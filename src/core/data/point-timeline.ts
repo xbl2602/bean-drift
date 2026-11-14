@@ -5,7 +5,7 @@ import { findVisibleIntervals, intersectIntervals, summarizeIntervals, type Inte
 import type { LunarPosition, PointQueryOptions, Provenance, TimeWindow } from "../types";
 import { canonicalLonDeg } from "./point-conditions";
 import { bodiesVisibleAt, visibleFromSky } from "./point-visibility";
-import { openPrecomputedMaps, readHorizonProfileAt } from "./precomputed-maps";
+import { readPointHorizonProfile } from "./terrain-source-routing";
 
 const MINUTE_MS = 60_000;
 const HOUR_MS = 3_600_000;
@@ -101,7 +101,7 @@ export function getPointTimeline(
   const latDeg = position.latDeg;
   const lonDeg = canonicalLonDeg(position.lonDeg);
   const floorDeg = options.minEarthElevationDeg;
-  const profileDeg = readHorizonProfileAt(openPrecomputedMaps(), latDeg, lonDeg);
+  const profileDeg = readPointHorizonProfile(latDeg, lonDeg);
 
   const sunIntervals = findVisibleIntervals((t) => bodiesVisibleAt(profileDeg, latDeg, lonDeg, t, floorDeg).sun, startMs, endMs, SCAN_STEP_MS);
   const earthIntervals = findVisibleIntervals((t) => bodiesVisibleAt(profileDeg, latDeg, lonDeg, t, floorDeg).earth, startMs, endMs, SCAN_STEP_MS);
