@@ -6,8 +6,8 @@
 ## 线上（Vercel）
 
 - Vercel 项目：`bean-drift`，线上地址：**https://bean-drift.vercel.app**（这里只登记项目名和地址，不登记任何密钥）。
-- ⚠️ **这个项目最初关联的是旧的演练仓库，目前线上跑的还是旧仓库的构建**（例如 MCP 工具说明里的示例时间还是旧的），推送到本仓库不会触发它部署。需要 `xbl2602` 在 Vercel 后台 Project → Settings → Git 里把关联仓库改成 `xbl2602/bean-drift`，再触发一次部署。改好后把这条提示删掉。
-- 关联到本仓库之后：**推送到 `main` 自动部署到正式环境**，推送其他分支会生成预览地址。
+- 项目已关联本仓库 `xbl2602/bean-drift`：**推送到 `main` 自动部署到正式环境**，推送其他分支会生成预览地址。线上内容已确认是本仓库的构建（见文末部署记录）。
+- 如果以后推送后线上没有更新：先看 Vercel 后台 Project → Settings → Git 关联的仓库对不对，再看 GitHub 上 Vercel 应用是否有这个仓库的访问权限。
 - Node 版本固定为 24.x（`package.json` 的 `engines`）。
 - 密钥只放在 Vercel 后台（Project → Settings → Environment Variables），**不要**写进仓库。现在还没有任何要配的。
 - 自检：打开 `<域名>/api/health` 应返回 `{"status":"ok","service":"bean-drift"}`。
@@ -47,7 +47,8 @@ curl -X POST <域名>/mcp -H "content-type: application/json" -d '{"jsonrpc":"2.
 
 ## 部署记录
 
-每次正式部署后在这里追加一行：日期、做了什么、结果。
+每次正式部署后在这里追加一行：提交（或日期）、做了什么、结果。
 
-| 日期 | 事件 |
+| 提交 / 日期 | 事件 |
 |---|---|
+| `21c9f0d` | 项目改为关联本仓库后的第一次正式部署：状态 READY；`/api/health`、`/api/presets`、`/`、`/product` 返回 200；`/mcp` 的工具说明已是本仓库的版本（示例时间 `2030-01-01T12:00:00Z`）。 |

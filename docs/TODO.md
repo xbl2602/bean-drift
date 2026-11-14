@@ -16,7 +16,6 @@
 ## 近期要做
 
 - [ ] `xbl2602`：在 GitHub 仓库设置里给 `main` 开分支保护（要求 PR 才能合并，并勾选"Require review from Code Owners"，配合 `.github/CODEOWNERS`），并开启 secret scanning（密钥泄露扫描）。
-- [ ] `xbl2602`：在 Vercel 后台把项目 `bean-drift`（https://bean-drift.vercel.app）关联的仓库改成 `xbl2602/bean-drift`，并触发一次部署（现在线上跑的是旧仓库的构建），见 [DEPLOYMENT.md](DEPLOYMENT.md)。
 - [ ] `xbl2602`：把原型 `tools/` 理成 `pipeline/`。
 - [ ] `xbl2602`：实测"算一块区域的地平线要多久"。
 - [ ] `xbl2602`：真正构建验证一次 Dockerfile（目前没有验证过）。
