@@ -28,7 +28,7 @@ const request = body => new Request('http://localhost/api/agent', {
   method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
 });
 
-test('real point tool returns unchanged data and unavailable terrain provenance', async () => {
+test('real point tool returns unchanged data with real terrain data and its provenance', async () => {
   let count = 0;
   const args = { latDeg: -89.71, lonDeg: 62.5, time: '2030-01-01T12:00:00Z' };
   const result = await runAgent({ message: 'Check this point' }, { tools: TOOLS, signal: signal(),
@@ -36,10 +36,12 @@ test('real point tool returns unchanged data and unavailable terrain provenance'
       count++;
       if (count === 1) return call('get_point_conditions', args);
       const data = JSON.parse(messages.at(-1).content);
-      // The terrain group always exists; while the data is not wired in every field is null
-      // and provenance says 'unavailable' (docs/SHARED_INTERFACES.md section 2).
-      assert.ok(data.terrain && Object.values(data.terrain).every(value => value === null));
-      assert.equal(data.provenance.terrain.status, 'unavailable');
+      // Terrain is wired in (pipeline v1, 0.25 degree map cells): real numbers and provenance 'ok'
+      // (docs/SHARED_INTERFACES.md section 2). If the data files cannot be read, the group degrades to
+      // all-null fields with provenance 'unavailable' instead of failing the request.
+      assert.equal(typeof data.terrain.heightM, 'number');
+      assert.equal(data.terrain.horizonProfile.length, 32);
+      assert.equal(data.provenance.terrain.status, 'ok');
       return answer;
     },
   });
