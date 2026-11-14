@@ -21,11 +21,49 @@ const { runAgent } = require('../logic/run-agent.ts');
 const { createAgentHandler } = require('../api/create-handler.ts');
 const { createDeepSeekComplete } = require('../api/deepseek.ts');
 const { z } = require('zod');
+const { searchLunarData } = require('../ui/search-client.ts');
 const signal = () => new AbortController().signal;
 const answer = { content: 'Answer based on the tool output.', toolCalls: [] };
 const call = (name, args, id = 'call-1') => ({ content: '', toolCalls: [{ id, name, arguments: args }] });
 const request = body => new Request('http://localhost/api/agent', {
   method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+});
+
+test('search client sends only the message and preserves actual source data', async t => {
+  const result = { answer: 'Tool-based answer', sources: [{tool:'list_presets',input:{},result:{presets:[]}}] };
+  t.mock.method(globalThis, 'fetch', async (url, options) => {
+    assert.equal(url, '/api/agent');
+    assert.deepEqual(JSON.parse(options.body), {message:'List presets'});
+    assert.equal(options.method, 'POST');
+    assert.ok(options.signal);
+    return Response.json(result);
+  });
+  assert.deepEqual((await searchLunarData('List presets', signal())).sources, result.sources);
+});
+
+test('search client gives safe errors for HTML, empty answers, malformed sources and rate limits', async t => {
+  const cases = [
+    [new Response('<html>Internal detail</html>'), /unreadable answer/],
+    [Response.json({answer:' ',sources:[]}), /unreadable answer/],
+    [Response.json({answer:'Hello',sources:[null]}), /unreadable answer/],
+    [new Response('PRIVATE', {status:429}), /Too many requests/],
+    [new Response('PRIVATE', {status:503}), /not available/],
+  ];
+  for (const [response, message] of cases) {
+    const mock = t.mock.method(globalThis, 'fetch', async () => response);
+    await assert.rejects(searchLunarData('Hello', signal()), message);
+    mock.mock.restore();
+  }
+});
+
+test('terrain and period guidance is passed to the model with real data tools', async () => {
+  await runAgent({message:'Compare sunlight'}, {tools:TOOLS, signal:signal(), complete:async ({messages}) => {
+    const prompt = messages[0].content;
+    assert.match(prompt, /periodStartUtc and periodEndUtc separately from the query timeUtc/);
+    assert.match(prompt, /non-null group object can still contain null fields/);
+    assert.match(prompt, /never claim a safe landing/);
+    return answer;
+  }});
 });
 
 test('real point tool returns unchanged data with real terrain data and its provenance', async () => {

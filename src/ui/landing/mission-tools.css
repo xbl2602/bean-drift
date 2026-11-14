@@ -1,0 +1,73 @@
+/* Layout for the "Explore lunar data your way" section: each tool is a full-width card split in two. */
+
+.lq .lq-tools-grid { grid-template-columns: 1fr; }
+.lq-tool-assistant,
+.lq-tool-integrations {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: center;
+  gap: clamp(1rem, 3vw, 2.5rem);
+}
+.lq-tool-copy { min-width: 0; }
+.lq-tool-assistant .lq-chat { min-height: 11rem; align-content: start; }
+
+/* The typing terminal. */
+.lq-terminal {
+  min-width: 0;
+  border: 1px solid var(--lq-line);
+  border-radius: 0.8rem;
+  overflow: hidden;
+  background: #05090e;
+  box-shadow: 0 18px 60px #00000080;
+}
+.lq-terminal-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.55rem 0.8rem;
+  border-bottom: 1px solid var(--lq-line);
+  background: #0c131b;
+}
+.lq-terminal-dots { display: flex; gap: 0.35rem; }
+.lq-terminal-dots i { width: 0.6rem; height: 0.6rem; border-radius: 50%; background: #2b3948; }
+.lq-terminal-dots i:first-child { background: var(--lq-accent); }
+.lq-terminal-tabs { display: flex; gap: 0.3rem; }
+.lq-terminal-tabs button {
+  padding: 0.2rem 0.65rem;
+  border-radius: 0.35rem;
+  color: var(--lq-muted);
+  cursor: pointer;
+  font: 0.68rem var(--lq-mono);
+  letter-spacing: 0.08em;
+}
+.lq-terminal-tabs button[aria-pressed="true"] { color: #101807; background: var(--lq-accent); }
+.lq-terminal-screen {
+  margin: 0;
+  padding: 1rem;
+  color: #c9d6e6;
+  font: clamp(0.66rem, 0.95vw, 0.8rem)/1.6 var(--lq-mono);
+  /* Long lines wrap instead of adding a sideways scrollbar. */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  tab-size: 2;
+}
+.lq-terminal-screen .is-command { color: var(--lq-accent); }
+.lq-terminal-screen .is-comment { color: #6f8196; }
+.lq-terminal-caret {
+  display: inline-block;
+  width: 0.55em;
+  height: 1.05em;
+  vertical-align: text-bottom;
+  background: var(--lq-accent);
+  animation: lq-caret-blink 0.9s steps(1) infinite;
+}
+@keyframes lq-caret-blink { 50% { opacity: 0; } }
+
+@media (max-width: 860px) {
+  .lq-tool-assistant,
+  .lq-tool-integrations { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lq-terminal-caret { animation: none; }
+}

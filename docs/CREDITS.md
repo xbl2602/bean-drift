@@ -13,6 +13,9 @@
 | NASA LRO LOLA 全月高度图 `LDEM_64` | https://imbrium.mit.edu/DATA/LOLA_GDR/CYLINDRICAL/IMG/LDEM_64.IMG（NASA PDS 地球科学节点 LOLA GDR；Smith et al. 2010, Space Sci. Rev. 150, 209–241） | 64 像素/度 = 473.8 m/像素，23040×11520，Int16，高度 = 值 × 0.5 m（相对 1737.4 km 参考球）。**原始文件不进 git**（约 506 MB，放 `data/raw/lola-global/`） | NASA 公开数据 | `pipeline/` 从它算出地形、地平线、一年日照/对地可见统计（衍生数据在 `public/data/v1/`，约 55 MB，**是我们自己算的衍生数据，不是 NASA 原文件**，处理方法见 `pipeline/README.md` 和 `manifest.json`） |
 | JPL Horizons | https://ssd.jpl.nasa.gov/horizons/ | — | 仅用于**校验**我们自实现的星历，未直接使用其数据 | 星历精度核对 |
 | NASA Moon Trek 瓦片（LRO WAC 全月影像拼图 `LRO_WAC_Mosaic_Global_303ppd_v02`、LOLA 渲染图） | https://trek.nasa.gov/tiles/Moon/EQ/ | WAC 最细约 83 m/像素；LOLA 渲染图约 666 m/像素；等距柱状投影 | NASA 数据；**使用条款未确认**（官方页面只写 "© 2016 Trek"），见 `docs/research/nasa-trek-tiles-for-frontend.md` | 计划：product page 2D 底图（尚未接入） |
+| NASA SVS CGI Moon Kit：月球彩色图 `lroc_color_poles_4k.tif`（LRO LROC WAC） | https://svs.gsfc.nasa.gov/4720 | 原图 4096×2048，等距柱状投影；转成 JPG 存为 `public/landing/moon-color-4k.jpg` | NASA 公开数据（NASA Scientific Visualization Studio） | landing page 的月球（首屏和滚动动画） |
+| NASA SVS CGI Moon Kit：月球高程图 `ldem_3_8bit.jpg`（LRO LOLA） | https://svs.gsfc.nasa.gov/4720 | 原图 1024×512；存为 `public/landing/moon-height-1k.jpg`，只用来做坑洞的明暗起伏 | NASA 公开数据 | landing page 的月球 |
+| NASA Blue Marble Next Generation `world.topo.bathy.200412.3x5400x2700.jpg` | https://assets.science.nasa.gov/content/dam/science/esd/eo/images/bmng/bmng-topography-bathymetry/december/world.topo.bathy.200412.3x5400x2700.jpg | 原图 5400×2700；缩小到 2048×1024 存为 `public/landing/earth-blue-marble-2k.jpg` | NASA 公开数据（NASA Earth Observatory / Visible Earth） | landing page 的地球 |
 
 ## 2. 算法与代码来源
 
@@ -27,6 +30,8 @@
 | 名称 | 文件位置 | 来源/许可 | 是否 AI 生成 | 提示词 | 登记人 | 日期 |
 |---|---|---|---|---|---|---|
 | 主页缩略图 | `prototypes/lunar-scene-demo/thumbs/` | 我们自己场景的截图，无外部素材 | 否（场景由 AI 辅助编写的代码渲染） | — | xbl2602 | |
+| landing page 月面视角图 3 张 | `public/landing/moon-pov-*.jpg` | 从 `prototypes/lunar-scene-demo/thumbs/` 复制（pole-a、pole、apollo11），我们自己场景的截图，无外部素材 | 否（场景由 AI 辅助编写的代码渲染） | — | chanjy0806 | 2026-11-14 |
+| landing page 的星空、云层、太阳光晕、光照效果 | `src/ui/landing/space-shaders.ts` | 用代码（着色器）画的装饰效果，无外部素材，不是真实数据；月球和地球表面用的是下面"数据源"表里的 NASA 贴图 | 是（代码由 AI 辅助编写） | 见 `docs/logs/chanjy0806/2026-11-14.md` | chanjy0806 | 2026-11-14 |
 
 ## 4. AI 辅助声明
 
@@ -40,3 +45,5 @@
 | 点位 | 坐标 | 出处链接 | 核对人 | 日期 |
 |---|---|---|---|---|
 | 阿波罗 11 号 | 0.67416°N 23.47314°E | 原型使用值，来自 LROC 影像中"鹰号"下降级位置（见 PROJECT_CONTEXT），误差几米 | xbl2602 | |
+| 嫦娥四号（landing page"三个著名着陆点"） | 45.457°S 177.589°E | NASA LROC 根据影像定位的着陆器位置，误差约 ±20 m：https://www.lroc.asu.edu/posts/1087 | chanjy0806 | 2026-11-14 |
+| 月船三号 Chandrayaan-3（Statio Shiv Shakti，landing page"三个著名着陆点"） | 69.373°S 32.319°E | IAU 批准的地名条目所列坐标，转引自 https://en.wikipedia.org/wiki/Statio_Shiv_Shakti ；另有文档写 69.3676°S 32.3481°E，两者相差约 0.03°，**未能核对哪个更准** | chanjy0806 | 2026-11-14 |
