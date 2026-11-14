@@ -18,6 +18,7 @@ NASA Space Apps Challenge（吉隆坡站）参赛作品：让任务规划者、�
 - `docs/`：全部文档
 - `prototypes/`：原型。`lunar-scene-demo/` 是已经能跑的月面第一人称场景（南极、阿波罗 11 号，真实 NASA 地形与星历），另有两版 landing page 视觉原型。运行方法见 [prototypes/README.md](prototypes/README.md)
 - 产品代码（Next.js，项目名 **Bean Drift**）：`app/`、`src/`，已有占位页、REST API、MCP；运行和部署见 [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)，目录说明见 [AGENTS.md](AGENTS.md) 第 12 节
+- 线上地址：https://bean-drift.vercel.app （接口：`/api/health`、`/api/point`、`/api/compare`、`/api/presets`、`/mcp`）
 
 ## 团队
 

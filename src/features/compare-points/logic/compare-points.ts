@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { getPointConditions } from "@/core/data";
 import type { PointConditions } from "@/core/types";
-import { MAX_COMPARE_POINTS, positionSchema, resolveTimeMs, timeUtcSchema } from "@/lib/shared/schemas";
+import { MAX_COMPARE_POINTS, minEarthElevationDegSchema, positionSchema, resolveTimeMs, timeUtcSchema } from "@/lib/shared/schemas";
 
 export const comparePointsInputSchema = z.object({
   points: z
@@ -10,6 +10,7 @@ export const comparePointsInputSchema = z.object({
     .max(MAX_COMPARE_POINTS)
     .describe(`1 to ${MAX_COMPARE_POINTS} points to compare side by side`),
   time: timeUtcSchema,
+  minEarthElevationDeg: minEarthElevationDegSchema,
 });
 
 export type ComparePointsInput = z.output<typeof comparePointsInputSchema>;
@@ -25,6 +26,6 @@ export function comparePoints(input: ComparePointsInput): ComparePointsResult {
   const timeMs = resolveTimeMs(input.time);
   return {
     timeUtc: new Date(timeMs).toISOString(),
-    results: input.points.map((point) => getPointConditions(point, timeMs)),
+    results: input.points.map((point) => getPointConditions(point, timeMs, { minEarthElevationDeg: input.minEarthElevationDeg })),
   };
 }

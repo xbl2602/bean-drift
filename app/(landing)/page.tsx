@@ -1,22 +1,46 @@
-// landing page 占位页。负责人：chanjy0806。可以整个替换，只要保留指向 /product 的入口。
+// Landing page. Owner: chanjy0806. Order follows the hand-drawn plan:
+// hero -> scroll story (Moon, Earth, Sun) -> mission tools -> famous landing sites -> Moon-POV gallery -> closing.
+import type { Metadata } from "next";
 import Link from "next/link";
+import { HeroSection } from "@/ui/landing/hero-section";
+import { LandingSites } from "@/ui/landing/landing-sites";
+import { MissionTools } from "@/ui/landing/mission-tools";
+import { PovGallery } from "@/ui/landing/pov-gallery";
+import { ScrollStory } from "@/ui/landing/scroll-story";
+import "@/ui/landing/landing.css";
+
+export const metadata: Metadata = {
+  title: "Lunar Quest · Discover the Perfect Landing Site",
+  description:
+    "Explore the Moon and compare landing sites by sunlight, solar elevation and Earth visibility, on any date.",
+};
 
 export default function LandingPage() {
   return (
-    <main className="mx-auto flex min-h-screen max-w-3xl flex-col justify-center gap-6 px-6">
-      <p className="text-sm uppercase tracking-widest text-[var(--muted)]">Landing page · placeholder</p>
-      <h1 className="text-5xl font-semibold">Bean Drift</h1>
-      <p className="text-lg text-[var(--muted)]">
-        Compare sunlight and Earth-communication conditions anywhere on the Moon, on any date.
-      </p>
-      <div>
-        <Link
-          href="/product"
-          className="inline-block rounded-md bg-[var(--accent)] px-5 py-2.5 font-medium text-black hover:opacity-90"
-        >
-          Open the map
-        </Link>
-      </div>
-    </main>
+    <div className="lq">
+      <HeroSection />
+      <main>
+        <ScrollStory />
+        <MissionTools />
+        <LandingSites />
+        <PovGallery />
+        <section className="lq-section lq-closing" aria-labelledby="lq-closing-heading">
+          <p className="lq-kicker">Ready for descent</p>
+          <h2 id="lq-closing-heading" className="lq-section-heading">
+            Compare coordinates. Choose your site.
+          </h2>
+          <p className="lq-section-lead">
+            Put candidate locations side by side and see which one keeps the lights on and the link to Earth open.
+          </p>
+          <Link href="/product" className="lq-button">
+            Try Now
+            <span aria-hidden="true">→</span>
+          </Link>
+          <p className="lq-footer-note">
+            Lunar Quest · NASA Space Apps Challenge · Built on NASA LOLA and LROC data
+          </p>
+        </section>
+      </main>
+    </div>
   );
 }

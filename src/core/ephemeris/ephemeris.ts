@@ -6,7 +6,7 @@
 // 这是全项目唯一的星历实现（DATA_FLOW 规则 2）：别处不要再写一份。
 // 坐标系：EQJ = J2000 赤道系；Body = 月固系（x 指向经纬 0/0，y 指向东经 90°，z 指向北）。
 
-type Vec3 = readonly [number, number, number];
+export type Vec3 = readonly [number, number, number];
 /** 3x3 矩阵，按行展开（9 个数）。 */
 type Mat3 = readonly number[];
 
@@ -15,6 +15,8 @@ const R2D = 180 / Math.PI;
 export const MOON_RADIUS_KM = 1737.4;
 export const EARTH_RADIUS_KM = 6371.0;
 const AU_KM = 149597870.7;
+/** 太阳半径，km（IAU 2015 标称值），用来算太阳视半径。 */
+export const SUN_RADIUS_KM = 695700;
 /** TT - UTC，秒。2017 年起有效，直到下一次闰秒。 */
 const TT_MINUS_UTC_S = 69.184;
 
@@ -161,11 +163,33 @@ export interface BodyAzEl {
 }
 
 export interface SkyAtPoint {
-  sun: BodyAzEl;
+  sun: BodyAzEl & {
+    distanceKm: number;
+    angularRadiusDeg: number;
+  };
   earth: BodyAzEl & {
     distanceKm: number;
     angularRadiusDeg: number;
     illuminatedFraction: number;
+  };
+}
+
+/**
+ * 月固系里太阳和地球的位置（相对月心，km）。月固系：x 指向经纬 0/0，y 指向东经 90°，z 指向月球北极
+ * （LOLA 用的 Mean-Earth/polar-axis 框架）。
+ * 整月预计算（pipeline）和单点查询（skyAtLatLon）都从这里取天体位置，保证全项目只有一份星历实现。
+ * 注意：地球离得近，视差不能忽略（不同月面点看到的地球方向最多差约 1°），所以这里给的是位置而不是方向。
+ */
+export function bodyFixedSunEarth(timeMs: number): { sunKm: Vec3; earthKm: Vec3 } {
+  const jde = julianDayTt(timeMs);
+  const moon = moonEcliptic(jde);
+  const sun = sunEcliptic(jde);
+  const moonGeo = eclipticToEqj(moon.lonDeg, moon.latDeg, moon.distKm, jde);
+  const sunGeo = eclipticToEqj(sun.lonDeg, 0, sun.distKm, jde);
+  const orientation = lunarOrientation(jde);
+  return {
+    sunKm: mulMV(orientation, [sunGeo[0] - moonGeo[0], sunGeo[1] - moonGeo[1], sunGeo[2] - moonGeo[2]]),
+    earthKm: mulMV(orientation, [-moonGeo[0], -moonGeo[1], -moonGeo[2]]),
   };
 }
 
@@ -181,15 +205,7 @@ export function skyAtLatLon(timeMs: number, latDeg: number, lonDeg: number): Sky
   // 本地坐标：x = 东，y = 上，z = 南
   const toLocal: Mat3 = [...east, ...up, -north[0], -north[1], -north[2]];
 
-  const jde = julianDayTt(timeMs);
-  const moon = moonEcliptic(jde);
-  const sun = sunEcliptic(jde);
-  const moonGeo = eclipticToEqj(moon.lonDeg, moon.latDeg, moon.distKm, jde);
-  const sunGeo = eclipticToEqj(sun.lonDeg, 0, sun.distKm, jde);
-  const orientation = lunarOrientation(jde);
-
-  const sunBody = mulMV(orientation, [sunGeo[0] - moonGeo[0], sunGeo[1] - moonGeo[1], sunGeo[2] - moonGeo[2]]);
-  const earthBody = mulMV(orientation, [-moonGeo[0], -moonGeo[1], -moonGeo[2]]);
+  const { sunKm: sunBody, earthKm: earthBody } = bodyFixedSunEarth(timeMs);
   const sunFromObserver: Vec3 = [sunBody[0] - observer[0], sunBody[1] - observer[1], sunBody[2] - observer[2]];
   const earthFromObserver: Vec3 = [earthBody[0] - observer[0], earthBody[1] - observer[1], earthBody[2] - observer[2]];
 
@@ -201,10 +217,15 @@ export function skyAtLatLon(timeMs: number, latDeg: number, lonDeg: number): Sky
   });
 
   const earthDistanceKm = Math.hypot(...earthFromObserver);
+  const sunDistanceKm = Math.hypot(...sunFromObserver);
   // sun · earth = -1 表示"满地球"（新月）
   const cosPhase = sunDir[0] * earthDir[0] + sunDir[1] * earthDir[1] + sunDir[2] * earthDir[2];
   return {
-    sun: azEl(sunDir),
+    sun: {
+      ...azEl(sunDir),
+      distanceKm: sunDistanceKm,
+      angularRadiusDeg: Math.asin(SUN_RADIUS_KM / sunDistanceKm) * R2D,
+    },
     earth: {
       ...azEl(earthDir),
       distanceKm: earthDistanceKm,

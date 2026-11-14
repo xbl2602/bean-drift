@@ -1,5 +1,6 @@
-# AGENTS.md 第 10 节：main 必须随时保持"能跑起来"。每个 PR 和每次推送到 main 都跑一遍类型检查和构建。
-# 目前网页、API、MCP 不需要任何环境变量，所以这里不需要配置任何密钥。
+# AGENTS.md 第 10 节：main 必须随时保持"能跑起来"。每个 PR 和每次推送到 main 都跑一遍类型检查、测试和构建。
+# 测试 = src/ 下所有 *.test.cjs（npm test）。新功能想被 CI 跑到，把测试文件放在自己的 tests/ 里并以 .test.cjs 结尾。
+# 目前网页、API、MCP 不需要任何环境变量，测试也不需要密钥（模型接口用的是替身，不会调用 DeepSeek），所以这里不需要配置任何密钥。
 name: CI
 
 on:
@@ -18,4 +19,5 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run typecheck
+      - run: npm test
       - run: npm run build

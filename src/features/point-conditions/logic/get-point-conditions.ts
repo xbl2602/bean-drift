@@ -2,16 +2,19 @@
 import { z } from "zod";
 import { getPointConditions } from "@/core/data";
 import type { PointConditions } from "@/core/types";
-import { latDegSchema, lonDegSchema, resolveTimeMs, timeUtcSchema } from "@/lib/shared/schemas";
+import { latDegSchema, lonDegSchema, minEarthElevationDegSchema, resolveTimeMs, timeUtcSchema } from "@/lib/shared/schemas";
 
 export const pointConditionsInputSchema = z.object({
   latDeg: latDegSchema,
   lonDeg: lonDegSchema,
   time: timeUtcSchema,
+  minEarthElevationDeg: minEarthElevationDegSchema,
 });
 
 export type PointConditionsInput = z.output<typeof pointConditionsInputSchema>;
 
 export function getPointConditionsForQuery(input: PointConditionsInput): PointConditions {
-  return getPointConditions({ latDeg: input.latDeg, lonDeg: input.lonDeg }, resolveTimeMs(input.time));
+  return getPointConditions({ latDeg: input.latDeg, lonDeg: input.lonDeg }, resolveTimeMs(input.time), {
+    minEarthElevationDeg: input.minEarthElevationDeg,
+  });
 }
