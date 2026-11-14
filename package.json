@@ -11,7 +11,9 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test": "node --test \"src/**/*.test.cjs\""
+    "test": "node --test \"src/**/*.test.cjs\"",
+    "data": "node --no-warnings pipeline/build-all.mjs",
+    "test:core": "node --no-warnings --test \"src/core/terrain/tests/*.test.mts\""
   },
   "dependencies": {
     "next": "^16.4.5",

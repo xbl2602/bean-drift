@@ -13,6 +13,7 @@
 - `/api/agent` 的频率限制是 Vercel 后台的防火墙规则 `agent-rate-limit-20-per-min`（Project → Firewall → Custom Rules）：每个 IP 每分钟 20 次，超出返回 429。**它不在仓库里**；要改数字就在那里改，要重建见 `docs/decisions/2026-11-14_xbl2602_agent-rate-limit.md`。Docker 和本地没有这条限制（它们要用自己的密钥，才会真的调用 DeepSeek）。
 - 本地和 Docker：把 `DEEPSEEK_API_KEY=...` 写进你自己的 `.env.local`（已被 git 忽略；`docker compose` 会自动读它）。
 - 自检：打开 `<域名>/api/health` 应返回 `{"status":"ok","service":"bean-drift"}`。
+- **预计算数据随仓库发布**（`public/data/v1/`，约 55 MB，进 git；见 DATA_FLOW 第 4 节）。部署后自检：`/api/point?latDeg=-89.9&lonDeg=0` 里 `provenance.terrain.status` 应为 `ok`（`unavailable` 说明函数包里没带上数据文件，先看 `next.config.ts` 的 `outputFileTracingIncludes`）。重算数据用 `npm run data`，要先下载 506 MB 的原始 DEM，见 `pipeline/README.md`；**普通部署和本地运行不需要原始 DEM**。
 
 > 登录保护：线上地址不用登录就能访问（已验证），评委可以直接打开。**如果以后重建项目**要注意：新建的 Vercel 项目默认开启登录保护（Vercel Authentication），没登录的人（包括评委）会被跳转到登录页，要在 Project → Settings → Deployment Protection 里关掉（或改成只保护预览）。AI 工具尝试关闭时可能被权限系统拦下，这一步留给人手动做。
 

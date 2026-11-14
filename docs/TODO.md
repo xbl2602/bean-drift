@@ -6,18 +6,19 @@
 
 | # | 问题 | 为什么要定 | 相关 |
 |---|---|---|---|
-| Q1 | L6"最长平均断电时间"、L7"平均单次信号时间"的精确公式 | 决定预计算什么 | FEATURE_SPEC §3 |
+| ~~Q1~~ | ~~L6"最长平均断电时间"、L7"平均单次信号时间"的精确公式~~ **已解决（2026-11-14）**：按次平均、圆盘上缘露出即可见、2030 全年逐小时；见 `docs/decisions/2026-11-14_xbl2602_precomputed-terrain-and-year-stats.md`。待 `xbl2602` 整理进 DECISION_LOG 后可从本表删除 | 决定预计算什么 | FEATURE_SPEC §3 |
 | Q2 | 综合有效位置图（L9）的基地参数有哪些、默认值多少 | 决定 UI 和着色规则 | FEATURE_SPEC §5 |
 | Q3 | 预设点位清单（中美俄等）和**有出处的**坐标。**进度**：现有 4 个有出处的点（来自原型）；其余等调研，每个坐标的出处要记进 CREDITS | 用户要求预设点；坐标不能凭记忆 | FEATURE_SPEC §7 |
-| Q4 | 预计算产物放哪。**进度**：已调研，见 `docs/research/tile-hosting-limits.md`。小图层（坡度/日照/通信，估算几十 MB）可跟网站放 Vercel；全月高精度地形（约 8.5 GB）放不进 Vercel 和 Supabase 免费版，候选是 Cloudflare R2（对外）+ Oracle VPS（备份）。**还没拍板**：是否做高精度地形、是否用 R2 | 影响大小限制和稳定性 | DATA_FLOW §4 |
-| Q5 | 全月数据用什么 DEM、多大分辨率。**进度**：候选已选 LOLA 118 m 全月（`LDEM_256`）做地形，NASA Moon Trek 的 WAC（约 83 m/像素）做 2D 底图（见 `docs/research/nasa-trek-tiles-for-frontend.md`）。**还差**：Trek 使用条款未确认；"算一块区域地平线要多久"和压缩后大小都没实测 | 决定"全月每点可调用"能否做到 | FEATURE_SPEC §6 |
+| Q4 | 预计算产物放哪。**进度**：已调研，见 `docs/research/tile-hosting-limits.md`。小图层（坡度/日照/通信，估算几十 MB）可跟网站放 Vercel；全月高精度地形（约 8.5 GB）放不进 Vercel 和 Supabase 免费版，候选是 Cloudflare R2（对外）+ Oracle VPS（备份）。**2026-11-14 进展**：0.25° 整月预计算（约 55 MB，含地形、地平线、一年统计）已随网站放在 `public/data/v1/`，不需要外部存储。**还没拍板**：是否做高精度地形、是否用 R2 | 影响大小限制和稳定性 | DATA_FLOW §4 |
+| Q5 | 全月数据用什么 DEM、多大分辨率。**进度**：候选已选 LOLA 118 m 全月（`LDEM_256`）做地形，NASA Moon Trek 的 WAC（约 83 m/像素）做 2D 底图（见 `docs/research/nasa-trek-tiles-for-frontend.md`）。**2026-11-14 进展**：整月概览实际用了旧仓库已有的 `LDEM_64`（473.8 m/像素），0.25° 格子，全月地平线 25 秒算完（20 线程），见 decisions；更细的 DEM 是否要上，等前端用起来再定。**还差**：Trek 使用条款未确认；更高分辨率（着陆点尺度）的地平线耗时和大小没实测 | 决定"全月每点可调用"能否做到 | FEATURE_SPEC §6 |
 | Q6 | **沿用的框架与原型是否要向本地组织者说明或确认？** 官方 FAQ 有一条"赛前不得开始做挑战"（见 `docs/research/lunar-landing-site-navigator_research.md` 第 1 节），而沿用的内容是活动开始之前做的，这一点没有向组织者确认过。视频和提交文档里怎么如实标注"已有基础"也要定 | 避免提交被认定违规；对评委诚实 | DECISION_LOG D-0008 |
 
 ## 近期要做
 
 - [ ] `xbl2602`：在 GitHub 仓库设置里给 `main` 开分支保护（要求 PR 才能合并，并勾选"Require review from Code Owners"，配合 `.github/CODEOWNERS`），并开启 secret scanning（密钥泄露扫描）。
-- [ ] `xbl2602`：把原型 `tools/` 理成 `pipeline/`。
-- [ ] `xbl2602`：实测"算一块区域的地平线要多久"。
+- [x] `xbl2602`：整月预计算流水线已建（`pipeline/`，`npm run data`），2026-11-14。原型 `tools/`（南极 10 m / 阿波罗 11 号 2 m 的高精度部分）还没迁。
+- [ ] `xbl2602`：用 NASA 官方的 LOLA 平均可见性产品对照我们的 `stats-4ppd.u16`（逐点核对）；极区的结论尤其要核。
+- [ ] 前端（`ShanLe1224`）：product page 直接读 `public/data/v1/` 的静态图层，格式见 `docs/SHARED_INTERFACES.md` 2.5.1 和 `manifest.json`。
 - [ ] `xbl2602`：真正构建验证一次 Dockerfile（目前没有验证过）。
 - [ ] 每个人：完成 TEAM_HANDBOOK 第 2 节的"热身提交"。
 - [ ] `leeziqi0531-debug`：建立 CREDITS 登记习惯；起草 30 秒视频分镜。

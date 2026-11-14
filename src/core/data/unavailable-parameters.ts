@@ -1,7 +1,6 @@
-// 还没接入数据的参数组：地形、地形遮挡后的可见性、一年统计。
-// 接口形状已定（见 docs/SHARED_INTERFACES.md 第 2 节），但没有数据，所以每个字段都是 null，并带"还没接入"的说明。
-// 这里不编造任何数。接入真实数据时：在 point-conditions.ts 里用真实值换掉对应的 emptyXxx() 调用，
-// 并把对应 Provenance 的 status 改成 "ok"（来源、分辨率写进 source / note）。调用方不用改。
+// 地形、地形遮挡后的可见性、一年统计这三组参数的"没有数据"版本：每个字段都是 null，并带说明。
+// 真实数据由 terrain-groups.ts 拼装；只有预计算数据文件读不到时才会退回这里（降级），接口仍然返回，
+// 而不是整体报错。这里不编造任何数。
 //
 // 用函数而不是常量：每次返回新对象，避免多个请求共用同一个对象（服务端不放可变的模块级状态）。
 import type { BodyVisibility, BodyYearStats, Provenance, TerrainParameters, Visibility, YearStats } from "../types";
@@ -19,7 +18,7 @@ export function emptyVisibility(): Visibility {
 }
 
 function emptyBodyYearStats(): BodyYearStats {
-  return { visibleFraction: null, longestOutageH: null, visibleWindows: null };
+  return { visibleFraction: null, longestOutageH: null, meanOutageH: null, meanVisibleWindowH: null, visibleWindows: null };
 }
 
 export function emptyYearStats(): YearStats {

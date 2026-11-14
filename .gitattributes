@@ -1,0 +1,5 @@
+# pipeline 预计算的二进制数据文件：永远按二进制处理，不做换行转换。
+# （Windows 上 core.autocrlf=true 时，如果 git 误把它们当文本，字节 0x0A 会被改写，数据就坏了。）
+public/data/v1/*.u8 binary
+public/data/v1/*.u16 binary
+public/data/v1/*.i16 binary

@@ -10,6 +10,7 @@
 |---|---|---|---|---|
 | NASA LRO LOLA 南极高度图 `LDEM_875S_10M` | MIT 镜像 https://imbrium.mit.edu/DATA/LOLA_GDR/POLAR/JP2/ | 10 m/像素，南纬 87.5° 至南极 | NASA 公开数据 | 原型的南极场景 |
 | NASA LROC NAC 阿波罗 11 号立体地形模型 `NAC_DTM_APOLLO11` | https://pds.lroc.im-ldi.com/data/LRO-L-LROC-5-RDR-V1.0/LROLRC_2001/DATA/SDP/NAC_DTM/APOLLO11/ | 2 m/像素 | NASA PDS 公开数据 | 原型的阿波罗 11 号场景 |
+| NASA LRO LOLA 全月高度图 `LDEM_64` | https://imbrium.mit.edu/DATA/LOLA_GDR/CYLINDRICAL/IMG/LDEM_64.IMG（NASA PDS 地球科学节点 LOLA GDR；Smith et al. 2010, Space Sci. Rev. 150, 209–241） | 64 像素/度 = 473.8 m/像素，23040×11520，Int16，高度 = 值 × 0.5 m（相对 1737.4 km 参考球）。**原始文件不进 git**（约 506 MB，放 `data/raw/lola-global/`） | NASA 公开数据 | `pipeline/` 从它算出地形、地平线、一年日照/对地可见统计（衍生数据在 `public/data/v1/`，约 55 MB，**是我们自己算的衍生数据，不是 NASA 原文件**，处理方法见 `pipeline/README.md` 和 `manifest.json`） |
 | JPL Horizons | https://ssd.jpl.nasa.gov/horizons/ | — | 仅用于**校验**我们自实现的星历，未直接使用其数据 | 星历精度核对 |
 | NASA Moon Trek 瓦片（LRO WAC 全月影像拼图 `LRO_WAC_Mosaic_Global_303ppd_v02`、LOLA 渲染图） | https://trek.nasa.gov/tiles/Moon/EQ/ | WAC 最细约 83 m/像素；LOLA 渲染图约 666 m/像素；等距柱状投影 | NASA 数据；**使用条款未确认**（官方页面只写 "© 2016 Trek"），见 `docs/research/nasa-trek-tiles-for-frontend.md` | 计划：product page 2D 底图（尚未接入） |
 

@@ -1,17 +1,10 @@
 // 统一数据接口：给定月面位置和时间，返回点位参数。
-// 目前真实可用的只有"太阳/地球的方位角、高度角、距离、视半径"（星历）。地形、遮挡后的可见性、一年统计
-// 需要 pipeline 产出的衍生数据，还没接入：接口已留好（见 unavailable-parameters.ts），字段如实返回 null + 说明，
-// 而不是编一个数。接入后只改 src/core/data/，调用方不用动。
+// 太阳/地球的方位角、高度角、距离、视半径来自星历；地形、遮挡后的可见性、一年统计来自 pipeline 预计算的
+// 整月地图（public/data/v1/）加现算，拼装见 terrain-groups.ts。读不到预计算数据时，这三组降级成字段全为 null
+// + 说明（见 unavailable-parameters.ts），而不是编一个数，也不让整个接口出错。
 import { skyAtLatLon } from "../ephemeris/ephemeris";
 import type { LunarPosition, PointConditions } from "../types";
-import {
-  emptyTerrain,
-  emptyVisibility,
-  emptyYearStats,
-  unavailableTerrainProvenance,
-  unavailableVisibilityProvenance,
-  unavailableYearStatsProvenance,
-} from "./unavailable-parameters";
+import { buildTerrainGroups } from "./terrain-groups";
 
 /** 把经度规范到 [-180, 180]。 */
 export function normalizeLonDeg(lonDeg: number): number {
@@ -23,6 +16,7 @@ export function getPointConditions(position: LunarPosition, timeMs: number): Poi
   const lonDeg = Number(normalizeLonDeg(position.lonDeg).toFixed(6));
   const sky = skyAtLatLon(timeMs, position.latDeg, lonDeg);
   const round = (value: number, digits: number) => Number(value.toFixed(digits));
+  const terrainGroups = buildTerrainGroups(position.latDeg, lonDeg, timeMs, sky);
 
   return {
     position: { latDeg: position.latDeg, lonDeg },
@@ -43,18 +37,18 @@ export function getPointConditions(position: LunarPosition, timeMs: number): Poi
       angularRadiusDeg: round(sky.earth.angularRadiusDeg, 4),
       illuminatedFraction: round(sky.earth.illuminatedFraction, 4),
     },
-    terrain: emptyTerrain(),
-    visibility: emptyVisibility(),
-    yearStats: emptyYearStats(),
+    terrain: terrainGroups.terrain,
+    visibility: terrainGroups.visibility,
+    yearStats: terrainGroups.yearStats,
     provenance: {
       ephemeris: {
         status: "ok",
         source: "Truncated Meeus lunar theory + low-precision Sun + IAU lunar orientation (WGCCRE 2009); checked against JPL Horizons",
         note: "Accuracy about 0.02 degrees; fine for visualising illumination and comms windows, not for mission-grade planning. Angles are relative to a smooth 1737.4 km sphere (no terrain).",
       },
-      terrain: unavailableTerrainProvenance(),
-      visibility: unavailableVisibilityProvenance(),
-      yearStats: unavailableYearStatsProvenance(),
+      terrain: terrainGroups.provenance.terrain,
+      visibility: terrainGroups.provenance.visibility,
+      yearStats: terrainGroups.provenance.yearStats,
     },
     conventions: {
       longitude: "selenographic degrees, east positive, normalized to [-180, 180]",

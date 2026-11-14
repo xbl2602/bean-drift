@@ -22,14 +22,14 @@
 
 类型定义：`src/core/types.ts`。**不要在别处重新定义**，直接 import。`GET /api/point`、MCP `get_point_conditions`、`POST /api/compare` 的每个结果，都是这个结构。数据由 `src/core/data/point-conditions.ts` 汇总。
 
-**设计原则：接口先留好，数据后接入。**
+**设计原则：接口先留好，数据后接入。**（2026-11-14 起 `terrain`、`visibility`、`yearStats` 三组都已接入真实数据。）
 
-1. 每一组参数（`terrain`、`visibility`、`yearStats`）**永远存在**，组里每个字段还没有数据时为 `null`。调用方照着字段名写代码，数据接入后**不用改代码**。
+1. 每一组参数（`terrain`、`visibility`、`yearStats`）**永远存在**，组里每个字段没有数据时为 `null`。调用方照着字段名写代码。
 2. `null` 是什么意思，看这一组的 `provenance.<组>.status`：
-   - `unavailable`：这类数据**还没接入**，所有字段都没算。
-   - `ok`：已接入。此时某个字段为 `null` 表示"这个点、这段时间里没有这个量"（例如查询范围内没有日落）。
+   - `unavailable`：这类数据**没有**，所有字段都没算。目前只会在服务器读不到预计算数据文件时出现（接口仍返回 200，note 里说明），应当让用户稍后重试，而不是当成"这里没有地形"。
+   - `ok`：已接入。此时某个字段为 `null` 表示"这个点、这段时间里没有这个量"（例如 60 天内没有日落，或坡向在平地上没有意义）。
 3. 状态图例：✅ 已有真实数据 · ⬜ 接口已留，值恒为 `null`（等数据）。
-4. 想知道"某个量到底有没有"，永远看 `provenance`，不要看字段是不是 `null` 就下结论（**`terrain.heightM: null` 不等于"这里没有高度"**，而是"还没接入"）。
+4. 想知道"某个量到底有没有"，永远看 `provenance`，不要看字段是不是 `null` 就下结论（**`terrain.heightM: null` 不等于"这里没有高度"**，而是"这次没读到数据"）。
 
 ### 2.1 基础
 
@@ -53,38 +53,50 @@
 | `earth.angularRadiusDeg` | 地球视半径（按地球平均半径 6371 km） | 度 | ✅ |
 | `earth.illuminatedFraction` | 从该点看到的地球被照亮的比例 | 比例 0~1 | ✅ |
 
-### 2.3 地形（`terrain`）⬜
+### 2.3 地形（`terrain`）✅
 
-依赖 LOLA 衍生数据（TODO Q4、Q5）。对应 FEATURE_SPEC 第 4 节参数卡的"高度、坡度、坡向、地平线剖面"和第 6 节"返回里说明来自多少米/像素的数据"。
-
-| 字段 | 含义 | 单位 | 状态 |
-|---|---|---|---|
-| `terrain.heightM` | 海拔，相对 1737.4 km 参考球 | 米 | ⬜ |
-| `terrain.slopeDeg` | 坡度 | 度 | ⬜ |
-| `terrain.aspectDeg` | 坡向：下坡方向的方位角（正北 0°，向东增加） | 度 | ⬜ |
-| `terrain.horizonProfile` | 地平线剖面：`[{ azimuthDeg, elevationDeg }]`，按方位角排序；每个方位上地形挡住的仰角。采样间隔在 `provenance.terrain.note` 里写明 | 度 | ⬜ |
-| `terrain.resolutionM` | 上面这些值来自多少米/像素的数据 | 米/像素 | ⬜ |
-
-### 2.4 地形遮挡后的可见性（`visibility`）⬜
-
-"此刻"太阳、地球有没有被地形挡住。依赖 2.3 的地平线数据加星历。`visibility.sun` 和 `visibility.earth` **结构相同**：
+数据来自 LOLA 全月 DEM（473.8 m/像素），pipeline 平均到 0.25° 的地图格子（约 7.6 km），见 [decisions/2026-11-14_xbl2602_precomputed-terrain-and-year-stats.md](decisions/2026-11-14_xbl2602_precomputed-terrain-and-year-stats.md)。对应 FEATURE_SPEC 第 4 节参数卡的"高度、坡度、坡向、地平线剖面"和第 6 节"返回里说明来自多少米/像素的数据"。**这个分辨率是"整月概览"级别，不是着陆点尺度**——接口返回的 `provenance.terrain.note` 会如实写明。
 
 | 字段 | 含义 | 单位 | 状态 |
 |---|---|---|---|
-| `visibility.<sun/earth>.diskVisibleFraction` | 圆盘有多大比例露在地形地平线之上（0 = 全挡住，1 = 全可见）。FEATURE_SPEC 要求处理部分遮挡；**"可见"定义为这个值 > 0** | 比例 0~1 | ⬜ |
-| `visibility.<sun/earth>.nextRiseUtc` | 下一次从地形地平线后升起（由不可见变可见）的时刻 | UTC ISO 8601 | ⬜ |
-| `visibility.<sun/earth>.nextSetUtc` | 下一次落到地形地平线之下（由可见变不可见）的时刻。对应参数卡的"距日落、距地球落下的剩余时间" | UTC ISO 8601 | ⬜ |
+| `terrain.heightM` | 海拔，相对 1737.4 km 参考球。在相邻 4 个格子间双线性插值 | 米 | ✅ |
+| `terrain.slopeDeg` | 坡度：格子内逐像素坡度（约 474 m 基线）的平均，再在相邻格子间插值。**不是这个点本身的坡度，不能当着陆安全坡度用** | 度 | ✅ |
+| `terrain.aspectDeg` | 坡向：下坡方向的方位角（正北 0°，向东增加），取最近格子；格子平均是平地时为 `null` | 度 | ✅ |
+| `terrain.horizonProfile` | 地平线剖面：`[{ azimuthDeg, elevationDeg }]`，32 个方位（间隔 11.25°，从正北起），每个方位上地形挡住的仰角，在相邻格子间插值；范围 −8°~32° | 度 | ✅ |
+| `terrain.resolutionM` | 上面这些值的格子边长（南北向，约 7581 m；东西向随纬度缩小） | 米 | ✅ |
 
-### 2.5 一年统计（`yearStats`）⬜
+### 2.4 地形遮挡后的可见性（`visibility`）✅
 
-由 pipeline 预计算，公式待定（TODO Q1）。FEATURE_SPEC 术语：**断电** = 太阳被地形挡住的连续时段，**断信号** = 地球被地形挡住的连续时段。`yearStats.sun` 和 `yearStats.earth` **结构相同**：
+"此刻"太阳、地球有没有被地形挡住。用 2.3 的地平线剖面加星历现算。`visibility.sun` 和 `visibility.earth` **结构相同**：
 
 | 字段 | 含义 | 单位 | 状态 |
 |---|---|---|---|
-| `yearStats.periodStartUtc`、`yearStats.periodEndUtc` | 统计覆盖的时间范围。❓ 怎么取（从查询时刻起一年 / 日历年 / 18.6 年周期）等 Q1 定 | UTC ISO 8601 | ⬜ |
-| `yearStats.<sun/earth>.visibleFraction` | 统计期内可见的时间占比（太阳：日照比例；地球：地球可见比例） | 比例 0~1 | ⬜ |
-| `yearStats.<sun/earth>.longestOutageH` | 统计期内最长一次连续不可见（太阳：最长断电；地球：最长断信号） | 小时 | ⬜ |
-| `yearStats.<sun/earth>.visibleWindows` | 连续可见的窗口列表 `[{ startUtc, endUtc, durationH }]`（太阳：各月昼窗口） | UTC、小时 | ⬜ |
+| `visibility.<sun/earth>.diskVisibleFraction` | 圆盘有多大比例露在地形地平线之上（0 = 全挡住，1 = 全可见）。**"可见"定义为这个值 > 0，即圆盘上缘高于地平线**；把地平线近似成圆盘中心方位上的一条水平线 | 比例 0~1 | ✅ |
+| `visibility.<sun/earth>.nextRiseUtc` | 下一次从地形地平线后升起（由不可见变可见）的时刻；往后最多找 60 天，找不到为 `null` | UTC ISO 8601 | ✅ |
+| `visibility.<sun/earth>.nextSetUtc` | 下一次落到地形地平线之下（由可见变不可见）的时刻，同样最多找 60 天。对应参数卡的"距日落、距地球落下的剩余时间" | UTC ISO 8601 | ✅ |
+
+### 2.5 一年统计（`yearStats`）✅
+
+统计期固定为 **2030-01-01T00:00:00Z 起的 8760 小时（整年），逐小时取样**（TODO Q1 的决定，见上面的 decisions 文件）。**不随查询时刻变**。FEATURE_SPEC 术语：**断电** = 太阳被地形挡住的连续时段，**断信号** = 地球被地形挡住的连续时段。口径：圆盘上缘高于地形地平线算可见；被统计期首尾截断的时段按截断后的长度计入。`yearStats.sun` 和 `yearStats.earth` **结构相同**：
+
+| 字段 | 含义 | 单位 | 状态 |
+|---|---|---|---|
+| `yearStats.periodStartUtc`、`yearStats.periodEndUtc` | 统计覆盖的时间范围（起点含、终点不含） | UTC ISO 8601 | ✅ |
+| `yearStats.<sun/earth>.visibleFraction` | 统计期内可见的时间占比（太阳：日照比例；地球：地球可见比例） | 比例 0~1 | ✅ |
+| `yearStats.<sun/earth>.longestOutageH` | 统计期内最长一次连续不可见（太阳：最长断电 L4；地球：最长断信号 L5）。从未可见 = 整个统计期 | 小时 | ✅ |
+| `yearStats.<sun/earth>.meanOutageH` | 统计期内所有连续不可见时段的平均时长（L6"按次平均"）。从未不可见 = 0 | 小时 | ✅ |
+| `yearStats.<sun/earth>.meanVisibleWindowH` | 统计期内所有连续可见时段的平均时长（L7"平均单次信号时间"，地球一栏）。从未可见 = 0 | 小时 | ✅ |
+| `yearStats.<sun/earth>.visibleWindows` | 连续可见的窗口列表 `[{ startUtc, endUtc, durationH }]`（太阳：各月昼窗口）。一个点最多约几十条 | UTC、小时 | ✅ |
+
+### 2.5.1 整月地图（给网页图层用，静态文件）
+
+pipeline 把上面的统计对**整个月面每个 0.25° 格子**算好，放在 `public/data/v1/`，网页图层直接按静态文件取（不经过 API）。**格式以 `public/data/v1/manifest.json` 为准**（里面写了每个文件的名字、尺寸、缩放系数、来源和局限），这里只写要点：
+
+- 网格：1440 列 × 720 行，每格 0.25°；第 0 行是北端（纬度 +90°），第 0 列是西端（经度 −180°）；每个文件都是同样的行主序排布，小端字节序。
+- `stats-4ppd.u16`：7 个连续的 Uint16 平面，依次是：太阳日照比例、地球可见比例、两者同时可见比例（÷10000）；最长断电 L4、最长断信号 L5（小时）；平均断电时长 L6、平均地球可见窗口 L7（÷4 = 小时）。
+- `height-4ppd.i16`（×0.5 = 米）、`slope-4ppd.u16`（÷100 = 度）、`aspect-4ppd.u16`（÷100 = 度，65535 = 无）、`horizon-4ppd.u8`（33 个平面：32 个方位各一层，方位 k × 11.25°，再加第 33 层 = 方位 360°（复制第 0 层，方便插值绕回）；字节值 ÷255 × 40 − 8 = 度）。
+- 单个文件最大 34 MB（horizon），总计约 55 MB，随网站一起发布，不需要外部存储。
+- 地图值以**格子中心**为代表点；点位接口 `yearStats` 以**查询点**为代表点（读邻近格子插值后的地平线），两者在格子中心处的差别实测小于 0.05%。
 
 ### 2.6 来源与约定
 
@@ -100,7 +112,6 @@
 
 ### 2.7 故意没放进接口的（定义还没定，不要猜）
 
-- **L6"最长平均断电时间"、L7"平均单次信号时间"**：精确公式没定（TODO Q1），字段名和含义都没法定。定了再加。
 - **关键日期**：FEATURE_SPEC 第 4 节有这个词，但没说是哪些日期。
 - **基地参数与综合有效位置（L9）**、**通信要求的最小地球仰角**：这些是用户**输入**，不是点位输出，待 TODO Q2 定。
 

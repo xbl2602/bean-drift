@@ -93,15 +93,22 @@ export interface TimeWindow {
 export interface BodyYearStats {
   /** 统计期内可见的时间占比，0~1。 */
   visibleFraction: number | null;
-  /** 统计期内最长一次连续不可见，小时。 */
+  /** 统计期内最长一次连续不可见，小时（L4/L5）。从未可见 = 整个统计期。 */
   longestOutageH: number | null;
+  /** 统计期内所有连续不可见时段的平均时长，小时（L6）。从未不可见 = 0。 */
+  meanOutageH: number | null;
+  /** 统计期内所有连续可见时段的平均时长，小时（L7）。从未可见 = 0。 */
+  meanVisibleWindowH: number | null;
   /** 连续可见的窗口列表（太阳：各月昼窗口）。 */
   visibleWindows: TimeWindow[] | null;
 }
 
-/** 一年统计。公式待定（TODO Q1），由 pipeline 预计算。 */
+/**
+ * 一年统计：从 periodStartUtc 起逐小时取样的整年（口径见 docs/decisions/ 里 Q1 的决定）。
+ * "可见" = 圆盘上缘高于地形地平线；被统计期首尾截断的时段按截断后的长度计入。
+ */
 export interface YearStats {
-  /** 统计覆盖的时间范围，UTC ISO 8601。怎么取待 Q1 定。 */
+  /** 统计覆盖的时间范围，UTC ISO 8601（起点含、终点不含）。 */
   periodStartUtc: string | null;
   periodEndUtc: string | null;
   sun: BodyYearStats;

@@ -1,0 +1,121 @@
+{
+  "version": 1,
+  "generatedUtc": "2026-11-14T04:14:20.298Z",
+  "frame": "Selenographic Mean-Earth / polar-axis (LOLA): latitude north+, longitude east+ in -180..180, height above the 1737.4 km reference sphere",
+  "grid": {
+    "width": 1440,
+    "height": 720,
+    "ppd": 4,
+    "layout": "every plane is height x width, row 0 = north edge (lat +90), column 0 = west edge (lon -180); cell (row, col) covers lat 90-(row+1)/ppd..90-row/ppd, lon -180+col/ppd..-180+(col+1)/ppd",
+    "cellSizeM": "about 7580 m north-south; east-west shrinks with cos(latitude)"
+  },
+  "sources": {
+    "dem": {
+      "name": "NASA LRO LOLA global DEM, LDEM_64",
+      "pixelsPerDegree": 64,
+      "metresPerPixel": 473.8,
+      "url": "https://imbrium.mit.edu/DATA/LOLA_GDR/CYLINDRICAL/IMG/LDEM_64.IMG",
+      "license": "NASA data, public domain",
+      "citation": "Smith et al. (2010), Space Sci. Rev. 150, 209-241 (LOLA); NASA PDS Geosciences Node"
+    },
+    "ephemeris": "src/core/ephemeris (Truncated Meeus + IAU lunar orientation, about 0.02 deg)"
+  },
+  "terrain": {
+    "width": 1440,
+    "height": 720,
+    "ppd": 4,
+    "files": {
+      "height": "height-4ppd.i16",
+      "slope": "slope-4ppd.u16",
+      "aspect": "aspect-4ppd.u16"
+    },
+    "heightUnitM": 0.5,
+    "heightMinM": -8673.5,
+    "heightMaxM": 10478,
+    "slopeScale": 100,
+    "aspectScale": 100,
+    "aspectNone": 65535,
+    "demBlock": "16x16 pixels of ldem_64.img per cell",
+    "pixelBaselineM": 473.8
+  },
+  "horizon": {
+    "width": 1440,
+    "height": 720,
+    "ppd": 4,
+    "azimuths": 32,
+    "horMinDeg": -8,
+    "horMaxDeg": 32,
+    "file": "horizon-4ppd.u8",
+    "layers": 33,
+    "rayMaxKm": 296,
+    "raySamples": 97,
+    "source": "ldem_64.img bilinear"
+  },
+  "stats": {
+    "startUtc": "2030-01-01T00:00:00Z",
+    "hours": 8760,
+    "stepH": 1,
+    "width": 1440,
+    "height": 720,
+    "file": "stats-4ppd.u16",
+    "planes": [
+      {
+        "key": "sunFraction",
+        "unit": "ratio 0..1",
+        "scale": 10000,
+        "meaning": "share of the year the Sun is visible (any part of the disk above the terrain horizon)"
+      },
+      {
+        "key": "earthFraction",
+        "unit": "ratio 0..1",
+        "scale": 10000,
+        "meaning": "share of the year the Earth is visible"
+      },
+      {
+        "key": "bothFraction",
+        "unit": "ratio 0..1",
+        "scale": 10000,
+        "meaning": "share of the year Sun and Earth are visible at the same time"
+      },
+      {
+        "key": "longestNoSunH",
+        "unit": "hours",
+        "scale": 1,
+        "meaning": "longest single stretch without Sun (power outage), L4"
+      },
+      {
+        "key": "longestNoEarthH",
+        "unit": "hours",
+        "scale": 1,
+        "meaning": "longest single stretch without Earth (no direct signal), L5"
+      },
+      {
+        "key": "meanNoSunH",
+        "unit": "hours",
+        "scale": 4,
+        "meaning": "mean length of all stretches without Sun in the year, L6 (0 if the Sun is never lost)"
+      },
+      {
+        "key": "meanEarthWindowH",
+        "unit": "hours",
+        "scale": 4,
+        "meaning": "mean length of all unbroken stretches with Earth visible, L7 (0 if the Earth is never visible)"
+      }
+    ],
+    "visibleCriterion": "upper limb of the disk above the terrain horizon (horizon at the azimuth of the disk centre)",
+    "ephemeris": "src/core/ephemeris (Truncated Meeus + IAU lunar orientation, about 0.02 deg)"
+  },
+  "files": {
+    "height-4ppd.i16": 2073600,
+    "slope-4ppd.u16": 2073600,
+    "aspect-4ppd.u16": 2073600,
+    "horizon-4ppd.u8": 34214400,
+    "stats-4ppd.u16": 14515200
+  },
+  "limitations": [
+    "One value per 0.25 degree cell (about 7.6 km); a landing-site-scale question needs finer data than this.",
+    "The horizon is computed from the cell centre only, in 32 compass directions (11.25 degree steps), so a narrow ridge between two directions can be missed.",
+    "One year (2030) is not the worst year: the Moon's orbit has an 18.6 year cycle that changes how far Sun and Earth swing above and below the horizon at the poles.",
+    "Sun and Earth positions are accurate to about 0.02 degrees, not mission-grade."
+  ]
+}
