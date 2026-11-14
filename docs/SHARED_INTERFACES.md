@@ -87,6 +87,16 @@
 | `yearStats.<sun/earth>.meanOutageH` | 统计期内所有连续不可见时段的平均时长（L6"按次平均"）。从未不可见 = 0 | 小时 | ✅ |
 | `yearStats.<sun/earth>.meanVisibleWindowH` | 统计期内所有连续可见时段的平均时长（L7"平均单次信号时间"，地球一栏）。从未可见 = 0 | 小时 | ✅ |
 | `yearStats.<sun/earth>.visibleWindows` | 连续可见的窗口列表 `[{ startUtc, endUtc, durationH }]`（太阳：各月昼窗口）。一个点最多约几十条 | UTC、小时 | ✅ |
+| `yearStats.bothVisibleFraction` | 统计期内太阳和地球**同时**可见的时间占比（和 `sun`、`earth` 并列，不在它们里面）。选址要两者都满足，这个比单看任一个更有说服力。整月地图里同名的一层 `bothFraction` 与它同口径 | 比例 0~1 | ✅ |
+
+### 2.5.2 选填假设：地球最低仰角（`minEarthElevationDeg`）✅
+
+直连通信通常要求地球高过某个最低仰角。**输入**（不是输出）：`GET /api/point`、`POST /api/compare`、`get_point_conditions`、`compare_points`、`GET /api/timeline`、`POST /api/compare-dates` 以及对应 MCP 工具都接受可选的 `minEarthElevationDeg`（度，0~60）。
+
+- **不传 = 只看地形**，结果和之前完全一致，也和整月地图一致（整月地图**不**带这个要求）。**不传和传 0 不一样**：地形地平线可以是负的（比光滑球面的水平线还低），传 0 会额外要求地球不低于球面水平线。
+- 传了之后：地球要"上缘高于 max(地形地平线, 最低仰角)"才算可见，规则和原来"上缘高于地形地平线"一致，只是多了一条下限。**只影响地球，不影响太阳。** 影响 `visibility.earth`、`yearStats.earth`、`yearStats.bothVisibleFraction`，以及时间序列里的地球窗口。
+- 返回里的 `assumptions.minEarthElevationDeg` 写明这次用了什么（`null` = 没加要求），`provenance` 的说明里也会多一句。
+- 阈值本身没有官方来源（调研没有查到明确数值，见 `docs/research/`），所以**不设默认值**，由调用方自己选。
 
 ### 2.5.1 整月地图（给网页图层用，静态文件）
 
@@ -113,7 +123,7 @@ pipeline 把上面的统计对**整个月面每个 0.25° 格子**算好，放�
 ### 2.7 故意没放进接口的（定义还没定，不要猜）
 
 - **关键日期**：FEATURE_SPEC 第 4 节有这个词，但没说是哪些日期。
-- **基地参数与综合有效位置（L9）**、**通信要求的最小地球仰角**：这些是用户**输入**，不是点位输出，待 TODO Q2 定。
+- **基地参数与综合有效位置（L9）**：这些是用户**输入**，不是点位输出，待 TODO Q2 定。（"通信要求的最小地球仰角"已作为选填输入做了，见 2.5.2；它的**默认值**仍没有来源，故不设。）
 
 ### 2.8 怎么把一个 ⬜ 字段变成 ✅
 
@@ -128,15 +138,59 @@ pipeline 把上面的统计对**整个月面每个 0.25° 格子**算好，放�
 | 方法 路径 | 参数 | 返回 |
 |---|---|---|
 | `GET /api/health` | — | `{ "status": "ok", "service": "bean-drift" }` |
-| `GET /api/point` | query：`latDeg`（-90~90）、`lonDeg`（-180~360）、`time`（可选，默认现在） | `PointConditions` |
-| `POST /api/compare` | JSON：`{ "points": [{ "latDeg", "lonDeg" }, ...1~10 个], "time"?: "..." }` | `{ "timeUtc", "results": PointConditions[] }`，顺序与输入一致 |
+| `GET /api/point` | query：`latDeg`（-90~90）、`lonDeg`（-180~360）、`time`（可选，默认现在）、`minEarthElevationDeg`（可选，见 2.5.2） | `PointConditions` |
+| `POST /api/compare` | JSON：`{ "points": [{ "latDeg", "lonDeg" }, ...1~10 个], "time"?: "...", "minEarthElevationDeg"?: n }` | `{ "timeUtc", "results": PointConditions[] }`，顺序与输入一致 |
 | `GET /api/presets` | — | `{ "presets": Preset[] }`（`Preset` 见 `src/core/types.ts`） |
+| `GET /api/timeline` | query：`latDeg`、`lonDeg`（必填）；`time`（起点，默认现在）、`durationH`（1~744，默认 720）、`stepMin`（曲线间隔，10~1440 分钟，默认约 144 个点）、`minEarthElevationDeg` | `PointTimeline`，见 3.1 |
+| `POST /api/compare-dates` | JSON：`{ "points": [{ "latDeg", "lonDeg" }, ...1~5 个], "times": ["...Z", ...1~8 个], "minEarthElevationDeg"?: n }` | `{ "timesUtc", "points": PointAcrossTimes[], "provenance" }`，见 3.2 |
+| `POST /api/find-sites` | JSON，条件都选填：`maxSlopeDeg`、`minSunVisibleFraction`、`minEarthVisibleFraction`、`minBothVisibleFraction`、`maxLongestSunOutageH`、`maxLongestEarthOutageH`、`latMinDeg`/`latMaxDeg`/`lonMinDeg`/`lonMaxDeg`（框，不能跨 180° 经线）、`rankBy`、`limit`（1~20，默认 10）、`minSeparationKm`（默认 50） | `FindSitesResult`，见 3.3 |
 
 示例：
 
 ```
 GET /api/point?latDeg=-89.71&lonDeg=62.5&time=2030-01-01T12:00:00Z
+GET /api/timeline?latDeg=-89.71&lonDeg=62.5&time=2030-01-01T00:00:00Z&durationH=744&stepMin=360
+POST /api/find-sites   { "maxSlopeDeg": 15, "maxLongestSunOutageH": 300, "latMaxDeg": -80, "limit": 5 }
 ```
+
+### 3.1 时间序列（`PointTimeline`）
+
+类型在 `src/core/data/point-timeline.ts`。一个点、一段时间（最长 744 小时 = 31 天，够一个月昼）里的变化。**"可见"的规则和 2.4、2.5 完全一致**（圆盘上缘高于有效地平线）。
+
+| 字段 | 含义 | 单位 |
+|---|---|---|
+| `position`、`startUtc`、`endUtc`、`durationH`、`sampleStepMin` | 查询的点和时间范围；`sampleStepMin` 是曲线采样间隔 | 度、UTC、小时、分钟 |
+| `assumptions.minEarthElevationDeg` | 同 2.5.2，`null` = 没加要求 | 度 |
+| `sun`、`earth`、`both` | 各自（`both` = 太阳和地球同时）的汇总，结构相同：`visibleFraction`（这段时间里可见的占比）、`longestOutageH`（这段时间里最长一次连续不可见）、`windows`（连续可见的时间段 `[{ startUtc, endUtc, durationH }]`，被首尾截断的按截断后算） | 比例 0~1、小时、UTC |
+| `samples` | 曲线：每个采样点 `{ timeUtc, sun: { azimuthDeg, elevationDeg, visible }, earth: { … } }`，最多 240 个。高度角是相对光滑球面的（和 2.2 一样），`visible` 是含地形遮挡的 | 度 |
+| `provenance` | 来源与口径 | — |
+
+窗口的起止时间用 10 分钟步长扫描、发现变化后二分到约 2 秒，和 `stepMin` 无关；**短于 10 分钟的窗口（取样之间升起又落下）会漏掉**。`stepMin` 太小会超过 240 个点，返回 400。读不到预计算地形数据时返回 500。
+
+### 3.2 跨日期对比（`PointAcrossTimes`）
+
+类型在 `src/core/data/point-snapshots.ts`。同一批点在几个不同时刻的对比（`compare_points` 是多个点、同一时刻；这个是同一个点、多个时刻）。地形和一年统计**和时刻无关**，每个点只给一次，每个时刻只给随时间变化的部分，所以比对每个时刻各调一次 `get_point_conditions` 小得多（实测：5 点 × 8 时刻约 16 KB，约 1.3 秒；时间序列 31 天、最多 240 个点约 42 KB）。
+
+| 字段 | 含义 |
+|---|---|
+| `points[i].position` | 点（经度规范到 [-180, 180]） |
+| `points[i].terrain` | `{ heightM, slopeDeg, aspectDeg, resolutionM }`，含义同 2.3 |
+| `points[i].yearStats` | `{ periodStartUtc, periodEndUtc, sunVisibleFraction, earthVisibleFraction, bothVisibleFraction, longestSunOutageH, longestEarthOutageH }`，含义同 2.5，**固定是 2030 年那一年，不随 `times` 变** |
+| `points[i].snapshots[j]` | 第 j 个时刻（与 `timesUtc[j]` 对应）：`{ timeUtc, sun, earth }`，`sun`/`earth` 都是 `{ azimuthDeg, elevationDeg, diskVisibleFraction, nextRiseUtc, nextSetUtc }`，含义同 2.2、2.4 |
+| `points[i].assumptions` | 同 2.5.2 |
+
+### 3.3 按条件找位置（`FindSitesResult`）
+
+类型在 `src/core/terrain/site-search.ts`、`src/core/data/site-search.ts`。在 2.5.1 的整月预计算地图里筛选，**每次请求读一遍文件（约 19 MB）现筛，约 0.2~0.4 秒**。
+
+| 字段 | 含义 |
+|---|---|
+| `query` | 实际用上的条件（含默认值）；没写的条件 = 不限制 |
+| `matchedCells`、`totalCells` | 满足全部条件的格子总数（不是返回条数）、地图格子总数（1,036,800） |
+| `sites[]` | 最多 `limit` 个，按 `rankBy` 从好到差，彼此至少隔 `minSeparationKm`。每个：`latDeg`、`lonDeg`（**格子中心**，不是实测着陆点）、`heightM`、`slopeDeg`、`sunVisibleFraction`、`earthVisibleFraction`、`bothVisibleFraction`、`longestSunOutageH`、`longestEarthOutageH`、`meanSunOutageH`、`meanEarthWindowH` |
+| `provenance` | 来源与口径 |
+
+`rankBy`：`bothVisibleFraction`（默认）、`sunVisibleFraction`、`earthVisibleFraction`、`lowestSlope`。**没有格子满足条件时返回 200，`matchedCells` 为 0、`sites` 为空**（不是错误；例如当前数据里南纬 80° 以南最长断电最短的格子约 215 小时，要求 ≤ 120 小时就是空的）。口径局限：0.25° 格子（约 7.6 km）会抹平很小的"常亮峰"；地球一栏**没有最低仰角要求**（整月地图不带它），对通信偏乐观；坡度是格子平均，不是着陆安全坡度。用返回的位置再调 `get_point_conditions` / `get_point_timeline` 看细节——格子中心的值和单点查询是同一口径，实测完全一致。
 
 ## 4. MCP（Streamable HTTP）
 
@@ -149,8 +203,11 @@ GET /api/point?latDeg=-89.71&lonDeg=62.5&time=2030-01-01T12:00:00Z
 | `get_point_conditions` | 一个点、一个时间的 `PointConditions`（参数同 `GET /api/point`）。字段清单见第 2 节 | 读 |
 | `compare_points` | 多个点同一时间并排（参数同 `POST /api/compare`），每个点都是完整的 `PointConditions` | 读 |
 | `list_presets` | 预设点位清单 | 读 |
+| `get_point_timeline` | 一个点一段时间里太阳/地球的曲线和可见时间段（参数同 `GET /api/timeline`），见 3.1 | 读 |
+| `compare_dates` | 同一批点在几个时刻的对比（参数同 `POST /api/compare-dates`），见 3.2 | 读 |
+| `find_sites` | 按条件在整个月面找位置（参数同 `POST /api/find-sites`），见 3.3 | 读 |
 
-**还没做的候选能力**（等 FEATURE_SPEC 的待决问题定下来再落定）：查询图层值、时间序列（太阳/地球高度曲线与窗口）、按条件找位置。
+**还没做的候选能力**：查询整月图层在某点/某区域的值（图层目前只作为静态文件给网页用）。
 
 **怎么加一个新能力**（给 `louis068` 和他的 agent）：在 `src/features/<功能名>/` 下建 `logic/`（纯函数 + zod 输入 schema）、`api/`、`mcp/`，照 `src/features/point-conditions/` 抄；然后让 `xbl2602` 在 `src/core/registry.ts` 和 `app/api/` 各加一行。
 
@@ -166,6 +223,6 @@ GET /api/point?latDeg=-89.71&lonDeg=62.5&time=2030-01-01T12:00:00Z
 - **成功（200）**：`{ "answer": string, "sources": [{ "tool", "input", "result" }], "mode": "live", "model": "deepseek-flash" }`。`answer` 是纯文本，前端**不能**当 HTML 渲染。`sources` 是真正执行过的工具结果；`sources` 为空表示这个回答没有经过数据验证，界面不能把它标成"已计算"。
 - **错误**：和其他接口一样是 `{ "error": { "code", "message" } }`。400 输入不对、405 不是 POST、413 请求太大、422 问题要的步骤太多、429 **限速**（有两个来源，前端只看状态码 429 就行，见下面"频率限制"）、502 模型或工具返回无效、503 没配置密钥或服务不可用、504 超时或被取消。前端显示错误，让用户**手动**重试，不要自动重发（每次重发都花钱）。
 - **单次上限**：最多 4 次模型调用、8 次工具执行；模型每次输出最多 1200 tokens；总超时 25 秒。
-- **可用工具**（代码里写死的只读白名单）：`get_point_conditions`、`compare_points`、`list_presets`。
+- **可用工具**（代码里写死的只读白名单）：`get_point_conditions`、`compare_points`、`list_presets`。**待办（`louis068`，在 `src/features/agent-search/`）**：第 4 节新增的 `get_point_timeline`、`compare_dates`、`find_sites` 已进 `registry.ts`（MCP 能用），但 agent 自己的白名单（`logic/run-agent.ts` 里的 `ALLOWED`）和系统提示还没加，所以自然语言窗口暂时调不到它们（系统提示里"`null` 表示不可用"的过期措辞已由 PR #8 改对）。另注意：agent 单个工具结果上限是 65,536 字节，而 `compare_points` 满 10 个点实测已是 64,938 字节，几乎顶到上限（带上 `minEarthElevationDeg` 后每个点的说明还会多约 0.4 KB，就会超限，agent 会报"结果太大"）。建议把 agent 能传的对比点数限制在 8 个以内。新增的三个工具最大规模都在上限内（见 3.2、3.3）。
 - **密钥**：`DEEPSEEK_API_KEY`，仅服务端、每次请求时读取。网址和模型名（`deepseek-flash`）写死在代码里，不读环境变量。
 - **频率限制**：每个访问者 IP 每分钟最多 20 次请求（固定窗口），在 Vercel 防火墙里执行，不在代码里。超出时**还没进到我们的代码**就被拦下，返回 `429`，body 形如 `{"error":{"code":"429","message":"Too Many Requests","id":"..."}}`（`code` 是字符串 `"429"`）。DeepSeek 自己限速时是我们的代码返回 429，`code` 为 `rate_limited`。**前端不要按 `code` 区分，统一按状态码 429 提示"请求太频繁，稍后再试"，不要自动重发。** 注意：同一个 IP（例如同一个展位的 Wi-Fi）的所有人共用这 20 次。它限的是速度不是总花费，细节和重建办法见 `docs/decisions/2026-11-14_xbl2602_agent-rate-limit.md`。
