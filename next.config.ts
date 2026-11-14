@@ -21,6 +21,10 @@ const siteSearchDataFiles = [
 // 会同时用到点位数据和找位置的入口（MCP、agent 通过工具注册表能调到所有工具）。
 const allToolDataFiles = [...mapDataFiles, "./public/data/v1/stats-4ppd.u16"];
 
+// agent 的 IAU 月面地名表（src/features/agent-search/logic/gazetteer.ts 运行时用 fs 读，约 0.5 MB）。
+// 不列在这里的话，本地能跑，部署到 Vercel 后读不到，地名功能会静默失效。
+const gazetteerDataFiles = ["./public/product/moon/lunar-names.json"];
+
 const nextConfig: NextConfig = {
   // Docker 镜像用 standalone 输出（体积小）；Vercel 和本地开发不需要，所以只在 Dockerfile 里打开这个开关
   // （Docker 里整个 public/ 都会拷进镜像，不受下面这张表影响）。
@@ -43,7 +47,7 @@ const nextConfig: NextConfig = {
     "/api/timeline": mapDataFiles,
     "/api/compare-dates": mapDataFiles,
     "/api/find-sites": siteSearchDataFiles,
-    "/api/agent": allToolDataFiles,
+    "/api/agent": [...allToolDataFiles, ...gazetteerDataFiles],
     "/mcp": allToolDataFiles,
   },
 };
