@@ -15,6 +15,8 @@ const FIRST_DAY = Date.parse(FORECAST_START_UTC);
 const FRAME_DAYS = FORECAST_FRAME_HOURS / 24;
 const LAST_DAY = (FORECAST_FRAMES.length - 1) * FRAME_DAYS;
 const PLAY_DAYS_PER_S = 1.4;
+/** Near the top of the sky the Sun sweeps across the compass in a few hours; slow playback there so it reads as one glide. */
+const ZENITH_SLOW_FROM_DEG = 70;
 const DOME_RADIUS = 100;
 const DEG = Math.PI / 180;
 const dateLabel = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
@@ -101,7 +103,10 @@ export function SkyForecast() {
     const draw = (nowMs: number) => {
       const stepS = Math.min((nowMs - previousMs) / 1000, 0.1);
       previousMs = nowMs;
-      const next = Math.min(dayRef.current + PLAY_DAYS_PER_S * stepS, LAST_DAY);
+      const sunHeight = skyAtDay(dayRef.current).sun.elevationDeg;
+      const nearZenith = Math.min(Math.max((sunHeight - ZENITH_SLOW_FROM_DEG) / (88 - ZENITH_SLOW_FROM_DEG), 0), 1);
+      const speed = PLAY_DAYS_PER_S * (1 - 0.9 * nearZenith * nearZenith * (3 - 2 * nearZenith));
+      const next = Math.min(dayRef.current + speed * stepS, LAST_DAY);
       dayRef.current = next;
       setDay(next);
       if (next >= LAST_DAY) setIsPlaying(false);
@@ -122,7 +127,7 @@ export function SkyForecast() {
   return (
     <div className="lq-demo lq-forecast">
       <div className="lq-forecast-views">
-        <span className="lq-demo-caption">APOLLO 11 · SKY SIMULATION</span>
+        <span className="lq-demo-caption">APOLLO 11 · TRANQUILITY BASE</span>
         <div role="group" aria-label="Sky view">
           <button className="lq-demo-choice" type="button" aria-pressed={view === "horizon"} onClick={() => setView("horizon")}>Horizon</button>
           <button className="lq-demo-choice" type="button" aria-pressed={view === "dome"} onClick={() => setView("dome")}>All sky</button>
@@ -221,10 +226,10 @@ export function SkyForecast() {
         <strong>{selectedDate}</strong>
       </div>
       <div className="lq-sky-readings">
-        <span><i data-body="sun" /> Sun {angle(sky.sun.elevationDeg)}{sky.sun.elevationDeg < 0 && " · below"}</span>
-        <span><i data-body="earth" /> Earth {angle(sky.earth.elevationDeg)}{sky.earth.elevationDeg < 0 && " · below"}</span>
+        <span><i data-body="sun" /> Sun <b>{angle(sky.sun.elevationDeg)}</b><em>{sky.sun.elevationDeg < 0 ? "below" : ""}</em></span>
+        <span><i data-body="earth" /> Earth <b>{angle(sky.earth.elevationDeg)}</b><em>{sky.earth.elevationDeg < 0 ? "below" : ""}</em></span>
       </div>
-      <p className="lq-demo-caption">{view === "horizon" ? "EPHEMERIS · TERRAIN ILLUSTRATIVE · LOCAL OBSTRUCTIONS NOT MODELED" : "LOOKING UP · RING = HORIZON · DASHES = SUN AND EARTH PATHS"}</p>
+      <p className="lq-demo-caption">{view === "horizon" ? <>Simulated sky above a 1969 Apollo 11 photo. Local terrain does not affect sky visibility. Photo: Neil Armstrong / NASA.</> : "LOOKING UP · RING = HORIZON · DASHES = SUN AND EARTH PATHS"}</p>
     </div>
   );
 }

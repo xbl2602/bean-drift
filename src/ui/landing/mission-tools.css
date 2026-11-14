@@ -82,7 +82,7 @@
 .lq .lq-tools::after {
   content: "";
   position: absolute;
-  z-index: -1;
+  z-index: -3;
   top: 0;
   bottom: 0;
   left: 50%;
@@ -118,84 +118,69 @@
 }
 @keyframes lq-twinkle { from { opacity: 0.55; } to { opacity: 1; } }
 
-/* The artwork pins to the viewport inside the section, underneath the content. */
-.lq-console-track {
+/* The console backdrop. It sits in the space reserved under the headline, then stays pinned (sticky)
+   behind the page while the cards scroll over it. The cards are opaque enough to keep their text clear. */
+.lq .lq-tools { overflow-y: clip; }
+.lq-tools-overview {
+  --lq-stage-h: clamp(18rem, 56svh, 36rem);
+  position: relative;
+  display: block;
+  padding-block: 1rem var(--lq-stage-h);
+}
+.lq-analysis-track {
+  position: absolute;
+  left: 50%;
+  width: 100vw;
+  margin-left: -50vw;
+  top: calc(100% - var(--lq-stage-h));
+  height: 420vh;
+  z-index: -1;
+  overflow: clip;
+  pointer-events: none;
+}
+.lq-analysis-pin { position: sticky; top: 4.5rem; height: var(--lq-stage-h); }
+.lq-comms-stage {
+  position: relative;
+  width: min(100vw, 80rem);
+  height: 100%;
+  margin-inline: auto;
+  mask-image: linear-gradient(180deg, transparent, #000 9%, #000 90%, transparent);
+}
+.lq-comms-stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+@media (max-width: 560px) {
+  .lq-tools-overview { --lq-stage-h: clamp(15rem, 46svh, 24rem); }
+}
+.lq-tools-overview .lq-section-lead { max-width: min(62%, 36rem); color: #d3deed; }
+.lq-tools-overview .lq-group-heading { text-shadow: 0 2px 20px #020510, 0 1px 8px #020510, 0 0 2px #020510; }
+/* A dark wash behind the headline guarantees contrast wherever the scene brightens. */
+.lq-tools-intro { position: relative; z-index: 1; }
+.lq-tools-intro::before {
+  content: "";
   position: absolute;
   z-index: -1;
-  inset: 0;
+  inset: -2rem 8% -2rem -3rem;
+  background: radial-gradient(ellipse at 28% 50%, #03060ef0 0%, #03060ec2 45%, transparent 78%);
   pointer-events: none;
-  overflow: clip;
 }
-.lq-console-orbit {
-  position: sticky;
-  top: 4.25rem;
-  display: flex;
-  justify-content: end;
-  align-items: start;
-  height: 0;
-  margin-inline: calc(-1 * clamp(1rem, 3vw, 3rem));
-  opacity: .94;
-}
-.lq-console-orbit-map {
-  position: relative;
-  width: min(54vw, 41rem, calc(100svh - 5.5rem));
-  aspect-ratio: 1;
-  mask-image: radial-gradient(ellipse at 52% 49%, #000 47%, transparent 71%);
-}
-.lq-console-orbit-map canvas, .lq-console-orbit-map svg {
-  position: absolute;
-  inset: 0;
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-.lq-console-orbit-canvas { opacity: 0; transition: opacity .45s ease; }
-.lq-console-orbit-canvas.is-ready { opacity: 1; }
-.lq-console-orbit-canvas.is-ready + svg .lq-orbit-fallback { display: none; }
-.lq-console-orbit-map ellipse { fill: none; stroke-width: .28; }
-.lq-console-earth-path { stroke: #76b8eaa6; }
-.lq-console-moon-path { stroke: #d9fa88c4; stroke-dasharray: 1 1.3; }
-.lq-console-orbit-map text {
-  fill: #edf5ff;
-  stroke: #060912;
-  stroke-width: .65;
-  paint-order: stroke;
-  font: 2.25px var(--lq-mono);
-  letter-spacing: .18px;
-  text-anchor: middle;
+@media (max-width: 560px) {
+  .lq-tools-overview .lq-section-lead { max-width: 100%; }
 }
 .lq .lq-tools-intro { border-top: 0; padding-top: 0; }
 .lq .lq-tools-intro .lq-group-heading { max-width: 15ch; font-size: clamp(2.2rem, 5.6vw, 4.4rem); }
 .lq-tools-intro .lq-kicker { margin-bottom: 0.2rem; }
-.lq-orbit-caption {
-  margin-top: 1.1rem;
-  max-width: 28rem;
-  color: #afbed0;
-  font: .68rem/1.55 var(--lq-mono);
-}
-@media (min-width: 861px) {
-  .lq .lq-tools-grid { width: 78%; }
-}
 @media (max-width: 860px) {
-  .lq-console-orbit { margin-inline: 0 -8%; opacity: .68; }
-  .lq-console-orbit-map { width: min(77vw, 35rem, calc(100svh - 5rem)); }
   .lq-tool-integrations .lq-integration-row { grid-template-columns: 1fr; }
 }
-@media (max-width: 560px) {
-  .lq-console-orbit { margin-right: -20%; opacity: .54; }
-  .lq-console-orbit-map { width: min(91vw, calc(100svh - 4.25rem)); }
-}
-@media (prefers-reduced-motion: reduce) { .lq-console-orbit-canvas { transition: none; } }
 
 /* Glass cards with corner marks, like the chapter cards above. */
 .lq .lq-tool {
   position: relative;
   border-top-color: #d9fa8873;
-  background: linear-gradient(150deg, #141c28ed, #080c14bd 80%);
+  background: linear-gradient(150deg, #141c28f7, #080c14f2 80%);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
 }
-.lq .lq-tool-assistant { background: linear-gradient(150deg, #1b2a20ee, #080c14b8 80%); }
+.lq .lq-tool-assistant { background: linear-gradient(150deg, #1b2a20f7, #080c14f2 80%); }
 .lq .lq-tool::before,
 .lq .lq-tool::after {
   content: "";

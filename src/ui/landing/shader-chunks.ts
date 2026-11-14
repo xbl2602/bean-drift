@@ -242,6 +242,7 @@ export const GLSL_SUN = GLSL_SUN_PROCEDURAL + GLSL_FINISH;
 export const GLSL_SUN_PHOTO = `
 const float SUN_DISC_SHARE = 0.396;   // disc radius / image width in the SDO picture
 const float SUN_IMAGE_TEXELS = 4096.0;
+const float SUN_SPIN_PER_S = 0.06;    // radians of longitude per second: a visible, gentle turn
 
 vec3 sunGlow(vec2 offset, float radius) {
   float d = length(offset) / radius;
@@ -259,10 +260,17 @@ vec3 drawSun(vec3 color, vec2 frag, vec2 center, float radius, float strength) {
   float d = length(offset) / radius;
   color += sunGlow(offset, radius) * strength * 0.7;
   if (d < 0.5 / SUN_DISC_SHARE) {
-    // Turn the picture very slowly so the surface looks alive; the Sun does rotate.
-    float spin = uTime * 0.006;
-    vec2 q = vec2(offset.x * cos(spin) - offset.y * sin(spin), offset.x * sin(spin) + offset.y * cos(spin));
-    vec2 uv = vec2(0.5) + q / radius * SUN_DISC_SHARE;
+    // The Sun turns about its own axis: wrap the disc around a sphere, advance the longitude, and
+    // project it back. The photograph only shows one face, so the face is reused as it turns away.
+    vec2 q = offset / radius;
+    float r2 = dot(q, q);
+    if (r2 < 1.0) {
+      float lon = atan(q.x, sqrt(1.0 - r2)) + uTime * SUN_SPIN_PER_S;
+      lon = mod(lon + 1.5708, 3.14159) - 1.5708;
+      float lat = asin(clamp(q.y, -1.0, 1.0));
+      q = vec2(cos(lat) * sin(lon), sin(lat));
+    }
+    vec2 uv = vec2(0.5) + q * SUN_DISC_SHARE;
     uv.y = 1.0 - uv.y; // the photograph's first row is the top
     float texelsPerPixel = SUN_DISC_SHARE * SUN_IMAGE_TEXELS / radius;
     vec3 photo = textureLod(uSunImage, uv, max(log2(texelsPerPixel) - 0.5, 0.0)).rgb;

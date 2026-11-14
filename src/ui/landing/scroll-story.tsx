@@ -27,6 +27,8 @@ function revealCardGroup(group: HTMLElement | null, visibility: number): void {
   if (!group) return;
   group.style.visibility = visibility > 0.001 ? "visible" : "hidden";
   group.style.pointerEvents = visibility > 0.6 ? "auto" : "none";
+  // CSS animations that should replay each time a chapter comes into view hang off this class.
+  group.classList.toggle("is-live", visibility > 0.7);
   const items = group.querySelectorAll<HTMLElement>("[data-reveal]");
   const span = 1 + CARD_STAGGER * (items.length - 1);
   items.forEach((item, i) => {
@@ -77,13 +79,13 @@ export function ScrollStory() {
       kind: "moon",
       ...frame.moon,
       // Slow real-time turn plus a little extra as you scroll, so it never looks like a flat picture.
-      rotation: globeRotation(0.35 + timeS * 0.012 + progress * 1.4, 0.12, 0.1),
+      rotation: globeRotation(0.35 + timeS * 0.06 + progress * 1.4, 0.12, 0.1),
       light: lightFromScreen(frame.moon.xPx, frame.moon.yPx, frame.sun.xPx, frame.sun.yPx, 0.6),
     };
     const earth: SpaceBody = {
       kind: "earth",
       ...frame.earth,
-      rotation: globeRotation(2.2 + timeS * 0.06 + frame.earthScrollTurns * TWO_PI, 0.22, 0.41),
+      rotation: globeRotation(2.2 + timeS * 0.16 + frame.earthScrollTurns * TWO_PI, 0.22, 0.41),
       light: lightFromScreen(frame.earth.xPx, frame.earth.yPx, frame.sun.xPx, frame.sun.yPx, 0.6),
     };
 

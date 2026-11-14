@@ -120,6 +120,7 @@ uniform sampler2D uDepth;        // result of the MARCH pass
 uniform sampler2D uEarthColor;
 uniform sampler2D uSunImage;
 uniform vec3 uSunDir;            // world direction towards the Sun
+uniform vec3 uEarthDir;          // world direction towards the Earth
 uniform vec2 uSunCenter;         // device pixels, origin bottom-left
 uniform float uSunRadius;
 uniform vec2 uEarthCenter;
@@ -135,14 +136,14 @@ ${GLSL_SUN_PHOTO}
 ${GLSL_TERRAIN_AND_CAMERA}
 
 // 0 = the Sun is hidden from point p by terrain, 1 = fully visible; soft at the shadow's edge.
-float sunShadow(vec3 p, float viewDistance, float footprintM) {
-  if (uSunDir.y < -0.08) return 0.0;
+// 0 = the light is hidden from point p by terrain along direction dir, 1 = fully visible; soft at the edge.
+float rayShadow(vec3 p, vec3 dir, float viewDistance, float footprintM) {
   float lit = 1.0;
   // Each pixel starts its shadow ray a little differently, so the steps blend into fine grain
   // instead of forming stripes along gentle slopes.
   float s = max(0.06, viewDistance * 0.003) * (0.75 + 0.5 * hash21(gl_FragCoord.xy));
   for (int i = 0; i < 46; i++) {
-    vec3 q = p + uSunDir * s;
+    vec3 q = p + dir * s;
     // Far along the shadow ray only big shapes matter, so read the ground more and more coarsely.
     float above = q.y - terrainHeight(q.xz, max(footprintM, s * 0.04));
     lit = min(lit, above * 55.0 / s);
@@ -150,6 +151,11 @@ float sunShadow(vec3 p, float viewDistance, float footprintM) {
     s *= 1.32;
   }
   return clamp(lit, 0.0, 1.0);
+}
+
+float sunShadow(vec3 p, float viewDistance, float footprintM) {
+  if (uSunDir.y < -0.08) return 0.0;
+  return rayShadow(p, uSunDir, viewDistance, footprintM);
 }
 
 // How much of the Sun's disc is above the terrain as seen by the viewer (0..1).
@@ -170,9 +176,9 @@ vec3 shadeGround(vec3 origin, vec3 ray, float t) {
   vec3 p = origin + ray * t;
   // One pixel covers more ground the further away it is, and much more where we look along the
   // ground at a shallow angle; read the terrain at that scale so distant detail stays calm.
-  float footprintM = t * uPixelAngle * 3.4;
+  float footprintM = t * uPixelAngle * 2.4;
   // At least two samples of the finest detail tile: any closer and the slope shows the tile's pixel grid.
-  float e = max(0.16, footprintM);
+  float e = max(0.1, footprintM);
   float slopeX = terrainHeight(p.xz + vec2(e, 0.0), footprintM) - terrainHeight(p.xz - vec2(e, 0.0), footprintM);
   float slopeZ = terrainHeight(p.xz + vec2(0.0, e), footprintM) - terrainHeight(p.xz - vec2(0.0, e), footprintM);
   vec3 normal = normalize(vec3(-slopeX, 2.0 * e, -slopeZ));
@@ -188,28 +194,104 @@ vec3 shadeGround(vec3 origin, vec3 ray, float t) {
   float patches = mix(0.5, noise3(vec3(p.xz * 0.012, 3.0)), 0.6 * broadDetail);
   patches += (noise3(vec3(p.xz * 0.11, 7.0)) - 0.5) * 0.4 * (1.0 - smoothstep(2.0, 7.0, footprintM));
   vec3 dust = vec3(0.40, 0.385, 0.37) * (0.82 + 0.36 * patches);
-  // Lift the darkest ground slightly so the foreground reads even when the Sun sets.
-  vec3 earthshine = vec3(0.055, 0.064, 0.082);
-  return dust * (light * 2.6 + earthshine);
+  // When the Sun is down the ground is lit by the Earth (earthshine) and by starlight. Real
+  // earthshine is faint, but a camera would be set to expose for it, so lift it: the night
+  // surface stays readable, with a cool blue cast that points towards the Earth.
+  float night = smoothstep(0.12, -0.06, uSunDir.y);
+  float earthFacing = max(dot(normal, uEarthDir), 0.0);
+  // By night the Earth is the only big light, low in the sky: slopes facing it glow and everything
+  // else falls into long shadows, which is what makes craters and rocks stand out instead of a flat grey plain.
+  float earthShadow = night > 0.02 ? rayShadow(p + normal * (0.02 + t * 0.0008), uEarthDir, t, footprintM) : 1.0;
+  vec3 earthLight = vec3(0.62, 0.74, 1.0) * (0.1 + 1.3 * earthFacing * earthShadow) * (0.6 + 2.8 * night);
+  vec3 ambient = vec3(0.07, 0.082, 0.11) * (1.0 + 2.6 * night);
+  // The overall exposure is set a little high so the lunar ground reads as bright regolith.
+  return dust * (light * 3.0 + ambient + earthLight) * 1.22;
+}
+
+vec3 skyColor(vec2 frag, float sunVisible) {
+  // Stars fade a little while the Sun is up, as they would for a camera.
+  vec3 color = starField(frag / uPixelRatio, uStarDrift) * (1.0 - 0.45 * sunVisible);
+  color = drawEarth(color, frag, uEarthCenter, uEarthRadius, uEarthRotation, uEarthLight);
+  if (sunVisible > 0.0) color = drawSun(color, frag, uSunCenter, uSunRadius, sunVisible);
+  return color;
+}
+
+vec3 groundColor(vec2 frag, vec4 depth, float sunVisible) {
+  vec3 color = shadeGround(cameraOrigin(), cameraRay(frag), unpackDistance(depth.rgb));
+  // A little lens glare spills over the ground near the Sun.
+  return color + sunGlow(frag - uSunCenter, uSunRadius) * 0.16 * sunVisible;
+}
+
+vec4 depthAt(ivec2 p) {
+  return texelFetch(uDepth, clamp(p, ivec2(0), ivec2(uResolution) - 1), 0);
 }
 
 void main() {
   vec2 frag = gl_FragCoord.xy;
-  vec4 depth = texelFetch(uDepth, ivec2(frag), 0);
+  ivec2 p = ivec2(frag);
+  vec4 centre = depthAt(p);
+  vec4 right = depthAt(p + ivec2(1, 0));
+  vec4 left = depthAt(p - ivec2(1, 0));
+  vec4 up = depthAt(p + ivec2(0, 1));
+  vec4 down = depthAt(p - ivec2(0, 1));
   float sunVisible = sunDiscVisibility();
+  // How much of this pixel and its neighbours is ground: 0 = all sky, 1 = all ground.
+  float cover = (centre.a * 2.0 + right.a + left.a + up.a + down.a) / 6.0;
   vec3 color;
 
-  if (depth.a < 0.5) {
-    // Sky: stars fade a little while the Sun is up, as they would for a camera.
-    color = starField(frag / uPixelRatio, uStarDrift) * (1.0 - 0.45 * sunVisible);
-    color = drawEarth(color, frag, uEarthCenter, uEarthRadius, uEarthRotation, uEarthLight);
-    if (sunVisible > 0.0) color = drawSun(color, frag, uSunCenter, uSunRadius, sunVisible);
+  if (cover > 0.999) {
+    color = groundColor(frag, centre, sunVisible);
+  } else if (cover < 0.001) {
+    color = skyColor(frag, sunVisible);
   } else {
-    color = shadeGround(cameraOrigin(), cameraRay(frag), unpackDistance(depth.rgb));
-    // A little lens glare spills over the ground near the Sun.
-    color += sunGlow(frag - uSunCenter, uSunRadius) * 0.16 * sunVisible;
+    // A pixel on the skyline: the depth image is only ground or sky, which would leave jagged
+    // stairs. Shade both and blend by coverage (anti-aliasing for the horizon and ridge edges).
+    vec4 groundSample = centre.a > 0.5 ? centre : (right.a > 0.5 ? right : (left.a > 0.5 ? left : (up.a > 0.5 ? up : down)));
+    vec2 groundFrag = centre.a > 0.5 ? frag : (right.a > 0.5 ? frag + vec2(1, 0) : (left.a > 0.5 ? frag - vec2(1, 0) : (up.a > 0.5 ? frag + vec2(0, 1) : frag - vec2(0, 1))));
+    color = mix(skyColor(frag, sunVisible), groundColor(groundFrag, groundSample, sunVisible), smoothstep(0.0, 1.0, cover));
   }
 
   outColor = vec4(finishColor(color, frag), 1.0);
+}
+`;
+
+// Edge-smoothing pass (FXAA): looks for edges in the finished picture and blurs along them only,
+// so skylines, ridges and shadow edges lose their stair steps while the rest stays sharp.
+export const FXAA_FRAGMENT_SHADER = `#version 300 es
+precision highp float;
+uniform sampler2D uScene;
+uniform vec2 uInvRes;
+out vec4 outColor;
+
+float luma(vec3 c) { return dot(c, vec3(0.299, 0.587, 0.114)); }
+
+void main() {
+  vec2 uv = gl_FragCoord.xy * uInvRes;
+  vec3 rgbM = texture(uScene, uv).rgb;
+  vec3 rgbNW = texture(uScene, uv + vec2(-1.0, 1.0) * uInvRes).rgb;
+  vec3 rgbNE = texture(uScene, uv + vec2(1.0, 1.0) * uInvRes).rgb;
+  vec3 rgbSW = texture(uScene, uv + vec2(-1.0, -1.0) * uInvRes).rgb;
+  vec3 rgbSE = texture(uScene, uv + vec2(1.0, -1.0) * uInvRes).rgb;
+  float lumaM = luma(rgbM);
+  float lumaNW = luma(rgbNW);
+  float lumaNE = luma(rgbNE);
+  float lumaSW = luma(rgbSW);
+  float lumaSE = luma(rgbSE);
+  float lumaMin = min(lumaM, min(min(lumaNW, lumaNE), min(lumaSW, lumaSE)));
+  float lumaMax = max(lumaM, max(max(lumaNW, lumaNE), max(lumaSW, lumaSE)));
+  // Flat areas are left alone.
+  if (lumaMax - lumaMin < max(0.02, lumaMax * 0.10)) { outColor = vec4(rgbM, 1.0); return; }
+
+  vec2 dir;
+  dir.x = -((lumaNW + lumaNE) - (lumaSW + lumaSE));
+  dir.y = ((lumaNW + lumaSW) - (lumaNE + lumaSE));
+  float dirReduce = max((lumaNW + lumaNE + lumaSW + lumaSE) * 0.25 * 0.125, 1.0 / 128.0);
+  float rcpDirMin = 1.0 / (min(abs(dir.x), abs(dir.y)) + dirReduce);
+  dir = clamp(dir * rcpDirMin, vec2(-8.0), vec2(8.0)) * uInvRes;
+
+  vec3 rgbA = 0.5 * (texture(uScene, uv + dir * (1.0 / 3.0 - 0.5)).rgb + texture(uScene, uv + dir * (2.0 / 3.0 - 0.5)).rgb);
+  vec3 rgbB = rgbA * 0.5 + 0.25 * (texture(uScene, uv + dir * -0.5).rgb + texture(uScene, uv + dir * 0.5).rgb);
+  float lumaB = luma(rgbB);
+  outColor = vec4((lumaB < lumaMin || lumaB > lumaMax) ? rgbA : rgbB, 1.0);
 }
 `;

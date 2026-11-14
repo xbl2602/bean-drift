@@ -48,8 +48,8 @@
   z-index: -1;
   /* The bottom fades the ground into the night sky of the next section, with no visible edge. */
   background:
-    linear-gradient(to top, var(--lq-bg) 0%, rgba(4, 6, 11, 0.86) 8%, rgba(4, 6, 11, 0.5) 20%, rgba(4, 6, 11, 0.18) 34%, rgba(4, 6, 11, 0) 55%),
-    linear-gradient(to right, rgba(4, 6, 11, 0.55) 0%, rgba(4, 6, 11, 0) 50%);
+    linear-gradient(to top, var(--lq-bg) 0%, rgba(4, 6, 11, 0.55) 7%, rgba(4, 6, 11, 0.16) 18%, rgba(4, 6, 11, 0) 32%),
+    linear-gradient(to right, rgba(4, 6, 11, 0.38) 0%, rgba(4, 6, 11, 0) 42%);
 }
 
 .lq-topbar {
@@ -508,7 +508,6 @@
 .lq-closing {
   border-top: 1px solid var(--lq-line);
   text-align: center;
-  background: radial-gradient(ellipse at bottom, #22301860, transparent 70%);
 }
 
 .lq-closing .lq-section-heading,
@@ -517,26 +516,7 @@
   margin-right: auto;
 }
 
-.lq-github {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.9rem;
-  margin-top: 4rem;
-  padding: 0.85rem 1.3rem;
-  border: 1px solid var(--lq-line);
-  border-radius: 999px;
-  background: #0b111a99;
-  color: var(--lq-ink);
-  text-align: left;
-  font: 0.95rem var(--lq-mono);
-  letter-spacing: 0.04em;
-  transition: border-color 0.2s ease, background-color 0.2s ease, transform 0.2s ease;
-}
-.lq-github:hover { border-color: var(--lq-accent); background: #d9fa8812; transform: translateY(-2px); }
-.lq-github:focus-visible { outline: 2px solid var(--lq-accent); outline-offset: 4px; }
-.lq-github svg { width: 1.7rem; height: 1.7rem; flex: none; }
-.lq-github small { display: block; margin-bottom: 0.15rem; font-size: 0.62rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--lq-muted); }
-.lq-github i { margin-left: 0.4rem; font-style: normal; color: var(--lq-accent); }
+
 
 /* ---------- Small screens ---------- */
 

@@ -131,7 +131,12 @@ function stamp(
   }
 }
 
-/** Bowl-shaped craters with a raised rim; many small ones, few large ones, as on the real Moon. */
+type Crater = { x: number; y: number; radiusPx: number; radiusM: number; freshness: number };
+
+/**
+ * Bowl-shaped craters with a sharp raised rim. The Moon has far more small craters than large ones
+ * (a steep power law), most of them old and soft, a few young and crisp. `steepness` > 1 favours small ones.
+ */
 function addCraters(
   tile: Float32Array,
   tileM: number,
@@ -139,54 +144,84 @@ function addCraters(
   minRadiusM: number,
   maxRadiusM: number,
   random: () => number,
-): void {
+  steepness = 3,
+): Crater[] {
   const pxPerM = DETAIL_SIZE / tileM;
+  const craters: Crater[] = [];
   for (let i = 0; i < count; i++) {
-    const radiusM = minRadiusM * Math.pow(maxRadiusM / minRadiusM, Math.pow(random(), 2.4));
+    const radiusM = minRadiusM * Math.pow(maxRadiusM / minRadiusM, Math.pow(random(), steepness));
     const radiusPx = radiusM * pxPerM;
-    const freshness = 0.25 + 0.75 * random(); // old craters are shallow and soft
-    const depthM = radiusM * 0.36 * freshness;
-    const rimM = radiusM * 0.07 * freshness;
-    stamp(tile, random() * DETAIL_SIZE, random() * DETAIL_SIZE, radiusPx * 2.4, (distancePx) => {
+    const freshness = 0.2 + 0.8 * Math.pow(random(), 0.8); // old craters are shallow and soft
+    const depthM = radiusM * 0.4 * freshness;
+    const rimM = radiusM * 0.1 * freshness;
+    const x = random() * DETAIL_SIZE;
+    const y = random() * DETAIL_SIZE;
+    stamp(tile, x, y, radiusPx * 2.2, (distancePx) => {
       const d = distancePx / radiusPx;
       if (d < 1) return depthM * (d * d - 1) + rimM;
-      return rimM * Math.exp(-(d - 1) * 3.2) * (1 - (d - 1) / 1.4);
+      return rimM * Math.exp(-(d - 1) * 2.8) * (1 - (d - 1) / 1.2);
+    });
+    craters.push({ x, y, radiusPx, radiusM, freshness });
+  }
+  return craters;
+}
+
+/** One angular rock: two or three overlapping lumps with steep sides and a flattish top (not a smooth ball). */
+function addRock(tile: Float32Array, centreX: number, centreY: number, radiusM: number, tileM: number, random: () => number): void {
+  const pxPerM = DETAIL_SIZE / tileM;
+  const lumps = 2 + Math.floor(random() * 2);
+  for (let i = 0; i < lumps; i++) {
+    const radiusPx = Math.max(1.4, radiusM * pxPerM * (0.55 + 0.45 * random()));
+    const heightM = radiusM * (0.45 + 0.55 * random());
+    const x = centreX + (random() - 0.5) * radiusPx * 0.9;
+    const y = centreY + (random() - 0.5) * radiusPx * 0.9;
+    stamp(tile, x, y, radiusPx, (distancePx) => {
+      const q = distancePx / radiusPx;
+      return heightM * Math.pow(Math.max(0, 1 - Math.pow(q, 2.6)), 0.45);
     });
   }
 }
 
-function addRocks(tile: Float32Array, tileM: number, count: number, random: () => number): void {
-  const pxPerM = DETAIL_SIZE / tileM;
+/** Rocks scattered over the ground (mostly small, a few boulders) plus rock fields thrown out around fresh craters. */
+function addRocks(tile: Float32Array, tileM: number, count: number, craters: Crater[], random: () => number): void {
   for (let i = 0; i < count; i++) {
-    const radiusM = 0.07 + 0.38 * Math.pow(random(), 3);
-    const radiusPx = Math.max(1.5, radiusM * pxPerM);
-    const heightM = radiusM * (0.5 + 0.5 * random());
-    stamp(tile, random() * DETAIL_SIZE, random() * DETAIL_SIZE, radiusPx, (distancePx) => {
-      const d = distancePx / radiusPx;
-      return heightM * Math.sqrt(Math.max(0, 1 - d * d));
-    });
+    const isBoulder = random() < 0.02;
+    const radiusM = isBoulder ? 0.7 + 0.8 * random() : 0.05 + 0.45 * Math.pow(random(), 3.5);
+    addRock(tile, random() * DETAIL_SIZE, random() * DETAIL_SIZE, radiusM, tileM, random);
+  }
+  // Young craters excavate solid rock and throw it out in a ring: boulders sit on and just outside the rim.
+  for (const crater of craters) {
+    if (crater.radiusM < 1.2 || crater.freshness < 0.55) continue;
+    const rocks = Math.round(5 + crater.radiusM * 3.5 * crater.freshness);
+    for (let i = 0; i < rocks; i++) {
+      const angle = random() * Math.PI * 2;
+      const distance = crater.radiusPx * (0.95 + 0.9 * random() * random());
+      const radiusM = 0.1 + 0.55 * Math.pow(random(), 2.2);
+      addRock(tile, crater.x + Math.cos(angle) * distance, crater.y + Math.sin(angle) * distance, radiusM, tileM, random);
+    }
   }
 }
 
 function buildMidTile(): Float32Array {
   const random = createRandom(4720);
   const tile = new Float32Array(DETAIL_SIZE * DETAIL_SIZE);
-  addTileableNoise(tile, 5, 7, random);
-  addTileableNoise(tile, 14, 2.4, random);
-  addTileableNoise(tile, 46, 0.7, random);
-  addCraters(tile, MID_TILE_M, 420, 9, 170, random);
+  // Gentle hummocks only: the smooth, wave-like noise is what made the ground look like sand dunes.
+  addTileableNoise(tile, 5, 6, random);
+  addTileableNoise(tile, 14, 1.2, random);
+  addTileableNoise(tile, 46, 0.3, random);
+  addCraters(tile, MID_TILE_M, 1400, 6, 170, random, 3.2);
   return tile;
 }
 
 function buildFineTile(): Float32Array {
   const random = createRandom(1969);
   const tile = new Float32Array(DETAIL_SIZE * DETAIL_SIZE);
-  addTileableNoise(tile, 9, 0.22, random);
-  addTileableNoise(tile, 36, 0.055, random);
-  addTileableNoise(tile, 150, 0.014, random);
-  addTileableNoise(tile, 420, 0.005, random);
-  addCraters(tile, FINE_TILE_M, 230, 0.3, 6.5, random);
-  addRocks(tile, FINE_TILE_M, 190, random);
+  addTileableNoise(tile, 9, 0.18, random);
+  addTileableNoise(tile, 36, 0.025, random);
+  addTileableNoise(tile, 150, 0.012, random);
+  addTileableNoise(tile, 420, 0.006, random);
+  const craters = addCraters(tile, FINE_TILE_M, 460, 0.18, 6.5, random, 2.8);
+  addRocks(tile, FINE_TILE_M, 760, craters, random);
   return tile;
 }
 
