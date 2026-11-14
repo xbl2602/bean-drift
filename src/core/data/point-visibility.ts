@@ -1,7 +1,7 @@
 // 单点的"地形遮挡后的可见性"和"一年统计"：用星历 + 这个点的地平线剖面现算（不是查表）。
 // 整月地图（L4~L7）由 pipeline 预计算，口径与这里完全一致（上缘露出即可见），只是以 0.25° 格子中心为代表点。
 import { skyAtLatLon } from "../ephemeris/ephemeris";
-import { diskVisibleFraction, horizonElevationDeg, isDiskVisible, summarizeVisibilityRuns } from "../terrain/visibility";
+import { diskVisibleFraction, effectiveHorizonDeg, horizonElevationDeg, isDiskVisible, summarizeVisibilityRuns } from "../terrain/visibility";
 import type { BodyVisibility, BodyYearStats, TimeWindow, Visibility, YearStats } from "../types";
 
 const HOUR_MS = 3_600_000;
@@ -13,22 +13,40 @@ const SEARCH_DAYS = 60;
 const SEARCH_STEP_MS = 10 * 60_000;
 const BISECTION_ROUNDS = 8; // 10 分钟 / 2^8 ≈ 2 秒
 
-interface BodiesSky {
+export interface BodiesSky {
   sun: { azimuthDeg: number; elevationDeg: number; angularRadiusDeg: number };
   earth: { azimuthDeg: number; elevationDeg: number; angularRadiusDeg: number };
 }
 
-/** 某一时刻，太阳和地球相对该点地平线剖面的状态。 */
-function bodiesVisibleAt(profileDeg: number[], latDeg: number, lonDeg: number, timeMs: number): { sun: boolean; earth: boolean } {
-  const sky = skyAtLatLon(timeMs, latDeg, lonDeg);
+/**
+ * 已知此刻太阳和地球在天上的位置，判断它们相对该点地平线剖面是否可见（圆盘上缘高于地平线）。
+ * minEarthElevationDeg：地球还要高过多少度才算可见（只影响地球）；不传 = 只看地形。
+ * "可见"的规则只在这里定义一次：时间序列、单点查询、一年统计都走这里。
+ */
+export function visibleFromSky(profileDeg: number[], sky: BodiesSky, minEarthElevationDeg?: number): { sun: boolean; earth: boolean } {
   return {
     sun: isDiskVisible(sky.sun.elevationDeg, sky.sun.angularRadiusDeg, horizonElevationDeg(profileDeg, sky.sun.azimuthDeg)),
-    earth: isDiskVisible(sky.earth.elevationDeg, sky.earth.angularRadiusDeg, horizonElevationDeg(profileDeg, sky.earth.azimuthDeg)),
+    earth: isDiskVisible(
+      sky.earth.elevationDeg,
+      sky.earth.angularRadiusDeg,
+      effectiveHorizonDeg(horizonElevationDeg(profileDeg, sky.earth.azimuthDeg), minEarthElevationDeg),
+    ),
   };
 }
 
-function bodyVisibilityNow(profileDeg: number[], body: BodiesSky["sun"]): { fraction: number; visible: boolean } {
-  const horizon = horizonElevationDeg(profileDeg, body.azimuthDeg);
+/** 某一时刻，太阳和地球相对该点地平线剖面的状态。 */
+export function bodiesVisibleAt(
+  profileDeg: number[],
+  latDeg: number,
+  lonDeg: number,
+  timeMs: number,
+  minEarthElevationDeg?: number,
+): { sun: boolean; earth: boolean } {
+  return visibleFromSky(profileDeg, skyAtLatLon(timeMs, latDeg, lonDeg), minEarthElevationDeg);
+}
+
+function bodyVisibilityNow(profileDeg: number[], body: BodiesSky["sun"], minElevationDeg?: number): { fraction: number; visible: boolean } {
+  const horizon = effectiveHorizonDeg(horizonElevationDeg(profileDeg, body.azimuthDeg), minElevationDeg);
   return {
     fraction: diskVisibleFraction(body.elevationDeg, body.angularRadiusDeg, horizon),
     visible: isDiskVisible(body.elevationDeg, body.angularRadiusDeg, horizon),
@@ -71,23 +89,33 @@ function nextRiseAndSet(isVisibleAt: (timeMs: number) => boolean, nowMs: number,
 const toIso = (ms: number | null) => (ms === null ? null : new Date(ms).toISOString());
 
 /** 此刻太阳和地球的可见比例，以及下一次升起/落下。profileDeg 是该点的地平线剖面。 */
-export function computeVisibility(profileDeg: number[], latDeg: number, lonDeg: number, timeMs: number, sky: BodiesSky): Visibility {
+export function computeVisibility(
+  profileDeg: number[],
+  latDeg: number,
+  lonDeg: number,
+  timeMs: number,
+  sky: BodiesSky,
+  minEarthElevationDeg?: number,
+): Visibility {
   const build = (body: BodiesSky["sun"], pick: "sun" | "earth"): BodyVisibility => {
-    const now = bodyVisibilityNow(profileDeg, body);
-    const { riseMs, setMs } = nextRiseAndSet((t) => bodiesVisibleAt(profileDeg, latDeg, lonDeg, t)[pick], timeMs, now.visible);
+    const floorDeg = pick === "earth" ? minEarthElevationDeg : undefined;
+    const now = bodyVisibilityNow(profileDeg, body, floorDeg);
+    const { riseMs, setMs } = nextRiseAndSet((t) => bodiesVisibleAt(profileDeg, latDeg, lonDeg, t, minEarthElevationDeg)[pick], timeMs, now.visible);
     return { diskVisibleFraction: Number(now.fraction.toFixed(4)), nextRiseUtc: toIso(riseMs), nextSetUtc: toIso(setMs) };
   };
   return { sun: build(sky.sun, "sun"), earth: build(sky.earth, "earth") };
 }
 
 /** 一年统计：逐小时取样 YEAR_STATS_HOURS 步，统计太阳（断电）和地球（断信号）。 */
-export function computeYearStats(profileDeg: number[], latDeg: number, lonDeg: number): YearStats {
+export function computeYearStats(profileDeg: number[], latDeg: number, lonDeg: number, minEarthElevationDeg?: number): YearStats {
   const sun = new Uint8Array(YEAR_STATS_HOURS);
   const earth = new Uint8Array(YEAR_STATS_HOURS);
+  let bothHours = 0;
   for (let hour = 0; hour < YEAR_STATS_HOURS; hour++) {
-    const visible = bodiesVisibleAt(profileDeg, latDeg, lonDeg, YEAR_STATS_START_MS + hour * HOUR_MS);
+    const visible = bodiesVisibleAt(profileDeg, latDeg, lonDeg, YEAR_STATS_START_MS + hour * HOUR_MS, minEarthElevationDeg);
     sun[hour] = visible.sun ? 1 : 0;
     earth[hour] = visible.earth ? 1 : 0;
+    if (visible.sun && visible.earth) bothHours += 1;
   }
   const summarize = (flags: Uint8Array): BodyYearStats => {
     const runs = summarizeVisibilityRuns(flags, 1);
@@ -109,5 +137,6 @@ export function computeYearStats(profileDeg: number[], latDeg: number, lonDeg: n
     periodEndUtc: new Date(YEAR_STATS_START_MS + YEAR_STATS_HOURS * HOUR_MS).toISOString(),
     sun: summarize(sun),
     earth: summarize(earth),
+    bothVisibleFraction: Number((bothHours / YEAR_STATS_HOURS).toFixed(4)),
   };
 }

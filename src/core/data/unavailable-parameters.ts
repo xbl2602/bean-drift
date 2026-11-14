@@ -22,7 +22,7 @@ function emptyBodyYearStats(): BodyYearStats {
 }
 
 export function emptyYearStats(): YearStats {
-  return { periodStartUtc: null, periodEndUtc: null, sun: emptyBodyYearStats(), earth: emptyBodyYearStats() };
+  return { periodStartUtc: null, periodEndUtc: null, sun: emptyBodyYearStats(), earth: emptyBodyYearStats(), bothVisibleFraction: null };
 }
 
 export function unavailableTerrainProvenance(): Provenance {

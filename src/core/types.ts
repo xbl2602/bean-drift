@@ -113,6 +113,17 @@ export interface YearStats {
   periodEndUtc: string | null;
   sun: BodyYearStats;
   earth: BodyYearStats;
+  /** 统计期内太阳和地球**同时**可见的时间占比，0~1：选址要两者都满足，这个比单看任一个更能说明问题。 */
+  bothVisibleFraction: number | null;
+}
+
+/** 查点位时可以选填的假设。 */
+export interface PointQueryOptions {
+  /**
+   * 地球要高过多少度才算能通信（按地球圆盘上缘，和"可见"同口径）；不传 = 只看地形，和整月地图一致。
+   * 只影响地球，不影响太阳。
+   */
+  minEarthElevationDeg?: number;
 }
 
 /** 点位参数（PointConditions）。没有数据的字段为 null，并在 provenance 里说明。 */
@@ -130,6 +141,11 @@ export interface PointConditions {
     terrain: Provenance;
     visibility: Provenance;
     yearStats: Provenance;
+  };
+  /** 这次计算用了哪些可选假设，让调用方不用猜。 */
+  assumptions: {
+    /** 地球最低仰角，度；null = 没加这条要求（只看地形）。 */
+    minEarthElevationDeg: number | null;
   };
   /** 约定说明，方便调用方不用猜。 */
   conventions: {

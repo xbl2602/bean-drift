@@ -15,6 +15,8 @@ export interface MapManifest {
     aspectNone: number;
   };
   horizon: { file: string; azimuths: number; horMinDeg: number; horMaxDeg: number };
+  /** 一年统计图：按"平面"依次存放，key 和缩放系数以 manifest 为准。只有"按条件找位置"会读它，所以不强制要求。 */
+  stats?: { file: string; planes: { key: string; scale: number }[] };
 }
 
 export interface PrecomputedMaps {
