@@ -58,3 +58,4 @@ curl -X POST <域名>/api/agent -H "content-type: application/json" -d '{"messag
 | 提交 / 日期 | 事件 |
 |---|---|
 | `21c9f0d` | 项目改为关联本仓库后的第一次正式部署：状态 READY；`/api/health`、`/api/presets`、`/`、`/product` 返回 200；`/mcp` 的工具说明已是本仓库的版本（示例时间 `2030-01-01T12:00:00Z`）。 |
+| `9200525`（2026-11-14） | 整月地形遮挡与一年统计预计算上线：Vercel 生产部署成功、CI（含 20 项测试）通过。线上实测：`/api/point`、`POST /api/compare`、MCP `get_point_conditions` 的 `provenance.terrain/visibility/yearStats` 均为 `ok`；南极格子中心 `-89.875,0.125` 日照 0.2777、地球可见 0.5594、最长断电 578 小时，与本机一致。`/data/v1/` 下 `manifest.json`、`stats-4ppd.u16`、`horizon-4ppd.u8` 可直接下载，大小与本地逐字节一致。首个请求约 1.2 秒（含函数启动）。 |
