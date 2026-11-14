@@ -99,7 +99,7 @@ export function LunarSearch() {
           </details>)}
         </div> : <p className={styles.hint}>No lunar calculation tool was used for this answer.</p>}
       </article> : null}
-      <footer className={styles.footer}><span aria-hidden="true">◌</span><p>Exploration, not mission planning. Positions use an analytical approximation. Terrain obstruction and yearly statistics are not yet available.</p></footer>
+      <footer className={styles.footer}><span aria-hidden="true">◌</span><p>Exploration, not mission planning. Positions use an analytical approximation. Terrain and yearly statistics come from a coarse whole-Moon map, not site-scale surveys.</p></footer>
     </section>
   );
 }

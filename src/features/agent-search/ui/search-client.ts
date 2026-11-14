@@ -15,7 +15,8 @@ export async function searchLunarData(message: string, signal: AbortSignal): Pro
       404: "The lunar assistant is not connected yet. Please try again after setup.",
       413: "This question is too long. Please shorten it.",
       422: "This question needs too many steps. Try one location or one date.",
-      429: "DeepSeek is at its request limit. Please try again later.",
+      // 429 has two sources (the site's per-IP limit and DeepSeek's own); the client only sees the status code.
+      429: "Too many requests. Please wait a minute and try again.",
       502: "The assistant could not read the lunar data. Please try again.",
       503: "The assistant is not available yet. Please try again later.",
       504: "The search took too long. Try a more specific question.",
