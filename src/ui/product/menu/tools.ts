@@ -27,7 +27,7 @@ export interface ToolInfo {
 
 export const TOOLS: ToolInfo[] = [
   { id: "tutorial", category: "top", label: "Tutorial", hint: "How to explore the Moon", icon: "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Zm0 13v.01M12 13a2.5 2.5 0 1 0-2.5-2.5" },
-  { id: "ai", category: "top", label: "AI Tools", hint: "Ask in plain language (coming soon)", icon: "M12 3l1.8 4.7L18.5 9.5l-4.700 1.800L12 16l-1.800-4.700L5.500 9.500l4.700-1.800L12 3Zm6.500 11 .900 2.100 2.100.900-2.100.900-.900 2.100-.900-2.100-2.100-.900 2.100-.900.900-2.100Z" },
+  { id: "ai", category: "top", label: "AI Tools", hint: "Ask in plain language", icon: "M12 3l1.8 4.7L18.5 9.5l-4.700 1.800L12 16l-1.800-4.700L5.500 9.500l4.700-1.800L12 3Zm6.500 11 .900 2.100 2.100.900-2.100.900-.900 2.100-.900-2.100-2.100-.900 2.100-.900.900-2.100Z" },
   { id: "search", category: "explore", label: "Search Location", hint: "Find lunar coordinates or named regions", icon: "M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14Zm9 16-4.3-4.3" },
   { id: "site", category: "explore", label: "Select Landing Site", hint: "Drop a marker and save candidate site", icon: "M12 21s-6-6.2-6-11a6 6 0 0 1 12 0c0 4.800-6 11-6 11Zm0-9a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z", clickMode: "drop-site" },
   { id: "measure", category: "explore", label: "Measure Distance", hint: "Calculate distance between lunar locations", icon: "M3 17 17 3l4 4L7 21l-4-4Zm5-5 2 2m1-5 2 2m1-5 2 2", clickMode: "measure" },
