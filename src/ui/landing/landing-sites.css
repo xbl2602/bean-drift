@@ -1,0 +1,124 @@
+/* "Three sites. Three lessons." section. */
+
+.lq-sites { scroll-margin-top: 4.25rem; }
+.lq-sites-grid {
+  margin-top: 3rem;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.25rem;
+  align-items: stretch;
+}
+.lq-site {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--lq-line);
+  border-radius: 1rem;
+  background: linear-gradient(160deg, #111b27, #090e17 70%);
+  transition: border-color 0.25s ease, transform 0.25s ease;
+}
+.lq-site:hover { border-color: #d9fa8870; transform: translateY(-4px); }
+
+/* Flat map of the whole Moon with a pulsing marker on the site. */
+.lq-site-map {
+  position: relative;
+  aspect-ratio: 2 / 1;
+  background: #0a0d14 url("/landing/moon-color-4k.jpg") center / 100% 100%;
+  border-bottom: 1px solid var(--lq-line);
+}
+.lq-site-map::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  /* Darken the far side (outer quarters) so the near side reads as "the face we see". */
+  background: linear-gradient(90deg, #04060bb3 0 25%, transparent 25% 75%, #04060bb3 75%);
+  pointer-events: none;
+}
+.lq-site-map-label {
+  position: absolute;
+  z-index: 1;
+  bottom: 0.4rem;
+  transform: translateX(-50%);
+  font: 0.56rem var(--lq-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #e6edf7;
+  text-shadow: 0 1px 4px #000;
+}
+.lq-site-map-label:nth-of-type(2) { left: 12.5%; }
+.lq-site-map-label:nth-of-type(3) { left: 50%; }
+.lq-site-map-label:nth-of-type(4) { left: 87.5%; }
+.lq-site-marker {
+  position: absolute;
+  z-index: 2;
+  width: 0.7rem;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--lq-accent);
+  box-shadow: 0 0 0 2px #04060b;
+}
+.lq-site-marker::after {
+  content: "";
+  position: absolute;
+  inset: -0.5rem;
+  border: 1.5px solid var(--lq-accent);
+  border-radius: 50%;
+  animation: lq-site-ping 2.4s ease-out infinite;
+}
+@keyframes lq-site-ping {
+  from { transform: scale(0.4); opacity: 1; }
+  to { transform: scale(1.5); opacity: 0; }
+}
+
+.lq-site-body { display: flex; flex-direction: column; flex: 1; padding: clamp(1rem, 2vw, 1.5rem); }
+.lq-site-index { font: 0.66rem var(--lq-mono); letter-spacing: 0.16em; color: var(--lq-accent); }
+.lq-site-title {
+  margin-top: 0.5rem;
+  font: 700 clamp(1.7rem, 2.6vw, 2.4rem)/1 var(--lq-display);
+  letter-spacing: -0.03em;
+}
+.lq-site-place { margin-top: 0.25rem; color: var(--lq-muted); font-size: 0.95rem; }
+.lq-site-lesson {
+  margin-top: 0.9rem;
+  padding-left: 0.75rem;
+  border-left: 2px solid var(--lq-accent);
+  font-size: 0.98rem;
+  line-height: 1.45;
+}
+.lq-site-facts { margin-top: 1.1rem; display: grid; }
+.lq-site-facts > div {
+  display: grid;
+  grid-template-columns: 6.2rem minmax(0, 1fr);
+  gap: 0.75rem;
+  padding: 0.6rem 0;
+  border-top: 1px solid var(--lq-line);
+}
+.lq-site-facts dt {
+  font: 0.62rem/1.6 var(--lq-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--lq-muted);
+}
+.lq-site-facts dd { margin: 0; font-size: 0.86rem; line-height: 1.5; color: #d5dce8; }
+.lq-site-facts .lq-site-mono { font-family: var(--lq-mono); color: var(--lq-accent); }
+.lq-site-live {
+  margin-top: auto;
+  padding: 0.8rem;
+  border-radius: 0.6rem;
+  background: #060a10;
+  font: 0.74rem/1.7 var(--lq-mono);
+  color: var(--lq-ink);
+}
+.lq-site-facts + .lq-site-live { margin-top: auto; }
+.lq-site-live-title { letter-spacing: 0.14em; text-transform: uppercase; font-size: 0.62rem; color: var(--lq-sun); }
+.lq-sites-note { margin-top: 1.25rem; font-size: 0.78rem; color: var(--lq-muted); }
+
+@media (max-width: 1000px) {
+  .lq-sites-grid { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lq-site { transition: none; }
+  .lq-site-marker::after { animation: none; opacity: 0.6; }
+}
