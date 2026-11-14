@@ -252,6 +252,13 @@ test('tool-choice and coarse-screening guidance is passed to the model', async (
     assert.match(prompt, /at most 6 points per call/);
     assert.doesNotMatch(prompt, /find an optimal site without suitable data/);
     assert.match(tools.find(tool => tool.name === 'compare_points').description, /at most 6 points per call/);
+    const agentSchema = tools.find(tool => tool.name === 'compare_points').inputSchema;
+    const sharedSchema = TOOLS.find(tool => tool.name === 'compare_points').inputSchema;
+    assert.equal(z.toJSONSchema(agentSchema).properties.points.maxItems, 6);
+    assert.equal(z.toJSONSchema(sharedSchema).properties.points.maxItems, 10);
+    const points = Array.from({ length: 10 }, () => ({ latDeg: -85, lonDeg: 0 }));
+    assert.equal(sharedSchema.safeParse({ points }).success, true);
+    assert.equal(agentSchema.safeParse({ points }).success, false);
     return answer;
   } });
 });
@@ -260,7 +267,7 @@ test('find_sites, timeline and compare_dates run through the agent on real data 
   let round = 0, site;
   const result = await runAgent({ message: 'Find a flat place near the south pole and show its next month' }, { tools: TOOLS, signal: signal(),
     complete: async ({ messages }) => {
-      if (round++ === 0) return call('find_sites', { maxSlopeDeg: 10, maxLatDeg: -80, limit: 3 });
+      if (round++ === 0) return call('find_sites', { maxSlopeDeg: 10, latMaxDeg: -80, limit: 3 });
       if (round === 2) {
         site = JSON.parse(messages.at(-1).content).sites[0];
         return { content: '', toolCalls: [
@@ -273,6 +280,8 @@ test('find_sites, timeline and compare_dates run through the agent on real data 
   });
   assert.deepEqual(result.sources.map(source => source.tool), ['find_sites', 'get_point_timeline', 'compare_dates']);
   assert.equal(result.sources[0].result.sites.length, 3);
+  assert.equal(result.sources[0].input.latMaxDeg, -80);
+  assert.ok(result.sources[0].result.sites.every(site => site.latDeg <= -80));
   assert.deepEqual(result.sources[1].result.position, { latDeg: site.latDeg, lonDeg: site.lonDeg });
   assert.equal(result.sources[2].result.timesUtc.length, 2);
   assert.equal(result.sources[0].result.provenance.status, 'ok');
@@ -289,7 +298,7 @@ test('compare_points above the assistant limit is refused without running; the l
     return answer;
   } });
   assert.equal(executions, 0);
-  assert.equal(refusal.error, 'too_many_points');
+  assert.equal(refusal.error, 'invalid_arguments');
   assert.deepEqual(refused.sources, []);
 
   round = 0;

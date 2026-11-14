@@ -19,13 +19,13 @@ const replySchema = z.object({
 
 function withAgentLimits(tool: ReadTool): ReadTool {
   if (tool.name !== "compare_points") return tool;
-  return { ...tool, description: `${tool.description} In this assistant pass at most ${AGENT_COMPARE_POINTS_LIMIT} points per call.` };
-}
-
-function exceedsAgentLimits(name: string, args: unknown): boolean {
-  if (name !== "compare_points") return false;
-  const points = (args as { points?: unknown }).points;
-  return Array.isArray(points) && points.length > AGENT_COMPARE_POINTS_LIMIT;
+  // Clone only the agent schema, so the model sees the same limit we validate.
+  // Keep the shared REST/MCP schema and all its other fields unchanged.
+  const schema = tool.inputSchema;
+  const inputSchema = schema instanceof z.ZodObject && schema.shape.points instanceof z.ZodArray
+    ? schema.extend({ points: schema.shape.points.max(AGENT_COMPARE_POINTS_LIMIT) })
+    : schema;
+  return { ...tool, inputSchema, description: `${tool.description} In this assistant pass at most ${AGENT_COMPARE_POINTS_LIMIT} points per call.` };
 }
 
 export async function runAgent(
@@ -84,10 +84,6 @@ export async function runAgent(
       const args = tool.inputSchema.safeParse(call.arguments);
       if (!args.success) {
         messages.push({ role: "tool", callId: call.id, content: JSON.stringify({ error: "invalid_arguments", message: "Check coordinates, UTC date and point count against the tool schema." }) });
-        continue;
-      }
-      if (exceedsAgentLimits(call.name, args.data)) {
-        messages.push({ role: "tool", callId: call.id, content: JSON.stringify({ error: "too_many_points", message: `Compare at most ${AGENT_COMPARE_POINTS_LIMIT} points per call; split the request.` }) });
         continue;
       }
       let result: unknown;
