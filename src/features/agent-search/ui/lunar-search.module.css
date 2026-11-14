@@ -45,3 +45,8 @@
 .footer p { font-size: 11px; margin: 0; }
 .footer > span { color: #92b9ba; }
 @media (max-width: 450px) { .panel { border-radius: 16px; padding: 20px; } .header { gap: 12px; } .actions { gap: 8px; } .submit { padding: 11px; } .title { margin-top: 24px; } }
+.panel.embedded { max-width: none; padding: 0; background: none; border: 0; border-radius: 0; box-shadow: none; font-size: 13px; line-height: 1.5; }
+.embedded .subtitle { margin: 0 0 14px; max-width: none; font-size: 13px; }
+.embedded .form { padding: 12px; border-radius: 12px; }
+.embedded .input { min-height: 72px; }
+.embedded .footer { margin-top: 14px; padding-top: 12px; }

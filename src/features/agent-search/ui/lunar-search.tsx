@@ -19,10 +19,14 @@ const TOOL_LABELS: Record<string, string> = {
   find_sites: "Site finder",
 };
 
-/** Self-contained product-page widget. Calls only the site's /api/agent route. */
-export function LunarSearch() {
+/**
+ * Self-contained product-page widget. Calls only the site's /api/agent route.
+ * `embedded` drops the card chrome, eyebrow and big title so it fits inside a panel that already has a title.
+ */
+export function LunarSearch({ embedded = false }: { embedded?: boolean } = {}) {
   const id = useId();
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const answerRef = useRef<HTMLElement>(null);
   const active = useRef<AbortController | null>(null);
   const [question, setQuestion] = useState("");
   const [submitted, setSubmitted] = useState("");
@@ -32,6 +36,8 @@ export function LunarSearch() {
   const [result, setResult] = useState<SearchResult | null>(null);
 
   useEffect(() => () => { active.current?.abort(); active.current = null; }, []);
+  // In a side panel the answer lands below the examples; bring it into view so it does not look like nothing happened.
+  useEffect(() => { if (embedded && result) answerRef.current?.scrollIntoView({ block: "start" }); }, [embedded, result]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -63,12 +69,15 @@ export function LunarSearch() {
   function choose(question: string) { setQuestion(question); inputRef.current?.focus(); }
 
   return (
-    <section className={styles.panel} aria-labelledby={`${id}-title`}>
-      <header className={styles.header}>
-        <div className={styles.eyebrow}><span className={styles.orbit} aria-hidden="true" /> BEAN DRIFT / LUNAR ASSISTANT</div>
-        <span className={styles.badge}>DEEPSEEK FLASH</span>
-      </header>
-      <h2 id={`${id}-title`} className={styles.title}>A question. A clearer view.</h2>
+    <section className={embedded ? `${styles.panel} ${styles.embedded}` : styles.panel}
+      aria-labelledby={embedded ? undefined : `${id}-title`} aria-label={embedded ? "Lunar assistant" : undefined}>
+      {embedded ? null : <>
+        <header className={styles.header}>
+          <div className={styles.eyebrow}><span className={styles.orbit} aria-hidden="true" /> BEAN DRIFT / LUNAR ASSISTANT</div>
+          <span className={styles.badge}>DEEPSEEK FLASH</span>
+        </header>
+        <h2 id={`${id}-title`} className={styles.title}>A question. A clearer view.</h2>
+      </>}
       <p className={styles.subtitle}>Explore lunar locations, sunlight and Earth visibility with your own words.</p>
       <form onSubmit={submit} className={styles.form}>
         <label htmlFor={`${id}-question`} className={styles.label}>Ask about the Moon</label>
@@ -93,7 +102,7 @@ export function LunarSearch() {
       </div>
       <div role="status" aria-live="polite" className={styles.status}>{pending ? "Checking lunar tools. This may take a moment…" : notice}</div>
       {error ? <div role="alert" className={styles.error}>{error}<button type="button" onClick={() => inputRef.current?.focus()}>Edit question</button></div> : null}
-      {result ? <article className={styles.answer} aria-label="Search answer">
+      {result ? <article ref={answerRef} className={styles.answer} aria-label="Search answer">
         <div className={styles.answerHeader}><h3>Search result</h3><span>{result.model}</span></div>
         <p className={styles.question}>{submitted}</p>
         <div className={styles.answerText}>{result.answer}</div>

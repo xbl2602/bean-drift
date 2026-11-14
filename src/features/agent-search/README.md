@@ -96,7 +96,7 @@ npm run build
 
 产品页负责人可在页面中 import `{ LunarSearch }` from `@/features/agent-search/ui/lunar-search` 并渲染 `<LunarSearch />`。
 组件只向 `/api/agent` 发送 `{message}`；支持例题填入、Ctrl/Cmd+Enter、取消、来源展开和安全错误提示。
-截至本次检查，产品页仍是占位页，未引用组件；这与 API 已可用是两个独立状态。
+2026-11-15 起产品页的 AI Tools 面板已经挂上它：`src/ui/product/panels/ai-panel.tsx` 渲染 `<LunarSearch embedded />`。`embedded` 去掉卡片外框、眉标和大标题，适合放进已有标题的侧边面板；回答出来后会自动滚到回答开头。不加 `embedded` 时仍是原来的独立大卡片。
 
 2026-11-14 实测线上 `/api/agent` 返回 200、model=deepseek-flash，sources 中确有 list_presets；这次真实请求会产生正常 API 用量。
 本地浏览器以明确标注的模拟模型响应检查例题、答案显示、429 和取消。没有把模拟接口加入产品代码。
