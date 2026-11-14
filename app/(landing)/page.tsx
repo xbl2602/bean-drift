@@ -7,6 +7,7 @@ import { LandingSites } from "@/ui/landing/landing-sites";
 import { MissionTools } from "@/ui/landing/mission-tools";
 import { PovGallery } from "@/ui/landing/pov-gallery";
 import { ScrollStory } from "@/ui/landing/scroll-story";
+import { ProductPreload } from "@/ui/product/preload/product-preload";
 import "@/ui/landing/landing.css";
 
 export const metadata: Metadata = {
@@ -18,6 +19,8 @@ export const metadata: Metadata = {
 export default function LandingPage() {
   return (
     <div className="lq">
+      {/* 首页加载完、空闲时，悄悄把产品页进地图要用的贴图下好（组件在产品页目录，见 docs/decisions 里的记录） */}
+      <ProductPreload />
       <HeroSection />
       <main>
         <ScrollStory />
