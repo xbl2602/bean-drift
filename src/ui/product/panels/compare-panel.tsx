@@ -1,94 +1,65 @@
 "use client";
-// Compare Locations：候选点并排对比。每行一个指标，每列一个候选点；有"好坏方向"的指标标出最优值。
-import type { PointAnalysis } from "../analysis/point-analysis";
+import { useEffect, useRef, useState } from "react";
+import type { ComparisonTimeline as PointTimeline } from "../sites/annual-comparison";
+import type { SavedSite } from "../overlay/annotations";
 import type { SiteAnalyses } from "../analysis/use-point-analysis";
 import { formatLatLon } from "../moon-frames";
-import type { SavedSite } from "../overlay/annotations";
-import { METRIC_ROWS, SOURCE_NOTES, formatMetric, type MetricRow } from "../sites/metric-rows";
-import { Caveat, PanelButton, PanelShell } from "./panel-shell";
-
-interface ComparePanelProps {
-  sites: SavedSite[];
-  analyses: SiteAnalyses;
-  timeMs: number;
-  onAddSites: () => void;
-  onExport: () => void;
-  onClose: () => void;
+import { annualComparison } from "../sites/annual-comparison";
+import { fetchPointConditions } from "../point-api/fetch-point-conditions";
+import { PanelButton } from "./panel-shell";
+type Order = "sun" | "earth" | "night" | "outage" | "neither";
+const ORDERS: {key: Order; label: string}[] = [{key:"sun",label:"Sunlight"},{key:"earth",label:"Earth contact"},{key:"night",label:"Longest night"},{key:"outage",label:"Longest without contact"},{key:"neither",label:"No sunlight or Earth contact"}];
+const neitherFraction = (data: PointTimeline) => Math.max(0, Math.min(1, 1 - data.sun.visibleFraction - data.earth.visibleFraction + data.both.visibleFraction));
+const value = (data: PointTimeline, order: Order) => order === "sun" ? data.sun.visibleFraction : order === "earth" ? data.earth.visibleFraction : order === "night" ? -data.sun.longestOutageH : order === "neither" ? -neitherFraction(data) : -data.earth.longestOutageH;
+const hours = (n: number) => n.toFixed(1);
+function WindowBar({data, body}: {data: PointTimeline; body: "sun" | "earth"}) {
+ const start = Date.parse(data.startUtc), duration = Date.parse(data.endUtc)-start;
+ return <div className="mt-2"><p className={`mb-2 text-xs font-medium ${body === "sun" ? "text-[#dfc89d]" : "text-[#a8c8d9]"}`}>{body === "sun" ? "Sunlight" : "Contact with Earth"} over these dates</p><div role="img" aria-label={`${body === "sun" ? "Sunlight" : "Earth visibility"} windows: ${(data[body].visibleFraction*100).toFixed(1)}% of the period. Solid colour is visible; striped areas are unavailable.`} className="relative h-6 overflow-hidden border border-white/10 bg-[repeating-linear-gradient(45deg,#46505d_0px,#46505d_2px,#141c26_2px,#141c26_6px)]">{data[body].windows.map((window,i)=><span key={i} title={`${window.startUtc} – ${window.endUtc}`} className={`absolute inset-y-0 ${body === "sun" ? "bg-[linear-gradient(90deg,#ae956c,#e3c993)]" : "bg-[linear-gradient(90deg,#779aaf,#accddd)]"}`} style={{left:`${(Date.parse(window.startUtc)-start)/duration*100}%`,width:`${(Date.parse(window.endUtc)-Date.parse(window.startUtc))/duration*100}%`}} />)}</div></div>;
 }
+export function ComparePanel({sites,timeMs,onAddSites,onExport,onClose,onFocusSite,height,onHeightChange}: {sites:SavedSite[];analyses:SiteAnalyses;timeMs:number;onAddSites:()=>void;onExport:()=>void;onClose:()=>void;onFocusSite:(site:SavedSite)=>void;height:number;onHeightChange:(height:number)=>void}) {
+ const dragging = useRef(false);
+ const resizeTo = (next: number) => onHeightChange(Math.max(24, Math.min(72, next)));
+ const [order,setOrder]=useState<Order>("sun");
+ const [durationH,setDurationH]=useState(720);
+ const [settingsOpen,setSettingsOpen]=useState(true);
+ const [pendingDuration,setPendingDuration]=useState(720);
+ const [pendingOrder,setPendingOrder]=useState<Order>("sun");
+ const [results,setResults]=useState<{key:string;data:Record<string,PointTimeline|"error">}>({key:"",data:{}});
+ const startMs=Math.floor(timeMs/3600000)*3600000;
+ const siteKey=JSON.stringify(sites.map(s=>[s.id,s.latDeg,s.lonDeg]));
+ const key=`${siteKey}@${startMs}:${durationH}`;
+ useEffect(()=>{const controller=new AbortController(); const timer=setTimeout(()=>{setResults({key,data:{}}); const queue=[...sites]; async function worker(){while(queue.length&&!controller.signal.aborted){const site=queue.shift()!;try{let data: PointTimeline; if(durationH === 0) { data = annualComparison(await fetchPointConditions(site, startMs, controller.signal)); } else { const params=new URLSearchParams({latDeg:String(site.latDeg),lonDeg:String(site.lonDeg),time:new Date(startMs).toISOString(),durationH:String(durationH),stepMin:"360"});const response=await fetch(`/api/timeline?${params}`,{signal:controller.signal});if(!response.ok)throw new Error("Timeline unavailable");data=await response.json();if(!data.sun||!data.earth||data.durationH!==durationH)throw new Error("Invalid timeline"); } setResults(current=>current.key===key?{key,data:{...current.data,[site.id]:data}}:current);}catch{if(!controller.signal.aborted)setResults(current=>current.key===key?{key,data:{...current.data,[site.id]:"error"}}:current);}}} void Promise.all([worker(),worker()]);},450);return()=>{clearTimeout(timer);controller.abort();};},[key]);
+ const data=results.key===key?results.data:{};
+ const ranked=[...sites].sort((a,b)=>{const x=data[a.id],y=data[b.id];return x&&x!=="error"?y&&y!=="error"?value(y,order)-value(x,order):-1:y&&y!=="error"?1:0;});
+ const ready=ranked.filter(s=>data[s.id]&&data[s.id]!=="error");
+ const best=ready.length?value(data[ready[0].id] as PointTimeline,order):null;
+ const bestSite = ready.length === sites.length ? ready[0] : undefined;
+ useEffect(() => { if (bestSite) onFocusSite(bestSite); }, [bestSite?.id, bestSite?.latDeg, bestSite?.lonDeg, order, onFocusSite]);
+ return <aside aria-label="Landing site comparison" className="absolute bottom-0 left-0 right-0 h-[var(--compare-height)] z-30 flex flex-col overflow-hidden rounded-2xl border border-slate-400/35 bg-[linear-gradient(180deg,rgba(11,17,24,0.65)_0%,rgba(17,28,39,0.88)_48%,rgba(7,12,19,0.97)_100%)] text-white shadow-2xl lunar-glass backdrop-blur-xl ">
+ <div role="separator" aria-label="Resize comparison window" aria-orientation="horizontal" aria-valuemin={24} aria-valuemax={72} aria-valuenow={Math.round(height)} aria-valuetext={`${Math.round(height)}% of screen height`} tabIndex={0} title="Drag up or down to resize · arrow keys to adjust · double-click to reset"
+ onPointerDown={event => { if (event.button !== 0) return; dragging.current = true; event.currentTarget.setPointerCapture(event.pointerId); event.preventDefault(); }}
+ onPointerMove={event => { if (dragging.current) resizeTo((window.innerHeight - event.clientY) / window.innerHeight * 100); }}
+ onPointerUp={event => { dragging.current = false; if(event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId); }}
+ onPointerCancel={() => { dragging.current = false; }} onLostPointerCapture={() => { dragging.current = false; }}
+ onDoubleClick={() => resizeTo(34)} onKeyDown={event => { const next = event.key === "ArrowUp" ? height + 2 : event.key === "ArrowDown" ? height - 2 : event.key === "Home" ? 24 : event.key === "End" ? 72 : null; if(next !== null) { event.preventDefault(); resizeTo(next); } }}
+ className="group flex h-5 shrink-0 cursor-ns-resize touch-none select-none items-center justify-center rounded-t-2xl hover:bg-white/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-lime-200"><span className="h-1 w-12 rounded-full bg-slate-400/60 transition-colors group-hover:bg-slate-200" /></div>
+ <div className="min-h-0 flex-1 overflow-y-auto px-4 py-2">
+ <header className="flex items-center justify-between border-b border-slate-400/25 px-4 py-2"><div><h2 className="text-sm font-semibold uppercase tracking-widest text-slate-100">Compare landing sites</h2><p className="mt-1 text-xs text-slate-400">Sunlight for power · Earth visibility for communication</p></div><button onClick={onClose} aria-label="Close Compare Locations" className="rounded-lg p-2 text-xl text-slate-400 hover:bg-white/10">×</button></header>
 
-const SOURCE_BADGE: Record<MetricRow["source"], string> = { measured: "NASA data", ephemeris: "ephemeris", model: "model" };
-
-function bestSiteIds(row: MetricRow, ready: Array<{ site: SavedSite; analysis: PointAnalysis }>): Set<string> {
-  if (!row.better || ready.length < 2) return new Set();
-  const values = ready.map(({ analysis }) => Number(formatMetric(row, analysis)));
-  const best = row.better === "higher" ? Math.max(...values) : Math.min(...values);
-  // 全都一样就不标
-  if (values.every((value) => value === best)) return new Set();
-  return new Set(ready.filter((_, i) => values[i] === best).map(({ site }) => site.id));
-}
-
-export function ComparePanel({ sites, analyses, timeMs, onAddSites, onExport, onClose }: ComparePanelProps) {
-  const ready = sites.flatMap((site) => {
-    const analysis = analyses[site.id];
-    return analysis && analysis !== "error" ? [{ site, analysis }] : [];
-  });
-
-  return (
-    <PanelShell title="Compare Locations" onClose={onClose} wide>
-      {sites.length < 2 ? (
-        <div className="py-4 text-center">
-          <p className="text-sm text-white/75">Save at least two candidate sites to compare them. You have {sites.length}.</p>
-          <div className="mt-3"><PanelButton primary onClick={onAddSites}>Select landing sites</PanelButton></div>
-        </div>
-      ) : (
-        <>
-          <p className="text-xs text-white/55">Conditions at {new Date(timeMs).toISOString().slice(0, 16).replace("T", " ")} UTC. <span className="text-emerald-300">Green</span> marks the best value in a row.</p>
-          <div className="mt-3 overflow-x-auto">
-            <table className="w-full min-w-max border-separate border-spacing-0 text-sm">
-              <thead>
-                <tr>
-                  <th className="sticky left-0 bg-[#0b0f17] py-2 pr-4 text-left text-xs font-normal text-white/45">Metric</th>
-                  {sites.map((site) => (
-                    <th key={site.id} className="px-3 py-2 text-right align-bottom">
-                      <span className="block max-w-36 truncate font-semibold text-lime-100">{site.name}</span>
-                      <span className="block font-mono text-[10px] font-normal text-white/45">{formatLatLon(site)}</span>
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {METRIC_ROWS.map((row) => {
-                  const best = bestSiteIds(row, ready);
-                  return (
-                    <tr key={row.key} className="odd:bg-white/[0.03]">
-                      <th className="sticky left-0 border-t border-white/5 bg-[#0b0f17] py-1.5 pr-4 text-left font-normal">
-                        {row.label} <span className="text-white/40">({row.unit})</span>
-                        <span className="ml-2 rounded-full border border-white/10 px-1.5 text-[10px] text-white/45">{SOURCE_BADGE[row.source]}</span>
-                      </th>
-                      {sites.map((site) => {
-                        const analysis = analyses[site.id];
-                        const text = analysis === "error" ? "n/a" : analysis ? formatMetric(row, analysis) : "…";
-                        return (
-                          <td key={site.id} className={`border-t border-white/5 px-3 py-1.5 text-right font-mono ${best.has(site.id) ? "font-semibold text-emerald-300" : "text-white/85"}`}>
-                            {text}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-          <div className="mt-3 flex gap-2">
-            <PanelButton primary onClick={onExport}>Export results</PanelButton>
-            <PanelButton onClick={onAddSites}>Add or edit sites</PanelButton>
-          </div>
-          <Caveat>
-            {SOURCE_NOTES.measured} {SOURCE_NOTES.ephemeris} {SOURCE_NOTES.model}
-          </Caveat>
-        </>
-      )}
-    </PanelShell>
-  );
+ <div className="my-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-white/15 bg-white/5 px-3 py-2"><p className="text-xs text-slate-200">{durationH===0?"Yearly":durationH===24?"24 hours":`${durationH/24} days`} · {ORDERS.find(item=>item.key===order)!.label}</p><button type="button" aria-expanded={settingsOpen} onClick={()=>{if(!settingsOpen){setPendingDuration(durationH);setPendingOrder(order);}setSettingsOpen(!settingsOpen);}} className="min-h-10 rounded-lg border border-white/20 px-3 text-xs text-slate-100 hover:bg-white/10">{settingsOpen?"Hide settings":"Change period & order"}</button></div>
+ {settingsOpen && <section aria-label="Comparison settings" className="my-3 rounded-2xl border border-white/15 bg-white/[0.025] p-3">
+ <div className="mb-3 flex items-center justify-between"><h3 className="text-sm font-semibold">Comparison settings</h3><button type="button" aria-label="Close comparison settings" onClick={()=>setSettingsOpen(false)} className="rounded-lg px-3 py-2 text-slate-300 hover:bg-white/10">×</button></div>
+ <label htmlFor="comparison-period" className="mb-2 block text-xs font-semibold text-slate-100">Compare period</label>
+ <div className="flex flex-wrap items-center gap-2">
+ <select id="comparison-period" aria-label="Compare period" value={pendingDuration} onChange={event=>setPendingDuration(Number(event.target.value))} className="min-h-11 rounded-xl border border-white/25 bg-[#243140] px-3 text-sm text-white focus-visible:outline focus-visible:outline-lime-200">
+ {Array.from({length:30},(_,i)=>(i+1)*24).map(hours=><option key={hours} value={hours}>{hours===24?"24 hours":`${hours/24} days`}</option>)}<option value={0}>Yearly · available year</option></select>
+ <div role="group" aria-label="Quick comparison periods" className="flex flex-wrap gap-1.5">{[{hours:24,label:"24 hours"},{hours:168,label:"7 days"},{hours:336,label:"14 days"},{hours:720,label:"30 days"},{hours:0,label:"Yearly"}].map(period=><button key={period.hours} aria-pressed={pendingDuration===period.hours} onClick={()=>setPendingDuration(period.hours)} className={`min-h-11 rounded-xl border px-3 text-xs font-medium ${pendingDuration===period.hours?"border-lime-200/40 bg-lime-200/15 text-lime-100":"border-white/10 text-slate-300 hover:bg-white/10"}`}>{period.label}</button>)}</div></div>
+ <p className="mb-2 mt-2 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Order by</p><div role="group" aria-label="Order sites by" className="flex flex-wrap gap-1 rounded-2xl border border-white/15 p-1">{ORDERS.map(item=><button key={item.key} aria-pressed={pendingOrder===item.key} onClick={()=>setPendingOrder(item.key)} className={`min-h-10 rounded-xl px-3 text-xs font-semibold ${pendingOrder===item.key?"bg-lime-200/15 text-lime-100":"text-slate-400 hover:bg-white/5"}`}>{item.label}</button>)}</div>
+ <div className="my-3"><PanelButton onClick={onAddSites}>Add or edit sites</PanelButton></div>
+ <p className="text-[11px] text-slate-400">{durationH===0 ? (ready.length ? `${(data[ready[0].id] as PointTimeline).startUtc.slice(0,10)} → ${(data[ready[0].id] as PointTimeline).endUtc.slice(0,10)} UTC · Precomputed annual data; independent of map date` : "Loading available annual coverage…") : `${new Date(startMs).toISOString().slice(0,16).replace("T"," ")} → ${new Date(startMs+durationH*3600000).toISOString().slice(0,16).replace("T"," ")} UTC`}</p>
+ <div className="mt-3 flex items-center justify-between gap-3 border-t border-white/10 pt-3"><p className="text-xs text-slate-400">Changes update after you press Apply.</p><button type="button" onClick={()=>{setDurationH(pendingDuration);setOrder(pendingOrder);setSettingsOpen(false);}} className="min-h-11 rounded-xl border border-lime-200/35 bg-lime-200/15 px-6 text-sm font-semibold text-lime-100 hover:bg-lime-200/25">Apply</button></div></section>}<p role="status" className="sr-only">{sites.length<2?"Save at least two sites to compare.":ready.length<sites.length?`${Object.keys(data).length < sites.length ? "Calculating terrain-adjusted windows…" : "Some timelines are unavailable."} ${ready.length}/${sites.length} ready. Available results shown first.`:`Best ${order==="night"||order==="outage"||order==="neither"?"(shortest outage)":"(most time)"} first · ${ORDERS.find(item=>item.key===order)!.label}`}</p>
+ <div role="region" aria-label={sites.length > 3 ? "Ranked landing site cards; scroll sideways for more sites" : "Ranked landing site cards"} tabIndex={0} className={sites.length > 3 ? "flex snap-x gap-3 overflow-x-auto pb-3 focus-visible:outline-lime-200" : "grid grid-cols-1 gap-3 overflow-x-hidden pb-3 focus-visible:outline-lime-200 lg:grid-cols-[repeat(var(--site-columns),minmax(0,1fr))]"} style={{ "--site-columns": Math.max(1, sites.length) } as React.CSSProperties}>{ranked.map(site=>{const d=data[site.id];const usable=d&&d!=="error"?d:null;const rank=usable?1+ready.filter(s=>value(data[s.id] as PointTimeline,order)>value(usable,order)+1e-9).length:null;const isBest=usable&&best!==null&&Math.abs(value(usable,order)-best)<1e-9;return <article key={site.id} aria-label={site.name} className={`min-w-0 snap-start rounded-2xl border bg-[#10171f] p-3 ${sites.length > 3 ? "w-[min(320px,78vw)] shrink-0 lg:w-[calc((100%-1.5rem)/3)]" : ""} ${isBest?"border-lime-200/35":"border-white/15"}`}><header className="mb-1 flex h-24 items-start gap-3"><span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/20 font-bold ${isBest?"bg-lime-200/15 text-lime-100":"text-slate-300"}`}>{rank??"—"}</span><div><h3 className="line-clamp-2 min-h-6 break-words text-base font-semibold"><button type="button" onClick={() => onFocusSite(site)} className="text-left underline decoration-white/20 underline-offset-4 hover:text-lime-200" title="Show this site on the Moon">{site.name}</button></h3><p className="mt-1 font-mono text-[10px] text-slate-400">{formatLatLon(site)}</p><p className="mt-1 h-4 text-[10px] text-lime-200">{isBest?"Best for this ordering":""}</p></div></header>{!usable?<p className="py-12 text-sm text-slate-400">{d==="error"?"Could not load timeline. Change the period or reopen comparison to try again.":"Calculating sunlight and Earth contact…"}</p>:<><p className="h-8 text-xs text-slate-400">{order==="sun"?"Time in sunlight":order==="earth"?"Time in contact with Earth":order==="night"?"Longest night":order==="neither"?"No sunlight and no Earth contact":"Longest without contact"}</p><p className={`mt-1 text-2xl font-semibold tracking-tight tabular-nums ${isBest ? "text-lime-100" : "text-slate-100"}`}>{hours(order==="sun"?usable.sun.visibleFraction*usable.durationH:order==="earth"?usable.earth.visibleFraction*usable.durationH:order==="night"?usable.sun.longestOutageH:order==="neither"?neitherFraction(usable)*usable.durationH:usable.earth.longestOutageH)}<span className="ml-1 text-sm text-slate-400">h</span></p><dl className="my-5 grid grid-cols-2 gap-x-3 gap-y-4 border-y border-white/10 py-4">{[{label:"Sunlight",text:`${(usable.sun.visibleFraction*100).toFixed(1)}%`,colour:"text-slate-100"},{label:"Earth contact",text:`${(usable.earth.visibleFraction*100).toFixed(1)}%`,colour:"text-slate-100"},{label:"Neither available",text:`${hours(neitherFraction(usable)*usable.durationH)} h · ${(neitherFraction(usable)*100).toFixed(1)}%`,colour:"text-slate-100"},{label:"Longest night",text:`${hours(usable.sun.longestOutageH)} h`,colour:"text-slate-100"},{label:"Longest no contact",text:`${hours(usable.earth.longestOutageH)} h`,colour:"text-slate-100"}].map(item=><div key={item.label}><dt className="text-[11px] text-slate-400">{item.label}</dt><dd className={`mt-1 text-lg font-medium tracking-tight tabular-nums ${item.colour}`}>{item.text}</dd></div>)}</dl><WindowBar data={usable} body="sun"/><div className="mt-4"><WindowBar data={usable} body="earth"/></div><p className="mt-2 flex justify-between text-[9px] text-slate-500"><span>Day 0</span><span>Day {usable.durationH/24}</span></p><p className="mt-4 text-[10px] text-slate-400">Both available: {(usable.both.visibleFraction*100).toFixed(1)}% of this period</p></>}</article>;})}</div>
+ <p className="mt-1 text-[10px] text-slate-500">Solid bars: visible · striped bars: not visible. Equal results share rank.</p>
+ <details className="mt-3 text-[11px] leading-relaxed text-slate-400"><summary className="cursor-pointer">How to read this comparison</summary><p className="mt-2">Calculated from the shared timeline API using NASA LOLA terrain horizons. Earth contact means direct line of sight, without an extra minimum elevation requirement; it does not guarantee a working radio link. Outages are clipped to the selected dates. Terrain uses approximately 7.6 km cells; short-period windows shorter than 10 minutes may be missed. Annual data is sampled hourly, so its outage and window durations have hourly precision. Neither available counts only time when the Sun and Earth are both below their visibility thresholds at the same time (not simply the time when either is unavailable). It is calculated as 100% − sunlight − Earth contact + both available. Lower is better. No battery limit or uncertainty range is assumed.</p><p className="mt-2">For 24 hours–30 days, map time sets the start, rounded down to the hour. Yearly uses the API’s precomputed annual coverage, shown above; it is not a forecast for the map’s current year. Export below retains the existing saved-site snapshot data; it does not export these timeline windows.</p></details><div className="mt-3"><PanelButton onClick={onExport}>Export site snapshot data</PanelButton></div>
+ </div></aside>;
 }

@@ -160,13 +160,13 @@ export function FirstPersonView({ point, timeMs, onExit, onLoadingChange, onErro
       <button
         type="button"
         onClick={onExit}
-        className="absolute right-4 top-4 z-20 rounded-full border border-white/15 bg-black/60 px-5 py-2.5 text-sm font-medium text-white backdrop-blur-md transition hover:bg-white/15 sm:right-6 sm:top-6"
+        className="absolute right-4 top-4 z-20 rounded-full border border-white/15 bg-black/60 px-5 py-2.5 text-sm font-medium text-white lunar-glass backdrop-blur-md transition hover:bg-white/15 sm:right-6 sm:top-6"
       >
         ← Back to map
       </button>
 
-      <div className="pointer-events-none absolute bottom-24 left-4 z-10 sm:left-6">
-        <div className="pointer-events-auto max-h-[calc(100vh-11.5rem)] w-[min(21rem,calc(100vw-2rem))] overflow-y-auto rounded-xl border border-white/10 bg-black/55 p-4 text-sm backdrop-blur-md">
+      <div className="pointer-events-none absolute bottom-24 left-24 z-10">
+        <div className="pointer-events-auto max-h-[calc(100vh-11.5rem)] w-[min(21rem,calc(100vw-7rem))] overflow-y-auto rounded-xl border border-white/10 bg-black/55 p-4 text-sm lunar-glass backdrop-blur-md">
           <p className="text-xs uppercase tracking-[0.2em] text-lime-300/80">Standing at</p>
           <p className="mt-1 font-mono text-base text-white">{formatLatLon(point)}</p>
           <div className="mt-2 flex items-center gap-2 text-xs">

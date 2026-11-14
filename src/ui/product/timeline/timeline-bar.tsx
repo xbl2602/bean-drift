@@ -1,6 +1,7 @@
 "use client";
 // 底部时间轴（2D、3D、第一人称都显示）：拖动或播放，太阳位置随之改变，昼夜线和阴影跟着动。时间一律 UTC。
 import { useEffect, useRef, useState } from "react";
+import { DateTimePicker } from "./date-time-picker";
 import { bodyToLatLon, formatLatLon, sunDirectionBody } from "../moon-frames";
 
 const HOUR_MS = 3_600_000;
@@ -55,7 +56,7 @@ export function TimelineBar({ timeMs, onTimeChange }: TimelineBarProps) {
   const subSolar = bodyToLatLon(sunDirectionBody(timeMs));
 
   return (
-    <div className="absolute bottom-4 left-1/2 z-20 w-[min(46rem,calc(100vw-2rem))] -translate-x-1/2 rounded-2xl border border-white/10 bg-[#0b0f17]/85 px-3 py-2 text-white shadow-xl shadow-black/50 backdrop-blur-xl sm:bottom-5">
+    <div data-tour="timeline" className="absolute bottom-4 left-1/2 z-20 w-[min(46rem,calc(100vw-2rem))] -translate-x-1/2 rounded-2xl border border-white/10 bg-[#0b0f17]/85 px-3 py-2 text-white shadow-xl shadow-black/50 lunar-glass backdrop-blur-xl sm:bottom-5">
       <div className="flex items-center gap-2 sm:gap-3">
         <button
           type="button"
@@ -78,18 +79,7 @@ export function TimelineBar({ timeMs, onTimeChange }: TimelineBarProps) {
           aria-label="Move time up to 15 days either way; the Sun and shadows follow"
           className="min-w-0 flex-1 accent-lime-300"
         />
-        <input
-          type="datetime-local"
-          value={new Date(timeMs).toISOString().slice(0, 16)}
-          min="2000-01-01T00:00"
-          max="2099-12-31T23:59"
-          onChange={(e) => {
-            const ms = Date.parse(`${e.target.value}:00Z`);
-            if (Number.isFinite(ms)) jumpTo(ms);
-          }}
-          aria-label="Date and time, UTC"
-          className="hidden w-[11.5rem] shrink-0 rounded-lg border border-white/10 bg-white/5 px-2 py-1 font-mono text-xs text-white [color-scheme:dark] md:block"
-        />
+        <DateTimePicker timeMs={timeMs} onApply={jumpTo} onOpen={() => setPlaying(false)} />
         <button type="button" onClick={() => jumpTo(Date.now())} className="shrink-0 rounded-full px-2 py-1 text-xs text-lime-300 hover:bg-white/10">
           Now
         </button>

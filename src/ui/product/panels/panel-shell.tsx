@@ -13,12 +13,12 @@ interface PanelShellProps {
 
 export function PanelShell({ title, onClose, wide, side, children }: PanelShellProps) {
   const position = wide
-    ? "left-1/2 top-20 w-[min(60rem,calc(100vw-2rem))] -translate-x-1/2 sm:top-24"
+    ? "left-24 right-4 top-36 sm:right-6 sm:top-24"
     : side === "right"
-      ? "right-4 top-20 w-[min(22rem,calc(100vw-2rem))] sm:right-6 sm:top-24"
-      : "left-4 top-20 w-[min(21rem,calc(100vw-2rem))] sm:left-6 sm:top-24";
+      ? "left-24 right-4 top-36 sm:left-auto sm:right-6 sm:top-24 sm:w-[min(22rem,calc(100vw-7rem))]"
+      : "left-24 top-36 w-[min(21rem,calc(100vw-7rem))] sm:top-24";
   return (
-    <aside className={`absolute z-20 flex ${side === "right" ? "max-h-[min(50dvh,calc(100dvh-13.5rem))] sm:max-h-[calc(100dvh-13.5rem)]" : "max-h-[calc(100dvh-13.5rem)]"} flex-col rounded-2xl border border-white/10 bg-[#0b0f17]/90 text-white shadow-2xl shadow-black/60 backdrop-blur-xl ${position}`}>
+    <aside className={`absolute z-20 flex ${side === "right" ? "max-h-[min(50dvh,calc(100dvh-13.5rem))] sm:max-h-[calc(100dvh-13.5rem)]" : "max-h-[calc(100dvh-13.5rem)]"} flex-col rounded-2xl border border-white/10 bg-[#0b0f17]/90 text-white shadow-2xl shadow-black/60 lunar-glass backdrop-blur-xl ${position}`}>
       <header className="flex shrink-0 items-center justify-between px-4 pt-4">
         <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-lime-200/90">{title}</h2>
         <button type="button" onClick={onClose} aria-label={`Close ${title}`} className="rounded-full p-1 text-white/60 hover:bg-white/10 hover:text-white">
