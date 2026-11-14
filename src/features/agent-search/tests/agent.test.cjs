@@ -1,4 +1,4 @@
-const { test } = require('node:test');
+﻿const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -104,7 +104,7 @@ test('invalid coordinates/date/point count never execute a tool', async () => {
   const cases = [
     ['get_point_conditions', { latDeg: 91, lonDeg: 0 }],
     ['get_point_conditions', { latDeg: 0, lonDeg: 0, time: '2030-01-01' }],
-    ['compare_points', { points: Array.from({ length: 11 }, () => ({ latDeg: 0, lonDeg: 0 })) }],
+    ['compare_points', { points: Array.from({ length: 9 }, () => ({ latDeg: 0, lonDeg: 0 })) }],
   ];
   for (const [name, args] of cases) {
     let executions = 0, round = 0;
@@ -161,7 +161,7 @@ test('DeepSeek request uses Flash, tool schemas, disabled thinking and bounded t
     assert.equal(body.model, 'deepseek-flash');
     assert.deepEqual(body.thinking, { type: 'disabled' });
     assert.equal(body.max_tokens, 1200);
-    assert.equal(body.tools.length, 3);
+    assert.equal(body.tools.length, 6);
     return Response.json({ choices: [{ finish_reason: 'stop', message: { content: 'Hello' } }] });
   });
   const handler = createAgentHandler({ tools: TOOLS, getComplete: () => provider });
