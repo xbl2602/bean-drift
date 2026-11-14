@@ -9,7 +9,8 @@
 - 项目已关联本仓库 `xbl2602/bean-drift`：**推送到 `main` 自动部署到正式环境**，推送其他分支会生成预览地址。线上内容已确认是本仓库的构建（见文末部署记录）。
 - 如果以后推送后线上没有更新：先看 Vercel 后台 Project → Settings → Git 关联的仓库对不对，再看 GitHub 上 Vercel 应用是否有这个仓库的访问权限。
 - Node 版本固定为 24.x（`package.json` 的 `engines`）。
-- 密钥只放在 Vercel 后台（Project → Settings → Environment Variables），**不要**写进仓库。现在只有一个要配：`DEEPSEEK_API_KEY`（agent 窗口用，由 `xbl2602` 本人在后台添加；名字**不要**加 `NEXT_PUBLIC_` 前缀）。添加后要**重新部署**才生效（环境变量只对之后的新部署有效）。**配之前先看 `docs/TODO.md` 里"agent 频率限制"那一条。**
+- 密钥只放在 Vercel 后台（Project → Settings → Environment Variables），**不要**写进仓库。现在只有一个要配：`DEEPSEEK_API_KEY`（agent 窗口用，由 `xbl2602` 本人在后台添加；名字**不要**加 `NEXT_PUBLIC_` 前缀）。添加后要**重新部署**才生效（环境变量只对之后的新部署有效）。
+- `/api/agent` 的频率限制是 Vercel 后台的防火墙规则 `agent-rate-limit-20-per-min`（Project → Firewall → Custom Rules）：每个 IP 每分钟 20 次，超出返回 429。**它不在仓库里**；要改数字就在那里改，要重建见 `docs/decisions/2026-11-14_xbl2602_agent-rate-limit.md`。Docker 和本地没有这条限制（它们要用自己的密钥，才会真的调用 DeepSeek）。
 - 本地和 Docker：把 `DEEPSEEK_API_KEY=...` 写进你自己的 `.env.local`（已被 git 忽略；`docker compose` 会自动读它）。
 - 自检：打开 `<域名>/api/health` 应返回 `{"status":"ok","service":"bean-drift"}`。
 

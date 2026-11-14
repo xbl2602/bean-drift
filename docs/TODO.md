@@ -21,8 +21,8 @@
 - [ ] `xbl2602`：真正构建验证一次 Dockerfile（目前没有验证过）。
 - [ ] 每个人：完成 TEAM_HANDBOOK 第 2 节的"热身提交"。
 - [ ] `leeziqi0531-debug`：建立 CREDITS 登记习惯；起草 30 秒视频分镜。
-- [ ] **agent 频率限制（配 key 之前先定）**：`/api/agent` 已接线，但**没有"每个访问者的请求频率限制"**（AGENTS §4.5 要求有）。现在只有单次上限（4 次模型调用、25 秒、2000 字符）和 DeepSeek 官方并发限制，后者不是花费上限。选一个：① Vercel 后台的防火墙频率限制规则（不改代码，需确认免费版可用）；② 用 Supabase 做共享计数（要建表、改代码）；③ 接受风险，只靠 DeepSeek 账号里预充值的余额封顶（需确认你的账号是预充值制）。定了以后更新 `.env.example` 里 `AGENT_RATE_LIMIT_PER_MIN` 的说明。
-- [ ] 把 DeepSeek key 配进 Vercel 环境变量（变量名 `DEEPSEEK_API_KEY`，添加后重新部署）：**由 `xbl2602` 本人操作**，AI 不碰密钥。路由已接线，没配 key 时返回 503。**建议先处理上一条。**
+- [x] **agent 频率限制**（2026-11-14 完成）：Vercel 防火墙规则 `agent-rate-limit-20-per-min`，`/api/agent` 每个 IP 每 60 秒最多 20 次，超出返回 429。已在线上实测（前 20 次通过，第 21 次起 429）。规则只存在于 Vercel 后台，参数和重建办法见 `docs/decisions/2026-11-14_xbl2602_agent-rate-limit.md`。**它限的是速度，不是总花费**：多个 IP 可以绕过，所以 DeepSeek 账号里仍建议只留少量余额。
+- [ ] DeepSeek key（变量名 `DEEPSEEK_API_KEY`）：`xbl2602` 已在 Vercel 创建（AI 不碰密钥）。环境变量只对**之后的新部署**生效；验证办法：`POST /api/agent` 不再返回 503 `not_configured`。如果新部署后仍是 503，检查变量名拼写、是否勾选了 Production、值是否为空。
 - [ ] 把 `AI_PLAYBOOK.md` 第 6 节"还没做、值得做的"（画质指标、固定机位 URL）转成产品里的调试工具。
 
 ## 已知限制（来自原型）
