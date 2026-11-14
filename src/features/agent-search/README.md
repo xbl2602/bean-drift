@@ -1,7 +1,7 @@
 # Lunar AI search（Bean）
 
 2026-11-14：按操作者确认，使用 DeepSeek V4.1 Flash，模型 ID 为 `deepseek-flash`；
-请求限速由官方 API 执行，不设之前提议的 5 次/分钟或 100 次/天额度，不依赖 Supabase。
+不设之前提议的 5 次/分钟或 100 次/天额度，不依赖 Supabase。线上另有团队配置的 Vercel 每 IP 每分钟 20 次限制，见 SHARED_INTERFACES 第 6 节。
 官方并发上限不是消费预算。本模块收到官方 429 时直接向页面返回 429，不自动重试。
 
 ## 已实现
@@ -13,13 +13,13 @@
 - `tests/agent.test.cjs`：调用真实月球工具和模拟模型接口，无需密钥、不产生费用。
 
 模型通过已有注册工具查询数据，不复制星历算法。返回实际工具结果作为 sources，
-保留 terrain/yearStats 的 unavailable 来源。自然语言回答仍需真实模型联调；自动测试不能保证模型永不幻觉。
+保留 terrain、visibility、yearStats 的实际来源和可用状态。地形已接入整月概览数据；年统计目前覆盖 2030，不能冒充查询日期所属年份。自动测试不能保证模型永不幻觉。
 没有联网搜索、写数据库、shell 或任意文件访问能力。
 
 ## 路由负责人接入
 
 本次没有修改他人拥有的 `app/api/`、`src/core/`、`src/lib/`、产品页面或部署配置。
-在 `app/api/agent/route.ts` 添加以下接线即可启用真实接口（由该目录负责人合并）：
+主线已经在 `app/api/agent/route.ts` 接入以下接口（无需再次添加）：
 
 ```ts
 import { TOOLS } from "@/core/registry";
@@ -77,7 +77,7 @@ npm run build
 
 1. 问 “List the lunar presets”，确认 sources 有 list_presets。
 2. 查询指定 UTC 时间的点位并与 /api/point 对照。
-3. 问全年最佳着陆点，确认说明全年统计/地形尚不可用。
+3. 查询其他年份，确认回答分别说明查询时刻和返回统计期；无法提供的数据按 provenance 说明，不把 null 当成零。
 4. 浏览器 Network 只有本网站 /api/agent 请求，响应中无密钥。
 5. 真实请求会计费；单个问题最多产生四次模型请求。无需为了验证限速故意打满官方额度。
 
@@ -87,3 +87,12 @@ npm run build
 
 - 模型 ID：https://api-docs.deepseek.com/quick_start/
 - 账号级并发限制与 429：https://api-docs.deepseek.com/quick_start/rate_limit/
+
+## 搜索框接入与本次验证
+
+产品页负责人可在页面中 import `{ LunarSearch }` from `@/features/agent-search/ui/lunar-search` 并渲染 `<LunarSearch />`。
+组件只向 `/api/agent` 发送 `{message}`；支持例题填入、Ctrl/Cmd+Enter、取消、来源展开和安全错误提示。
+截至本次检查，产品页仍是占位页，未引用组件；这与 API 已可用是两个独立状态。
+
+2026-11-14 实测线上 `/api/agent` 返回 200、model=deepseek-flash，sources 中确有 list_presets；这次真实请求会产生正常 API 用量。
+本地浏览器以明确标注的模拟模型响应检查例题、答案显示、429 和取消。没有把模拟接口加入产品代码。
