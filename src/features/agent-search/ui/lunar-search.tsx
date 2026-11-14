@@ -38,6 +38,7 @@ export function LunarSearch() {
     const timer = setTimeout(() => { timedOut = true; controller.abort(); }, 30000);
     try {
       const response = await searchLunarData(message, controller.signal);
+      controller.signal.throwIfAborted();
       if (active.current === controller) { setResult(response); setNotice("Answer ready."); }
     } catch (cause) {
       if (active.current !== controller) return;
@@ -80,7 +81,7 @@ export function LunarSearch() {
           </button>
         </div>
       </form>
-      <p id={`${id}-hint`} className={styles.hint}>Include a location and UTC date for a specific calculation. Each search is independent.</p>
+      <p id={`${id}-hint`} className={styles.hint}>Include a location and UTC date. Each search is independent. Ctrl/Cmd + Enter to search.</p>
       <div className={styles.examples} aria-label="Example questions">
         {EXAMPLES.map(example => <button type="button" key={example.label} disabled={pending} onClick={() => choose(example.question)}>{example.label}<span aria-hidden="true"> +</span></button>)}
       </div>
@@ -99,7 +100,7 @@ export function LunarSearch() {
           </details>)}
         </div> : <p className={styles.hint}>No lunar calculation tool was used for this answer.</p>}
       </article> : null}
-      <footer className={styles.footer}><span aria-hidden="true">◌</span><p>Exploration, not mission planning. Positions use an analytical approximation. Terrain and yearly statistics come from a coarse whole-Moon map, not site-scale surveys.</p></footer>
+      <footer className={styles.footer}><span aria-hidden="true">◌</span><p>Exploration, not mission planning. Positions use an analytical approximation; terrain uses a coarse whole-Moon map. Annual statistics currently cover 2030, independent of the selected date. Check each result’s provenance and period.</p></footer>
     </section>
   );
 }

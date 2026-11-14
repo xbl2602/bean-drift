@@ -23,8 +23,10 @@ export async function searchLunarData(message: string, signal: AbortSignal): Pro
     };
     throw new Error(errors[response.status] ?? "Search failed. Please try again later.");
   }
-  const data: unknown = await response.json();
-  if (!data || typeof data !== "object" || !("answer" in data) || typeof data.answer !== "string"
+  let data: unknown;
+  try { data = await response.json(); }
+  catch { throw new Error("The assistant returned an unreadable answer. Please try again."); }
+  if (!data || typeof data !== "object" || !("answer" in data) || typeof data.answer !== "string" || !data.answer.trim()
     || !("sources" in data) || !Array.isArray(data.sources) || data.sources.length > 8
     || !data.sources.every(source => source && typeof source === "object" && typeof source.tool === "string" && "input" in source && "result" in source)) {
     throw new Error("The assistant returned an unreadable answer. Please try again.");
