@@ -217,12 +217,12 @@ POST /api/find-sites   { "maxSlopeDeg": 15, "maxLongestSunOutageH": 300, "latMax
 
 ## 6. agent 窗口：`POST /api/agent`
 
-实现在 `src/features/agent-search/`（负责人 `louis068`），路由接线在 `app/api/agent/route.ts`。它是 `/mcp` 同一套只读工具的自然语言入口：模型想查数据，只能调用下面三个工具，结果原样放进 `sources`。
+实现在 `src/features/agent-search/`（负责人 `louis068`），路由接线在 `app/api/agent/route.ts`。它是 `/mcp` 同一套只读工具的自然语言入口：模型想查数据，只能调用下面列出的只读工具（共 6 个），结果原样放进 `sources`。
 
 - **请求**：`Content-Type: application/json`，只允许 `{ "message": "..." }`，去掉首尾空白后 1~2000 字符，请求体不超过 8192 字节，未知字段直接拒绝。**没有对话历史**，每次要带齐地点和日期。
 - **成功（200）**：`{ "answer": string, "sources": [{ "tool", "input", "result" }], "mode": "live", "model": "deepseek-flash" }`。`answer` 是纯文本，前端**不能**当 HTML 渲染。`sources` 是真正执行过的工具结果；`sources` 为空表示这个回答没有经过数据验证，界面不能把它标成"已计算"。
 - **错误**：和其他接口一样是 `{ "error": { "code", "message" } }`。400 输入不对、405 不是 POST、413 请求太大、422 问题要的步骤太多、429 **限速**（有两个来源，前端只看状态码 429 就行，见下面"频率限制"）、502 模型或工具返回无效、503 没配置密钥或服务不可用、504 超时或被取消。前端显示错误，让用户**手动**重试，不要自动重发（每次重发都花钱）。
 - **单次上限**：最多 4 次模型调用、8 次工具执行；模型每次输出最多 1200 tokens；总超时 25 秒。
-- **可用工具**（代码里写死的只读白名单）：`get_point_conditions`、`compare_points`、`list_presets`。**待办（`louis068`，在 `src/features/agent-search/`）**：第 4 节新增的 `get_point_timeline`、`compare_dates`、`find_sites` 已进 `registry.ts`（MCP 能用），但 agent 自己的白名单（`logic/run-agent.ts` 里的 `ALLOWED`）和系统提示还没加，所以自然语言窗口暂时调不到它们（系统提示里"`null` 表示不可用"的过期措辞已由 PR #8 改对）。另注意：agent 单个工具结果上限是 65,536 字节，而 `compare_points` 满 10 个点实测已是 64,938 字节，几乎顶到上限（带上 `minEarthElevationDeg` 后每个点的说明还会多约 0.4 KB，就会超限，agent 会报"结果太大"）。建议把 agent 能传的对比点数限制在 8 个以内。新增的三个工具最大规模都在上限内（见 3.2、3.3）。
+- **可用工具**（代码里写死的只读白名单，`logic/run-agent.ts` 里的 `ALLOWED`）：`get_point_conditions`、`compare_points`、`list_presets`、`get_point_timeline`、`compare_dates`、`find_sites`，即 `registry.ts` 里的全部 6 个。**agent 专用的两条限制**（REST API 和 MCP 不受影响）：①`compare_points` 一次最多 **6 个点**（API/MCP 仍是 10 个）。原因：全月网格扫描里单个点的结果最大 9.9 KB（南纬 89.9°，一年有 40 个日照窗口），而 agent 单个工具结果上限是 65,536 字节；满 10 个点实测约 68.5 KB，按最大单点估算 8 个点也有约 79 KB，都会超限；6 个最大的点带 `minEarthElevationDeg` 实测 61,754 字节，在上限内。其余新工具都远低于上限（时间曲线最大实测约 26 KB，找位置 20 个结果约 6 KB，跨日期对比 5 点 × 8 时刻按最大单点估算约 20 KB）。②工具结果超过 65,536 字节时，不再让整个回答失败（原来是 502 `tool_error`），而是把 `result_too_large` 作为工具结果回给模型，让它用更少的点或更短的时段重问。决定记录：`docs/decisions/2026-11-14_xbl2602_agent-new-tools-and-compare-cap.md`。
 - **密钥**：`DEEPSEEK_API_KEY`，仅服务端、每次请求时读取。网址和模型名（`deepseek-flash`）写死在代码里，不读环境变量。
 - **频率限制**：每个访问者 IP 每分钟最多 20 次请求（固定窗口），在 Vercel 防火墙里执行，不在代码里。超出时**还没进到我们的代码**就被拦下，返回 `429`，body 形如 `{"error":{"code":"429","message":"Too Many Requests","id":"..."}}`（`code` 是字符串 `"429"`）。DeepSeek 自己限速时是我们的代码返回 429，`code` 为 `rate_limited`。**前端不要按 `code` 区分，统一按状态码 429 提示"请求太频繁，稍后再试"，不要自动重发。** 注意：同一个 IP（例如同一个展位的 Wi-Fi）的所有人共用这 20 次。它限的是速度不是总花费，细节和重建办法见 `docs/decisions/2026-11-14_xbl2602_agent-rate-limit.md`。

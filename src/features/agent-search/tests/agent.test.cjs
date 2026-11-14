@@ -1,4 +1,4 @@
-﻿const { test } = require('node:test');
+const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -104,7 +104,7 @@ test('invalid coordinates/date/point count never execute a tool', async () => {
   const cases = [
     ['get_point_conditions', { latDeg: 91, lonDeg: 0 }],
     ['get_point_conditions', { latDeg: 0, lonDeg: 0, time: '2030-01-01' }],
-    ['compare_points', { points: Array.from({ length: 9 }, () => ({ latDeg: 0, lonDeg: 0 })) }],
+    ['compare_points', { points: Array.from({ length: 11 }, () => ({ latDeg: 0, lonDeg: 0 })) }],
   ];
   for (const [name, args] of cases) {
     let executions = 0, round = 0;
@@ -234,4 +234,81 @@ test('stalled request body is cancelled on timeout before any provider call', as
   assert.equal(response.status, 504);
   assert.equal(cancelled, true);
   assert.equal(calls, 0);
+});
+
+test('the model is offered exactly the six read-only data tools', async () => {
+  let offered = [];
+  await runAgent({ message: 'Which tools?' }, { tools: TOOLS, signal: signal(), complete: async ({ tools }) => {
+    offered = tools.map(tool => tool.name).sort();
+    return answer;
+  } });
+  assert.deepEqual(offered, ['compare_dates', 'compare_points', 'find_sites', 'get_point_conditions', 'get_point_timeline', 'list_presets']);
+});
+
+test('tool-choice and coarse-screening guidance is passed to the model', async () => {
+  await runAgent({ message: 'Find sites' }, { tools: TOOLS, signal: signal(), complete: async ({ messages, tools }) => {
+    const prompt = messages[0].content;
+    assert.match(prompt, /find_sites returns 0\.25-degree map cells for coarse screening, not landing sites/);
+    assert.match(prompt, /at most 6 points per call/);
+    assert.doesNotMatch(prompt, /find an optimal site without suitable data/);
+    assert.match(tools.find(tool => tool.name === 'compare_points').description, /at most 6 points per call/);
+    return answer;
+  } });
+});
+
+test('find_sites, timeline and compare_dates run through the agent on real data and become sources', async () => {
+  let round = 0, site;
+  const result = await runAgent({ message: 'Find a flat place near the south pole and show its next month' }, { tools: TOOLS, signal: signal(),
+    complete: async ({ messages }) => {
+      if (round++ === 0) return call('find_sites', { maxSlopeDeg: 10, maxLatDeg: -80, limit: 3 });
+      if (round === 2) {
+        site = JSON.parse(messages.at(-1).content).sites[0];
+        return { content: '', toolCalls: [
+          { id: 'call-2', name: 'get_point_timeline', arguments: { latDeg: site.latDeg, lonDeg: site.lonDeg, time: '2030-03-05T00:00:00Z', durationH: 720 } },
+          { id: 'call-3', name: 'compare_dates', arguments: { points: [{ latDeg: site.latDeg, lonDeg: site.lonDeg }], times: ['2030-01-05T00:00:00Z', '2030-07-05T00:00:00Z'] } },
+        ] };
+      }
+      return answer;
+    },
+  });
+  assert.deepEqual(result.sources.map(source => source.tool), ['find_sites', 'get_point_timeline', 'compare_dates']);
+  assert.equal(result.sources[0].result.sites.length, 3);
+  assert.deepEqual(result.sources[1].result.position, { latDeg: site.latDeg, lonDeg: site.lonDeg });
+  assert.equal(result.sources[2].result.timesUtc.length, 2);
+  assert.equal(result.sources[0].result.provenance.status, 'ok');
+});
+
+test('compare_points above the assistant limit is refused without running; the limit itself fits the size cap on the largest real point', async () => {
+  const points = count => Array.from({ length: count }, () => ({ latDeg: -89.9, lonDeg: 50 })); // largest single-point result found by scanning the whole Moon grid (9.9 KB)
+  let executions = 0, refusal;
+  const counting = TOOLS.map(tool => ({ ...tool, run: input => { executions++; return tool.run(input); } }));
+  let round = 0;
+  const refused = await runAgent({ message: 'Compare seven' }, { tools: counting, signal: signal(), complete: async ({ messages }) => {
+    if (round++ === 0) return call('compare_points', { points: points(7), time: '2030-03-05T00:00:00Z' });
+    refusal = JSON.parse(messages.at(-1).content);
+    return answer;
+  } });
+  assert.equal(executions, 0);
+  assert.equal(refusal.error, 'too_many_points');
+  assert.deepEqual(refused.sources, []);
+
+  round = 0;
+  const allowed = await runAgent({ message: 'Compare six' }, { tools: counting, signal: signal(), complete: async () =>
+    round++ === 0 ? call('compare_points', { points: points(6), time: '2030-03-05T00:00:00Z', minEarthElevationDeg: 5 }) : answer } );
+  assert.equal(executions, 1);
+  assert.equal(allowed.sources[0].result.results.length, 6);
+  assert.ok(Buffer.byteLength(JSON.stringify(allowed.sources[0].result)) < 65536);
+});
+
+test('an oversized tool result is reported to the model instead of failing the whole answer', async () => {
+  const huge = { name: 'compare_points', description: '', access: 'read', inputSchema: z.object({}), run: () => ({ filler: 'x'.repeat(70000) }) };
+  let round = 0, toolMessage;
+  const result = await runAgent({ message: 'Compare' }, { tools: [huge], signal: signal(), complete: async ({ messages }) => {
+    if (round++ === 0) return call('compare_points', {});
+    toolMessage = JSON.parse(messages.at(-1).content);
+    return answer;
+  } });
+  assert.equal(toolMessage.error, 'result_too_large');
+  assert.deepEqual(result.sources, []);
+  assert.equal(result.answer, answer.content);
 });
