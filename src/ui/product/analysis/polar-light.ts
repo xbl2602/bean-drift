@@ -2,6 +2,7 @@
 // 整张图 4096×2048，只有南北纬 80° 以上有数据，所以只把顶部和底部各 10° 的像素条读进内存。
 import { MOON_TEXTURES, POLAR_LIGHT } from "../moon-assets";
 import type { LatLon } from "../moon-frames";
+import { fetchTextureBlob } from "../preload/texture-blob-cache";
 import type { PolarLight } from "./analysis-model";
 
 interface PolarStrips {
@@ -13,9 +14,8 @@ interface PolarStrips {
 let stripsPromise: Promise<PolarStrips> | null = null;
 
 async function loadStrips(): Promise<PolarStrips> {
-  const response = await fetch(MOON_TEXTURES.polar);
-  if (!response.ok) throw new Error(`polar light map returned ${response.status}`);
-  const bitmap = await createImageBitmap(await response.blob(), { colorSpaceConversion: "none", premultiplyAlpha: "none" });
+  // 和地图着色器用的是同一张图，走同一份下载缓存，不再单独下第二次
+  const bitmap = await createImageBitmap(await fetchTextureBlob(MOON_TEXTURES.polar), { colorSpaceConversion: "none", premultiplyAlpha: "none" });
   const rows = Math.ceil(((90 - POLAR_LIGHT.minAbsLatDeg) / 180) * POLAR_LIGHT.heightPx) + 1;
   const canvas = new OffscreenCanvas(bitmap.width, rows);
   const ctx = canvas.getContext("2d", { willReadFrequently: true });
