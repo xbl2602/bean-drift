@@ -22,23 +22,29 @@ export type SpaceBody = {
 export type SpaceScene = {
   timeS: number;
   starDriftPx: number;
-  /** Listed back to front: later bodies cover earlier ones. At most 3. */
+  /** Listed back to front: later bodies cover earlier ones. At most 4. */
   bodies: SpaceBody[];
 };
 
-const MAX_BODIES = 3;
+const MAX_BODIES = 4;
 const MAX_PIXEL_RATIO = 2;
 const KIND_INDEX: Record<BodyKind, number> = { moon: 0, earth: 1, sun: 2 };
 
 export const EARTH_TEXTURE_URL = "/landing/earth-blue-marble-2k.jpg";
-const TEXTURE_URLS = {
-  uMoonColor: "/landing/moon-color-4k.jpg",
-  uMoonHeight: "/landing/moon-height-1k.jpg",
-  uEarthColor: EARTH_TEXTURE_URL,
-} as const;
+export const MOON_COLOR_4K_URL = "/landing/moon-color-4k.jpg";
+export const MOON_COLOR_6K_URL = "/landing/moon-color-6k.jpg";
+const MOON_RELIEF_URL = "/landing/moon-relief-4k.jpg";
+export const SUN_IMAGE_URL = "/landing/sun-sdo-171-4k.jpg";
+
+export type SpaceRendererOptions = {
+  /** Moon colour map: the 6k one for a big Moon, the 4k one (default) for a small one. */
+  moonColorUrl?: string;
+  /** Skip the 4096 x 4096 Sun photograph when the scene has no Sun. */
+  withSun?: boolean;
+};
 
 /** Returns null when the browser has no WebGL2, so the caller can leave the plain background in place. */
-export function createSpaceRenderer(canvas: HTMLCanvasElement): CanvasRenderer<SpaceScene> | null {
+export function createSpaceRenderer(canvas: HTMLCanvasElement, options: SpaceRendererOptions = {}): CanvasRenderer<SpaceScene> | null {
   const gl = canvas.getContext("webgl2", { antialias: false, alpha: false, powerPreference: "high-performance" });
   if (!gl) return null;
 
@@ -59,7 +65,13 @@ export function createSpaceRenderer(canvas: HTMLCanvasElement): CanvasRenderer<S
     light: uniform("uLight"),
   };
 
-  const textureLoads = Object.entries(TEXTURE_URLS).map(([uniformName, url], unit) => {
+  const textureUrls: Record<string, string> = {
+    uMoonColor: options.moonColorUrl ?? MOON_COLOR_4K_URL,
+    uMoonHeight: MOON_RELIEF_URL,
+    uEarthColor: EARTH_TEXTURE_URL,
+  };
+  if (options.withSun !== false) textureUrls.uSunImage = SUN_IMAGE_URL;
+  const textureLoads = Object.entries(textureUrls).map(([uniformName, url], unit) => {
     gl.uniform1i(uniform(uniformName), unit);
     return loadGlobeTexture(gl, unit, url);
   });

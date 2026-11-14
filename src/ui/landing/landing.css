@@ -31,7 +31,7 @@
   min-height: 560px;
   overflow: hidden;
   isolation: isolate;
-  background: #04060b url("/landing/moon-pov-south-pole-earthrise.jpg") center / cover no-repeat;
+  background: #04060b url("/landing/shot-earthrise-hd.jpg") center / cover no-repeat;
 }
 
 .lq-hero-canvas {
@@ -46,8 +46,9 @@
   position: absolute;
   inset: 0;
   z-index: -1;
+  /* The bottom fades the ground into the night sky of the next section, with no visible edge. */
   background:
-    linear-gradient(to top, rgba(4, 6, 11, 0.6) 0%, rgba(4, 6, 11, 0.25) 30%, rgba(4, 6, 11, 0) 55%),
+    linear-gradient(to top, var(--lq-bg) 0%, rgba(4, 6, 11, 0.86) 8%, rgba(4, 6, 11, 0.5) 20%, rgba(4, 6, 11, 0.18) 34%, rgba(4, 6, 11, 0) 55%),
     linear-gradient(to right, rgba(4, 6, 11, 0.55) 0%, rgba(4, 6, 11, 0) 50%);
 }
 
@@ -197,6 +198,16 @@
 .lq-story {
   position: relative;
   height: 680vh; /* how much scrolling the Moon / Earth / Sun sequence takes */
+}
+
+/* The pinned stage ends on the last screen of the story; fade its bottom into the page background. */
+.lq-story::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: 34svh;
+  pointer-events: none;
+  background: linear-gradient(to bottom, rgba(4, 6, 11, 0), var(--lq-bg) 92%);
 }
 
 .lq-stage {
@@ -506,14 +517,26 @@
   margin-right: auto;
 }
 
-.lq-footer-note {
+.lq-github {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.9rem;
   margin-top: 4rem;
-  font-family: var(--lq-mono);
-  font-size: 0.68rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: rgba(148, 160, 180, 0.6);
+  padding: 0.85rem 1.3rem;
+  border: 1px solid var(--lq-line);
+  border-radius: 999px;
+  background: #0b111a99;
+  color: var(--lq-ink);
+  text-align: left;
+  font: 0.95rem var(--lq-mono);
+  letter-spacing: 0.04em;
+  transition: border-color 0.2s ease, background-color 0.2s ease, transform 0.2s ease;
 }
+.lq-github:hover { border-color: var(--lq-accent); background: #d9fa8812; transform: translateY(-2px); }
+.lq-github:focus-visible { outline: 2px solid var(--lq-accent); outline-offset: 4px; }
+.lq-github svg { width: 1.7rem; height: 1.7rem; flex: none; }
+.lq-github small { display: block; margin-bottom: 0.15rem; font-size: 0.62rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--lq-muted); }
+.lq-github i { margin-left: 0.4rem; font-style: normal; color: var(--lq-accent); }
 
 /* ---------- Small screens ---------- */
 
@@ -591,3 +614,19 @@
     transition: none;
   }
 }
+
+.lq-shot-frame { display: block; }
+.lq-shot-full {
+  position: absolute;
+  right: .65rem;
+  bottom: .65rem;
+  padding: .38rem .52rem;
+  color: #edf5ff;
+  background: #080e18e6;
+  border: 1px solid #75869b70;
+  border-radius: .35rem;
+  font: .61rem var(--lq-mono);
+  letter-spacing: .09em;
+}
+.lq-shot-frame:hover .lq-shot-full, .lq-shot-frame:focus-visible .lq-shot-full { color: var(--lq-accent); border-color: var(--lq-accent); }
+.lq-shot-detail { color: var(--lq-muted); font-size: .85rem; line-height: 1.5; margin-top: .22rem; }

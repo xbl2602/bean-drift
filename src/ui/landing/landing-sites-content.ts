@@ -1,26 +1,21 @@
 // Three well-known real landing sites, written for someone meeting lunar landing sites for the
-// first time. Each site teaches one idea: an easy equatorial plain, the far side with no view of
-// Earth, and the hard, low-Sun south polar region.
+// first time. Each card keeps only four facts: coordinates, where, who and purpose.
 //
 // Coordinates are from published sources and are registered in docs/CREDITS.md section 5.
-// Do not edit them from memory.
+// Photos are NASA Lunar Reconnaissance Orbiter camera images (also in docs/CREDITS.md).
+// Do not edit coordinates from memory.
 
 export type FamousSite = {
   id: string;
   mission: string;
   placeName: string;
-  agency: string;
   landed: string;
-  crew: string;
   latDeg: number;
   lonDeg: number;
-  region: string;
-  /** One-line reason this site is in the list. */
-  lesson: string;
+  where: string;
+  who: string;
   purpose: string;
-  sunlight: string;
-  earthView: string;
-  ground: string;
+  photo: { src: string; alt: string; caption: string };
 };
 
 export const FAMOUS_SITES: FamousSite[] = [
@@ -28,51 +23,48 @@ export const FAMOUS_SITES: FamousSite[] = [
     id: "apollo-11",
     mission: "Apollo 11",
     placeName: "Tranquility Base",
-    agency: "NASA · United States",
     landed: "20 July 1969",
-    crew: "Crewed · 2 astronauts on the surface",
     latDeg: 0.67416,
     lonDeg: 23.47314,
-    region: "Near side · close to the equator · Sea of Tranquility",
-    lesson: "The easy case: flat ground, with Earth always overhead.",
-    purpose: "Land people on the Moon for the first time and bring them home safely, so the safest ground was chosen.",
-    sunlight:
-      "About 14 Earth days of daylight, then 14 of night. The landing was timed for early lunar morning, when a low Sun gives long shadows that make rocks and craters easy to see.",
-    earthView: "Earth stays high in the sky all the time, so a direct radio link is always possible.",
-    ground: "A smooth, dark lava plain with gentle slopes and few large boulders.",
+    where: "Near side · Sea of Tranquility",
+    who: "NASA, USA · 2 astronauts on the surface",
+    purpose: "First people on the Moon, so the flattest, safest ground was chosen.",
+    photo: {
+      src: "/landing/site-apollo-11-lroc.png",
+      alt: "Orbiter photo of the Apollo 11 landing site, with the lander and equipment labelled",
+      caption: "Seen from orbit · the lander (LM) and its equipment are labelled",
+    },
   },
   {
     id: "change-4",
     mission: "Chang'e 4",
     placeName: "Von Kármán crater",
-    agency: "CNSA · China",
     landed: "3 January 2019",
-    crew: "Robotic · lander and Yutu-2 rover",
     latDeg: -45.457,
     lonDeg: 177.589,
-    region: "Far side · South Pole-Aitken basin",
-    lesson: "The far side: plenty of sunlight, but Earth is never in the sky.",
-    purpose: "Make the first ever landing on the far side and study one of the oldest, deepest impact basins on the Moon.",
-    sunlight: "A normal day-night cycle: about 14 Earth days of daylight followed by 14 days of darkness and deep cold.",
-    earthView:
-      "Never visible. The Moon itself blocks the way, so every message travels through a relay satellite parked beyond the Moon.",
-    ground: "The fairly flat floor of a large old crater, inside a much bigger basin, dotted with small craters.",
+    where: "Far side · South Pole-Aitken basin",
+    who: "CNSA, China · lander and Yutu-2 rover",
+    purpose: "First landing on the far side, to study one of the oldest, deepest basins.",
+    photo: {
+      src: "/landing/site-change-4-lroc.png",
+      alt: "Orbiter photo of the Chang'e 4 landing site with arrows pointing at the lander and the rover",
+      caption: "Seen from orbit · arrows mark the lander and rover, 468 m across",
+    },
   },
   {
     id: "chandrayaan-3",
     mission: "Chandrayaan-3",
     placeName: "Statio Shiv Shakti",
-    agency: "ISRO · India",
     landed: "23 August 2023",
-    crew: "Robotic · Vikram lander and Pragyan rover",
     latDeg: -69.373,
     lonDeg: 32.319,
-    region: "Near side · south polar region, about 600 km from the pole",
-    lesson: "Towards the pole: the Sun and Earth both stay low, and terrain starts to hide them.",
-    purpose: "Show a soft landing far from the equator and measure the soil and temperature of the south polar region.",
-    sunlight:
-      "The Sun never climbs high, so shadows are always long. The mission was planned to work for one lunar day, about 14 Earth days.",
-    earthView: "Earth sits low above the northern horizon, where hills and crater rims can block the link.",
-    ground: "Rough highland terrain between craters; a level patch had to be picked carefully.",
+    where: "Near side · south polar region, about 600 km from the pole",
+    who: "ISRO, India · Vikram lander and Pragyan rover",
+    purpose: "Show a soft landing near the pole and measure the soil and its temperature.",
+    photo: {
+      src: "/landing/site-chandrayaan-3-lroc.png",
+      alt: "Orbiter photo of rough, crater-dotted highland ground around the Chandrayaan-3 lander at the centre",
+      caption: "Seen from orbit · the lander sits at the centre, 1,738 m across",
+    },
   },
 ];

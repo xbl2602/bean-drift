@@ -4,7 +4,7 @@
 // the ground) is done ONCE into a "depth" image (MARCH pass). Every frame after that only does
 // the lighting for the current Sun position (SHADE pass), which is what makes the shadows sweep.
 
-import { GLSL_EARTH, GLSL_GLOBE, GLSL_NOISE, GLSL_STARS, GLSL_SUN } from "./shader-chunks";
+import { GLSL_EARTH, GLSL_GLOBE, GLSL_NOISE, GLSL_STARS, GLSL_SUN_PHOTO } from "./shader-chunks";
 import { FINE_TILE_M, MID_TILE_M } from "./surface-terrain";
 
 const GLSL_TERRAIN_AND_CAMERA = `
@@ -94,7 +94,8 @@ void main() {
     if (above < 0.0) { hit = true; break; }
     if (t > FAR_M || (ray.y > 0.0 && p.y > uMaxHeight)) break;
     previous = t;
-    t += max(above * 0.5, t * 0.006);
+    // Varying the step a little per pixel turns visible stair-step rings into unnoticeable grain.
+    t += max(above * 0.5, t * 0.006) * (0.7 + 0.3 * fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453));
   }
   if (!hit) { outColor = vec4(0.0); return; }
 
@@ -117,6 +118,7 @@ uniform float uTime;
 uniform float uStarDrift;
 uniform sampler2D uDepth;        // result of the MARCH pass
 uniform sampler2D uEarthColor;
+uniform sampler2D uSunImage;
 uniform vec3 uSunDir;            // world direction towards the Sun
 uniform vec2 uSunCenter;         // device pixels, origin bottom-left
 uniform float uSunRadius;
@@ -129,14 +131,16 @@ ${GLSL_NOISE}
 ${GLSL_STARS}
 ${GLSL_GLOBE}
 ${GLSL_EARTH}
-${GLSL_SUN}
+${GLSL_SUN_PHOTO}
 ${GLSL_TERRAIN_AND_CAMERA}
 
 // 0 = the Sun is hidden from point p by terrain, 1 = fully visible; soft at the shadow's edge.
 float sunShadow(vec3 p, float viewDistance, float footprintM) {
   if (uSunDir.y < -0.08) return 0.0;
   float lit = 1.0;
-  float s = max(0.06, viewDistance * 0.003);
+  // Each pixel starts its shadow ray a little differently, so the steps blend into fine grain
+  // instead of forming stripes along gentle slopes.
+  float s = max(0.06, viewDistance * 0.003) * (0.75 + 0.5 * hash21(gl_FragCoord.xy));
   for (int i = 0; i < 46; i++) {
     vec3 q = p + uSunDir * s;
     // Far along the shadow ray only big shapes matter, so read the ground more and more coarsely.
@@ -166,8 +170,9 @@ vec3 shadeGround(vec3 origin, vec3 ray, float t) {
   vec3 p = origin + ray * t;
   // One pixel covers more ground the further away it is, and much more where we look along the
   // ground at a shallow angle; read the terrain at that scale so distant detail stays calm.
-  float footprintM = t * uPixelAngle * 2.0;
-  float e = max(0.02, footprintM);
+  float footprintM = t * uPixelAngle * 3.4;
+  // At least two samples of the finest detail tile: any closer and the slope shows the tile's pixel grid.
+  float e = max(0.16, footprintM);
   float slopeX = terrainHeight(p.xz + vec2(e, 0.0), footprintM) - terrainHeight(p.xz - vec2(e, 0.0), footprintM);
   float slopeZ = terrainHeight(p.xz + vec2(0.0, e), footprintM) - terrainHeight(p.xz - vec2(0.0, e), footprintM);
   vec3 normal = normalize(vec3(-slopeX, 2.0 * e, -slopeZ));

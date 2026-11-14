@@ -9,6 +9,7 @@
   gap: clamp(1rem, 3vw, 2.5rem);
 }
 .lq-tool-copy { min-width: 0; }
+.lq-tool-integrations { align-items: start; }
 .lq-tool-assistant .lq-chat { min-height: 11rem; align-content: start; }
 
 /* The typing terminal. */
@@ -65,9 +66,193 @@
 @keyframes lq-caret-blink { 50% { opacity: 0; } }
 
 @media (max-width: 860px) {
-  .lq-tool-assistant,
+  .lq-tool-assistant { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) {
   .lq-tool-integrations { grid-template-columns: 1fr; }
 }
 @media (prefers-reduced-motion: reduce) {
   .lq-terminal-caret { animation: none; }
+}
+
+/* ---------- Space look: the same night sky, orbits and glass cards as the Moon / Earth / Sun chapters ---------- */
+
+.lq .lq-tools { position: relative; isolation: isolate; padding-top: clamp(5rem, 14vh, 9rem); }
+.lq .lq-tools::before,
+.lq .lq-tools::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 100vw;
+  transform: translateX(-50%);
+  pointer-events: none;
+  mask-image: linear-gradient(to bottom, transparent, #000 16%, #000 84%, transparent);
+}
+/* Nebula glow. */
+.lq .lq-tools::before {
+  background:
+    radial-gradient(ellipse 52% 40% at 88% 12%, #2d4a8a52, transparent 72%),
+    radial-gradient(ellipse 46% 38% at 6% 58%, #4a2f7a3d, transparent 72%),
+    radial-gradient(ellipse 40% 30% at 70% 92%, #1d5a6a38, transparent 72%);
+}
+/* Stars, twinkling gently. */
+.lq .lq-tools::after {
+  background-image:
+    radial-gradient(1.3px 1.3px at 8% 14%, #fff, transparent),
+    radial-gradient(1px 1px at 21% 63%, #cfe0ff, transparent),
+    radial-gradient(1.6px 1.6px at 33% 28%, #fff, transparent),
+    radial-gradient(1px 1px at 47% 82%, #ffe9c7, transparent),
+    radial-gradient(1.2px 1.2px at 58% 12%, #fff, transparent),
+    radial-gradient(1px 1px at 69% 47%, #cfe0ff, transparent),
+    radial-gradient(1.5px 1.5px at 81% 74%, #fff, transparent),
+    radial-gradient(1px 1px at 92% 33%, #ffe9c7, transparent),
+    radial-gradient(1px 1px at 14% 90%, #fff, transparent),
+    radial-gradient(1.2px 1.2px at 40% 52%, #cfe0ff, transparent),
+    radial-gradient(1px 1px at 76% 6%, #fff, transparent),
+    radial-gradient(1.4px 1.4px at 97% 91%, #fff, transparent);
+  background-size: 640px 520px;
+  animation: lq-twinkle 6s ease-in-out infinite alternate;
+}
+@keyframes lq-twinkle { from { opacity: 0.55; } to { opacity: 1; } }
+
+/* The artwork pins to the viewport inside the section, underneath the content. */
+.lq-console-track {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  pointer-events: none;
+  overflow: clip;
+}
+.lq-console-orbit {
+  position: sticky;
+  top: 4.25rem;
+  display: flex;
+  justify-content: end;
+  align-items: start;
+  height: 0;
+  margin-inline: calc(-1 * clamp(1rem, 3vw, 3rem));
+  opacity: .94;
+}
+.lq-console-orbit-map {
+  position: relative;
+  width: min(54vw, 41rem, calc(100svh - 5.5rem));
+  aspect-ratio: 1;
+  mask-image: radial-gradient(ellipse at 52% 49%, #000 47%, transparent 71%);
+}
+.lq-console-orbit-map canvas, .lq-console-orbit-map svg {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.lq-console-orbit-canvas { opacity: 0; transition: opacity .45s ease; }
+.lq-console-orbit-canvas.is-ready { opacity: 1; }
+.lq-console-orbit-canvas.is-ready + svg .lq-orbit-fallback { display: none; }
+.lq-console-orbit-map ellipse { fill: none; stroke-width: .28; }
+.lq-console-earth-path { stroke: #76b8eaa6; }
+.lq-console-moon-path { stroke: #d9fa88c4; stroke-dasharray: 1 1.3; }
+.lq-console-orbit-map text {
+  fill: #edf5ff;
+  stroke: #060912;
+  stroke-width: .65;
+  paint-order: stroke;
+  font: 2.25px var(--lq-mono);
+  letter-spacing: .18px;
+  text-anchor: middle;
+}
+.lq .lq-tools-intro { border-top: 0; padding-top: 0; }
+.lq .lq-tools-intro .lq-group-heading { max-width: 15ch; font-size: clamp(2.2rem, 5.6vw, 4.4rem); }
+.lq-tools-intro .lq-kicker { margin-bottom: 0.2rem; }
+.lq-orbit-caption {
+  margin-top: 1.1rem;
+  max-width: 28rem;
+  color: #afbed0;
+  font: .68rem/1.55 var(--lq-mono);
+}
+@media (min-width: 861px) {
+  .lq .lq-tools-grid { width: 78%; }
+}
+@media (max-width: 860px) {
+  .lq-console-orbit { margin-inline: 0 -8%; opacity: .68; }
+  .lq-console-orbit-map { width: min(77vw, 35rem, calc(100svh - 5rem)); }
+  .lq-tool-integrations .lq-integration-row { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) {
+  .lq-console-orbit { margin-right: -20%; opacity: .54; }
+  .lq-console-orbit-map { width: min(91vw, calc(100svh - 4.25rem)); }
+}
+@media (prefers-reduced-motion: reduce) { .lq-console-orbit-canvas { transition: none; } }
+
+/* Glass cards with corner marks, like the chapter cards above. */
+.lq .lq-tool {
+  position: relative;
+  border-top-color: #d9fa8873;
+  background: linear-gradient(150deg, #141c28ed, #080c14bd 80%);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+.lq .lq-tool-assistant { background: linear-gradient(150deg, #1b2a20ee, #080c14b8 80%); }
+.lq .lq-tool::before,
+.lq .lq-tool::after {
+  content: "";
+  position: absolute;
+  width: 0.9rem;
+  height: 0.9rem;
+  border: 0 solid var(--lq-accent);
+  opacity: 0.75;
+  pointer-events: none;
+}
+.lq .lq-tool::before { left: 0.5rem; bottom: 0.5rem; border-width: 0 0 1.5px 1.5px; }
+.lq .lq-tool::after { right: 0.5rem; bottom: 0.5rem; border-width: 0 1.5px 1.5px 0; }
+.lq-hud-tag {
+  position: absolute;
+  top: 0.85rem;
+  right: 1.1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font: 0.6rem var(--lq-mono);
+  letter-spacing: 0.2em;
+  color: var(--lq-muted);
+}
+.lq-hud-tag::before {
+  content: "";
+  width: 0.4rem;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--lq-accent);
+  box-shadow: 0 0 0.6rem var(--lq-accent);
+  animation: lq-caret-blink 1.8s steps(1) infinite;
+}
+.lq-tool-copy .lq-kicker { margin-top: 0.6rem; }
+
+/* Typed assistant answer with coloured key words. */
+.lq .lq-typed { margin: 0; color: var(--lq-ink); font-size: 1rem; line-height: 1.7; }
+.lq-tone { padding: 0.04em 0.28em; border-radius: 0.3em; font-weight: 650; }
+.lq-tone-sun { color: var(--lq-sun); background: #ffd68a24; }
+.lq-tone-earth { color: #7bd8ff; background: #7bd8ff22; }
+.lq-tone-value { color: var(--lq-accent); background: #d9fa8824; font-family: var(--lq-mono); font-size: 0.92em; }
+.lq-tone-place { color: #cdb4ff; background: #cdb4ff22; }
+.lq-tone-good { color: #8dffb0; background: #8dffb022; }
+.lq-tone-warn { color: #ffa77a; background: #ffa77a22; }
+.lq-tone-note { color: var(--lq-muted); font-weight: 400; font-style: italic; padding-inline: 0; background: none; }
+.lq-thinking-dots i {
+  display: inline-block;
+  width: 0.28rem;
+  aspect-ratio: 1;
+  margin-left: 0.22rem;
+  border-radius: 50%;
+  background: var(--lq-accent);
+  animation: lq-think 1s ease-in-out infinite;
+}
+.lq-thinking-dots i:nth-child(2) { animation-delay: 0.15s; }
+.lq-thinking-dots i:nth-child(3) { animation-delay: 0.3s; }
+@keyframes lq-think { 0%, 100% { opacity: 0.25; transform: translateY(0); } 50% { opacity: 1; transform: translateY(-0.2rem); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .lq .lq-tools::after, .lq-hud-tag::before, .lq-thinking-dots i { animation: none; }
 }

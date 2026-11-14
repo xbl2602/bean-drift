@@ -87,7 +87,7 @@ export function computeStoryFrame(progress: number, stageWidthPx: number, stageH
   };
 
   // --- Sun: waits off-screen to the upper left, sinks to its entry point, then crosses to the right.
-  const sunRadiusPx = Math.min(56, Math.max(30, w * 0.036));
+  const sunRadiusPx = Math.min(130, Math.max(48, w * 0.09));
   const sunApproach = eased(p, 0.5, 0.72);
   const sunCross = eased(p, 0.72, 0.88);
   const sunEntryX = -sunRadiusPx * 4;
