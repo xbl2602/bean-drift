@@ -34,8 +34,12 @@
 | 名称 | 文件位置 | 来源/许可 | 是否 AI 生成 | 提示词 | 登记人 | 日期 |
 |---|---|---|---|---|---|---|
 | 主页缩略图 | `prototypes/lunar-scene-demo/thumbs/` | 我们自己场景的截图，无外部素材 | 否（场景由 AI 辅助编写的代码渲染） | — | xbl2602 | |
-| landing page 月面视角图 3 张 | `public/landing/moon-pov-*.jpg` | 从 `prototypes/lunar-scene-demo/thumbs/` 复制（pole-a、pole、apollo11），我们自己场景的截图，无外部素材 | 否（场景由 AI 辅助编写的代码渲染） | — | chanjy0806 | 2026-11-14 |
-| landing page 的星空、云层、太阳光晕、光照效果 | `src/ui/landing/space-shaders.ts` | 用代码（着色器）画的装饰效果，无外部素材，不是真实数据；月球和地球表面用的是下面"数据源"表里的 NASA 贴图 | 是（代码由 AI 辅助编写） | 见 `docs/logs/chanjy0806/2026-11-14.md` | chanjy0806 | 2026-11-14 |
+| landing page 月面视角图（HD 渲染）5 张 | `public/landing/shot-earthrise-hd.jpg`、`shot-crater-rim-hd.jpg`、`shot-long-shadows-hd.jpg`（画廊）、`panorama-rim-hd.jpg`（"Stand there first" 卡片）、`panorama-sky-hd.jpg`（"forecast" 卡片背景） | 用我们自己的南极场景渲染器（`src/ui/landing/surface-renderer.ts`，地形是 NASA LOLA 南极数据 + 程序生成的细节）重新渲染，1920×1280 / 3840×1080 / 3000×760，无外部素材；取代了之前从原型复制的低清截图 | 否（场景由 AI 辅助编写的代码渲染，不是 AI 生成的图片） | — | chanjy0806 | 2026-11-14 |
+| 阿波罗 15 号哈德利月面全景 | `public/landing/apollo-15-hadley.webp`、`public/landing/forecast-ground.webp` | NASA、USGS 和 Apollo 15 crew，[Astronaut Exploring: An Apollo 15 Panorama](https://science.nasa.gov/image-article/apod-2018-november-11-astronaut-exploring-an-apollo-15-panorama/)。美国政府任务影像，按 [NASA 媒体使用指引](https://www.nasa.gov/nasa-brand-center/images-and-media/) 署名使用。源图 4000×723，裁切照片拼接边缘后以 WebP 展示；地表局部裁切仅为阿波罗 11 号天空预报的示意前景。 | 否 | — | chanjy0806 | 2026-11-14 |
+| 阿波罗 11 号着陆点轨道照片 | `public/landing/site-apollo-11-lroc.png` | NASA LRO 相机（LROC M175124932R）"Apollo 11 From Low Altitude"，署名 NASA/GSFC/Arizona State University；来自 https://lroc.im-ldi.com/images/484 。NASA 任务影像，一般按公共领域使用；**LROC 网站页脚写 "All rights reserved"，请 `leeziqi0531-debug`/`xbl2602` 确认后再用于最终提交** | 否 | — | chanjy0806 | 2026-11-14 |
+| 嫦娥四号着陆点轨道照片 | `public/landing/site-change-4-lroc.png` | NASA LRO 相机（LROC M1303619844LR），署名 NASA/GSFC/Arizona State University；来自 https://lroc.im-ldi.com/images/1092 ；许可备注同上，**待确认** | 否 | — | chanjy0806 | 2026-11-14 |
+| 月船三号着陆点轨道照片 | `public/landing/site-chandrayaan-3-lroc.png` | NASA LRO 相机（LROC M1447750764LR），署名 NASA/GSFC/Arizona State University；来自 https://lroc.im-ldi.com/images/1314 ；EurekAlert 将其标为公共领域，但 LROC 页脚许可备注同上，**待确认** | 否 | — | chanjy0806 | 2026-11-14 |
+| landing page 的星空、云层、太阳（米粒组织、黑子、临边昏暗、日珥）、光照效果 | `src/ui/landing/space-shaders.ts`、`shader-chunks.ts` | 用代码（着色器）画的装饰效果，太阳的样子参照公开的太阳照片但不是真实数据，无外部素材，不是真实数据；月球和地球表面用的是下面"数据源"表里的 NASA 贴图 | 是（代码由 AI 辅助编写） | 见 `docs/logs/chanjy0806/2026-11-14.md` | chanjy0806 | 2026-11-14 |
 
 ## 4. AI 辅助声明
 

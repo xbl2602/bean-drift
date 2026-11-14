@@ -9,10 +9,13 @@ import { useCallback, useRef } from "react";
 import { STORY_CHAPTERS } from "./feature-content";
 import { StoryDemo } from "./story-demos";
 import { clamp01, globeRotation, lightFromScreen } from "./space-math";
-import { createSpaceRenderer, type SpaceBody, type SpaceScene } from "./space-renderer";
+import { createSpaceRenderer, MOON_COLOR_6K_URL, type SpaceBody, type SpaceScene } from "./space-renderer";
 import { computeStoryFrame } from "./story-timeline";
 import { useAnimatedCanvas } from "./use-animated-canvas";
 import "./story-demos.css";
+
+/** The Moon grows to fill the screen here, so it gets the sharper 6144-pixel colour map. */
+const createStoryRenderer = (canvas: HTMLCanvasElement) => createSpaceRenderer(canvas, { moonColorUrl: MOON_COLOR_6K_URL });
 
 const CARD_STAGGER = 0.45;
 /** How quickly the scene catches up with the scrollbar, per second; lower = smoother, floatier. */
@@ -91,7 +94,7 @@ export function ScrollStory() {
     };
   }, []);
 
-  useAnimatedCanvas(canvasRef, createSpaceRenderer, buildScene);
+  useAnimatedCanvas(canvasRef, createStoryRenderer, buildScene, 0, true);
 
   return (
     <section ref={sectionRef} className="lq-story" aria-label="What Lunar Quest does">

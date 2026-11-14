@@ -1,5 +1,5 @@
-import Image from "next/image";
 import type { CSSProperties } from "react";
+import { LookAroundPanorama } from "./look-around-panorama";
 import { SiteSurvey } from "./site-survey";
 import { SkyForecast } from "./sky-forecast";
 
@@ -19,10 +19,13 @@ export function StoryDemo({ kind }: { kind: "survey" | "horizon" | "forecast" | 
     case "horizon":
       return (
         <figure className="lq-demo lq-pov-demo">
-          <div className="lq-pov-window">
-            <Image src="/landing/moon-pov-south-pole-crater-rim.jpg" alt="First-person view across Shackleton crater rim, with rough lunar ground in the foreground" width={960} height={540} sizes="100vw" unoptimized />
-          </div>
-          <figcaption className="lq-demo-caption">SHACKLETON RIM · FIRST-PERSON VIEW</figcaption>
+          <LookAroundPanorama
+            src="/landing/apollo-15-hadley.webp"
+            alt="Sunlit lunar hills, boulders and the Apollo 15 rover at Hadley–Apennine"
+            width={3200}
+            height={572}
+          />
+          <figcaption className="lq-demo-caption">APOLLO 15 · HADLEY–APENNINE · NASA / USGS</figcaption>
         </figure>
       );
     case "forecast":

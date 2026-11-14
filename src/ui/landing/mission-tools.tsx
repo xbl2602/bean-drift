@@ -3,7 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import type { Preset } from "@/core/types";
 import { CodeTyper } from "./code-typer";
+import { ConsoleOrbit } from "./console-orbit";
 import { angle, DEMO_EPOCH, DEMO_SITES, queryPoint } from "./demo-data";
+import { type ReplySegment, TypedReply } from "./typed-reply";
 import "./mission-tools.css";
 
 const PROMPTS = [
@@ -11,8 +13,37 @@ const PROMPTS = [
   { question: "Can I see Earth from Apollo 11?", body: "earth", site: DEMO_SITES[2] },
 ] as const;
 
+/** Turns a live reading into a short plain-language answer, with the key words tagged for colour. */
+function composeAnswer(prompt: (typeof PROMPTS)[number], elevationDeg: number): ReplySegment[] {
+  const isUp = elevationDeg >= 0;
+  const heightWord = isUp ? "above" : "below";
+  if (prompt.body === "sun") {
+    return [
+      { text: "The Sun", tone: "sun" },
+      { text: " is " },
+      { text: angle(elevationDeg), tone: "value" },
+      { text: ` ${heightWord} the horizon at ` },
+      { text: prompt.site.name, tone: "place" },
+      { text: ". " },
+      { text: isUp ? "A low Sun means long shadows." : "It is night there, so solar power is zero.", tone: "note" },
+    ];
+  }
+  return [
+    { text: isUp ? "Yes" : "Not right now", tone: isUp ? "good" : "warn" },
+    { text: " — " },
+    { text: "Earth", tone: "earth" },
+    { text: " is " },
+    { text: angle(elevationDeg), tone: "value" },
+    { text: ` ${heightWord} the horizon at ` },
+    { text: prompt.site.name, tone: "place" },
+    { text: ". " },
+    { text: "Nearby hills can still block the view.", tone: "note" },
+  ];
+}
+
 export function MissionTools() {
-  const [exampleResult, setExampleResult] = useState("");
+  const [answer, setAnswer] = useState<ReplySegment[]>([]);
+  const [failedMessage, setFailedMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [prompt, setPrompt] = useState<(typeof PROMPTS)[number]>();
   const query = useRef<AbortController | null>(null);
@@ -41,14 +72,14 @@ export function MissionTools() {
     query.current = controller;
     setPrompt(selected);
     setIsLoading(true);
-    setExampleResult("");
+    setAnswer([]);
+    setFailedMessage("");
     try {
       const point = await queryPoint(selected.site, DEMO_EPOCH, controller.signal);
       if (controller.signal.aborted) return;
-      const elevation = point[selected.body].elevationDeg;
-      setExampleResult(`${selected.body === "sun" ? "The Sun" : "Earth"} is at ${angle(elevation)} relative to the Moon’s reference horizon. Local terrain can affect visibility.`);
+      setAnswer(composeAnswer(selected, point[selected.body].elevationDeg));
     } catch {
-      if (!controller.signal.aborted) setExampleResult("Couldn’t load the answer. Choose a question to try again.");
+      if (!controller.signal.aborted) setFailedMessage("Couldn’t load the answer. Choose a question to try again.");
     } finally {
       if (!controller.signal.aborted) setIsLoading(false);
     }
@@ -66,12 +97,16 @@ export function MissionTools() {
 
   return (
     <section className="lq-section lq-tools" id="mission-tools" aria-labelledby="lq-tools-heading">
+      <ConsoleOrbit />
       <div className="lq-tools-intro">
-        <h2 className="lq-section-heading" id="lq-tools-heading">Explore lunar data your way.</h2>
+        <p className="lq-kicker">04 / Console</p>
+        <h2 className="lq-group-heading" id="lq-tools-heading">Explore lunar data your way.</h2>
         <p className="lq-section-lead">Start with a question or bring Lunar Quest data into your own app.</p>
+        <p className="lq-orbit-caption">Earth orbits the Sun. The Moon orbits Earth. Diagram not to scale.</p>
       </div>
       <div className="lq-tools-grid">
         <article className="lq-tool lq-tool-assistant">
+          <span className="lq-hud-tag" aria-hidden="true">CH-01 · ASSISTANT</span>
           <div className="lq-tool-copy">
             <p className="lq-kicker">AI assistant preview</p>
             <h3>Ask in plain language.</h3>
@@ -86,49 +121,58 @@ export function MissionTools() {
           <div className="lq-chat">
             <p className="lq-demo-caption">14 NOV 2026 · 12:00 UTC</p>
             {prompt && <blockquote>{prompt.question}</blockquote>}
-            <p className="lq-chat-reply" role="status">{isLoading ? "Checking lunar data…" : exampleResult || "Pick a question to try."}</p>
+            {isLoading && (
+              <p className="lq-chat-reply lq-chat-thinking" role="status">
+                Checking lunar data<span aria-hidden="true" className="lq-thinking-dots"><i /><i /><i /></span>
+              </p>
+            )}
+            {!isLoading && answer.length > 0 && <TypedReply segments={answer} />}
+            {!isLoading && answer.length === 0 && (
+              <p className="lq-chat-reply" role="status">{failedMessage || "Pick a question to try."}</p>
+            )}
           </div>
         </article>
         <article className="lq-tool lq-tool-integrations">
+          <span className="lq-hud-tag" aria-hidden="true">CH-02 · API + MCP</span>
           {/* Left: example requests typed out. Right: what they mean. */}
           <CodeTyper />
           <div className="lq-tool-copy">
-          <p className="lq-kicker">API + MCP</p>
-          <h3>Bring the Moon into your app.</h3>
-          <div className="lq-data-flow" aria-label="Lunar Quest sends lunar data to your program">
-            <span>Lunar Quest</span><span aria-hidden="true">⟶</span><span>Your program</span>
-          </div>
-          <div className="lq-integration-row">
-            <div>
-              <h4>REST API</h4>
-              <p>Scripts and apps can fetch landing sites, Sun and Earth positions, and site comparisons as JSON.</p>
+            <p className="lq-kicker">API + MCP</p>
+            <h3>Bring the Moon into your app.</h3>
+            <div className="lq-data-flow" aria-label="Lunar Quest sends lunar data to your program">
+              <span>Lunar Quest</span><span aria-hidden="true">⟶</span><span>Your program</span>
             </div>
-            <button className="lq-tool-action" type="button" onClick={loadPresets} disabled={presetStatus === "loading"}>
-              {presetStatus === "loading" ? "Loading sites…" : "Preview API data"}
-            </button>
-          </div>
-          <div className="lq-api-preview" aria-live="polite">
-            {presetStatus === "error" && <p>Couldn’t load the landing sites. Try again.</p>}
-            {presets && (
-              <div className="lq-api-result">
-                <p><code>GET /api/presets</code> <span>{presets.length} landing sites</span></p>
-                <ul>
-                  {presets.map(({ id, name, position }) => (
-                    <li key={id}><span>{name}</span><code>{position.latDeg.toFixed(2)}°, {position.lonDeg.toFixed(2)}°</code></li>
-                  ))}
-                </ul>
-                <a href="/api/presets" target="_blank" rel="noopener noreferrer">Open raw JSON in a new tab ↗</a>
+            <div className="lq-integration-row">
+              <div>
+                <h4>REST API</h4>
+                <p>Scripts and apps can fetch landing sites, Sun and Earth positions, and site comparisons as JSON.</p>
               </div>
-            )}
-          </div>
-          <div className="lq-integration-row">
-            <div>
-              <h4>MCP</h4>
-              <p>Connect an external AI client to the same lunar query tools via Streamable HTTP.</p>
+              <button className="lq-tool-action" type="button" onClick={loadPresets} disabled={presetStatus === "loading"}>
+                {presetStatus === "loading" ? "Loading sites…" : "Preview API data"}
+              </button>
             </div>
-            <button className="lq-tool-action" type="button" onClick={copyMcpUrl}>Copy MCP endpoint</button>
-          </div>
-          <p role="status">{mcpStatus}</p>
+            <div className="lq-api-preview" aria-live="polite">
+              {presetStatus === "error" && <p>Couldn’t load the landing sites. Try again.</p>}
+              {presets && (
+                <div className="lq-api-result">
+                  <p><code>GET /api/presets</code> <span>{presets.length} landing sites</span></p>
+                  <ul>
+                    {presets.map(({ id, name, position }) => (
+                      <li key={id}><span>{name}</span><code>{position.latDeg.toFixed(2)}°, {position.lonDeg.toFixed(2)}°</code></li>
+                    ))}
+                  </ul>
+                  <a href="/api/presets" target="_blank" rel="noopener noreferrer">Open raw JSON in a new tab ↗</a>
+                </div>
+              )}
+            </div>
+            <div className="lq-integration-row">
+              <div>
+                <h4>MCP</h4>
+                <p>Connect an external AI client to the same lunar query tools via Streamable HTTP.</p>
+              </div>
+              <button className="lq-tool-action" type="button" onClick={copyMcpUrl}>Copy MCP endpoint</button>
+            </div>
+            <p role="status">{mcpStatus}</p>
           </div>
         </article>
       </div>

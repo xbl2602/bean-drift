@@ -45,34 +45,77 @@
 }
 .lq-pov-window img { width: 100%; height: 100%; object-fit: cover; }
 .lq-pov-demo figcaption { margin-top: .45rem; }
+.lq-story .lq-card-forecast { display: flex; flex-direction: column; }
+.lq-forecast { flex: 1; display: flex; flex-direction: column; min-height: 0; }
 .lq-forecast-sky {
   position: relative;
-  height: clamp(6.5rem, 17vh, 11rem);
+  flex: 1 1 auto;
+  min-height: clamp(6.5rem, 17vh, 11rem);
   overflow: hidden;
   margin: .45rem 0;
   border: 1px solid var(--lq-line);
   border-radius: .5rem;
-  background: #090c13 url("/landing/moon-pov-apollo-11.jpg") center center / 100% 100%;
+  background:
+    radial-gradient(1px 1px at 7% 20%, #fff, transparent), radial-gradient(1.2px 1.2px at 15% 75%, #cfe0ff, transparent),
+    radial-gradient(1px 1px at 88% 24%, #fff, transparent), radial-gradient(1.3px 1.3px at 93% 70%, #ffe9c7, transparent),
+    radial-gradient(1px 1px at 4% 48%, #cfe0ff, transparent), radial-gradient(1px 1px at 96% 46%, #fff, transparent),
+    #070a11;
 }
-.lq-forecast-horizon { position: absolute; inset: 63% 0 auto; border-top: 1px dashed #d8e5f078; }
-.lq-sky-marker { position: absolute; width: .68rem; aspect-ratio: 1; border-radius: 50%; transform: translate(-50%, -50%); }
+.lq-forecast-horizon { position: absolute; inset: 76% 0 auto; border-top: 1px dashed #d8e5f078; }
+.lq-sky-marker { position: absolute; width: .68rem; aspect-ratio: 1; border-radius: 50%; transform: translate(-50%, -50%); will-change: left, top, opacity; }
 .lq-sky-marker[data-body="sun"] { background: #fff4c3; box-shadow: 0 0 .85rem .22rem #ffd37c9e; }
 .lq-sky-marker[data-body="earth"] { width: .92rem; background: #6bbfee url("/landing/earth-blue-marble-2k.jpg") center / 200% 100%; box-shadow: 0 0 .6rem .12rem #71bce8b0; }
 .lq-sky-compass { position: absolute; inset: auto 7% .25rem; display: flex; justify-content: space-between; color: white; text-shadow: 0 1px 4px black; font: .59rem var(--lq-mono); }
 .lq-forecast-time { display: grid; grid-template-columns: 1fr auto; gap: .2rem .45rem; align-items: center; color: var(--lq-ink); font-size: .71rem; }
 .lq-forecast-time strong { font: .66rem var(--lq-mono); color: var(--lq-accent); }
-.lq-forecast-time input { grid-column: 1 / -1; width: 100%; margin: .2rem 0; accent-color: var(--lq-accent); cursor: pointer; }
+.lq-forecast-time input {
+  grid-column: 1 / -1;
+  width: 100%;
+  height: 1.4rem;
+  margin: .2rem 0;
+  cursor: grab;
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+}
+.lq-forecast-time input:active { cursor: grabbing; }
+.lq-forecast-time input::-webkit-slider-runnable-track {
+  height: .42rem;
+  border-radius: 99px;
+  background: linear-gradient(90deg, var(--lq-accent) var(--lq-fill, 0%), #2a3644 var(--lq-fill, 0%));
+}
+.lq-forecast-time input::-moz-range-track { height: .42rem; border-radius: 99px; background: #2a3644; }
+.lq-forecast-time input::-moz-range-progress { height: .42rem; border-radius: 99px; background: var(--lq-accent); }
+.lq-forecast-time input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 1.15rem;
+  height: 1.15rem;
+  margin-top: -.36rem;
+  border: 3px solid #0b1118;
+  border-radius: 50%;
+  background: var(--lq-accent);
+  box-shadow: 0 0 0 1px var(--lq-accent), 0 0 .9rem #d9fa88a0;
+  transition: transform .15s ease;
+}
+.lq-forecast-time input::-moz-range-thumb {
+  width: .8rem; height: .8rem; border: 3px solid #0b1118; border-radius: 50%;
+  background: var(--lq-accent); box-shadow: 0 0 0 1px var(--lq-accent), 0 0 .9rem #d9fa88a0;
+}
+.lq-forecast-time input:hover::-webkit-slider-thumb,
+.lq-forecast-time input:active::-webkit-slider-thumb { transform: scale(1.18); }
 .lq-sky-readings { display: flex; flex-wrap: wrap; gap: .25rem .6rem; margin: .25rem 0; color: var(--lq-ink); font-size: .7rem; }
 .lq-sky-readings i { display: inline-block; width: .45rem; height: .45rem; border-radius: 50%; margin-right: .15rem; background: var(--lq-sun); }
 .lq-sky-readings i[data-body="earth"] { background: #7bd8ff; }
 .lq-story .lq-group-sun { width: min(88vw, 48rem); }
+/* On mid-size screens keep the card clear of the big Sun resting on the right. */
+@media (min-width: 761px) { .lq-story .lq-group-sun { width: min(88vw, 48rem, 62vw); } }
 .lq-story .lq-card-goal { padding: 0; border-color: #ffd68a63; overflow: hidden; background: #0a0d15; }
 .lq-card-goal > h3 { padding: .85rem clamp(1rem, 4vw, 2.25rem); margin: 0; font: .73rem var(--lq-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--lq-sun); }
 .lq-goal-demo {
   margin: 0;
   padding: clamp(1.2rem, 4vw, 2.75rem);
   border-top: 1px solid #ffd68a42;
-  background: linear-gradient(100deg, #080c14f9 12%, #080c14c4 56%, #080c142e), url("/landing/moon-pov-south-pole-earthrise.jpg") center / cover;
+  background: linear-gradient(100deg, #080c14f9 12%, #080c14c4 56%, #080c142e), url("/landing/shot-earthrise-hd.jpg") center / cover;
 }
 .lq-goal-demo .lq-demo-caption { color: var(--lq-sun); }
 .lq-goal-statement { margin: .65rem 0 1.6rem; font: 800 clamp(2rem, 5.6vw, 5rem)/.95 var(--lq-display); letter-spacing: -.045em; color: var(--lq-ink); }
@@ -103,38 +146,80 @@
 .lq-card-survey .lq-chart-row { grid-template-columns: 5.2rem minmax(0, 1fr); min-height: 1.65rem; font-size: .84rem; }
 .lq-card-survey .lq-chart-track { height: 1.15rem; }
 .lq-card-survey .lq-chart-axis { margin-left: 5.5rem; font-size: .72rem; }
-.lq-card-horizon .lq-pov-window { height: clamp(11rem, 32vh, 19rem); }
-/* A slow drift across the picture, as if turning your head. */
-.lq-card-horizon .lq-pov-window img { animation: lq-pov-drift 26s ease-in-out infinite alternate; }
-@keyframes lq-pov-drift {
-  from { transform: scale(1.12) translateX(-3%); }
-  to { transform: scale(1.3) translateX(3%); }
+.lq-card-horizon .lq-pov-window { height: clamp(11rem, 32vh, 19rem); position: relative; cursor: crosshair; touch-action: pan-y; }
+/* The panorama is bigger than its window and slides behind it as the cursor moves. */
+.lq-look-picture { position: absolute; left: 0; top: 0; will-change: transform; }
+.lq-pov-window .lq-look-picture img { display: block; width: 100%; height: 100%; object-fit: cover; user-select: none; }
+.lq-look::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 68%, #05080c45 100%);
 }
+.lq-look-hint {
+  position: absolute;
+  z-index: 1;
+  left: 50%;
+  bottom: .7rem;
+  transform: translateX(-50%);
+  padding: .3rem .7rem;
+  border-radius: 99px;
+  background: #060a10b8;
+  color: var(--lq-ink);
+  font: .6rem var(--lq-mono);
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  pointer-events: none;
+  transition: opacity .6s ease;
+}
+.lq-look-hint.is-hidden { opacity: 0; }
 .lq-demo-note { margin-top: .8rem; font-size: .9rem; line-height: 1.55; color: var(--lq-muted); }
 
-/* Mission progress: four small ring gauges. */
-.lq-gauges { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .8rem .6rem; margin-top: .6rem; }
-.lq-gauge { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: .6rem; text-align: left; }
+/* Mission progress: four ring gauges that fill the whole card. */
+.lq-story .lq-card-clock { display: flex; flex-direction: column; }
+.lq-progress-demo { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+.lq-gauges {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  gap: .7rem;
+  margin-top: .7rem;
+}
+.lq-gauge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: .55rem;
+  padding: .7rem .5rem;
+  border: 1px solid var(--lq-line);
+  border-radius: .7rem;
+  background: linear-gradient(160deg, #141d29, #0a1018);
+  text-align: center;
+}
 .lq-gauge-ring {
   display: grid;
   place-items: center;
-  width: clamp(2.9rem, 8.5vh, 4.4rem);
+  width: clamp(3.8rem, 11.5vh, 6.2rem);
   aspect-ratio: 1;
   border-radius: 50%;
   background: conic-gradient(var(--lq-gauge-color) calc(var(--lq-gauge-value) * 1%), #263342 0);
+  box-shadow: 0 0 1.2rem -.3rem var(--lq-gauge-color);
 }
 .lq-gauge-ring strong {
   display: grid;
   place-items: center;
-  width: 72%;
+  width: 76%;
   aspect-ratio: 1;
   border-radius: 50%;
-  background: #131c27;
+  background: #0f1620;
   color: var(--lq-ink);
-  font: 700 clamp(.78rem, 2.3vh, 1.05rem) var(--lq-display);
+  font: 700 clamp(1.18rem, 2.8vh, 1.55rem) var(--lq-display);
 }
-.lq-gauge-label { display: block; color: var(--lq-ink); font-size: .78rem; font-weight: 650; line-height: 1.25; }
-.lq-gauge-detail { display: block; font: .62rem/1.4 var(--lq-mono); color: var(--lq-muted); }
+.lq-gauge-label { display: block; color: var(--lq-ink); font-size: clamp(.94rem, 1.65vw, 1.14rem); font-weight: 700; line-height: 1.2; text-wrap: balance; }
+.lq-gauge-detail { display: block; margin-top: .25rem; font: clamp(.78rem, 1.15vw, .94rem)/1.35 var(--lq-mono); color: #afbdd0; }
 
 /* Keep the demos in the normal reading order when a pinned scene cannot fit. */
 @media (max-width: 500px), (max-height: 570px) {
@@ -158,5 +243,84 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .lq-card-horizon .lq-pov-window img { animation: none; }
 }
+
+/* All-sky chart. */
+.lq-forecast-sky { display: grid; place-items: center; }
+.lq-dome { width: 100%; height: 100%; max-height: 100%; display: block; }
+.lq-dome-labels text { fill: #cfe0f5; font-family: var(--lq-mono); letter-spacing: .08em; }
+.lq-sun-track { stroke: #ffd68a99; stroke-width: 1.3; stroke-dasharray: 0.2 3.4; stroke-linecap: round; }
+.lq-forecast-time { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem .75rem; }
+.lq-forecast-scrub { flex: 1 1 9rem; display: grid; gap: .1rem; min-width: 0; font-size: .71rem; }
+.lq-forecast-time strong { white-space: nowrap; }
+.lq-play {
+  display: grid;
+  place-items: center;
+  width: 2.1rem;
+  aspect-ratio: 1;
+  border: 1px solid #d9fa8880;
+  border-radius: 50%;
+  color: var(--lq-accent);
+  cursor: pointer;
+  transition: background-color .2s ease;
+}
+.lq-play:hover, .lq-play[aria-pressed="true"] { background: #d9fa8822; }
+.lq-play svg { width: .8rem; height: .8rem; }
+
+/* The named horizon is the mathematical boundary. Ground is a separate layer and masks
+   the Sun and Earth; a perspective image never serves as an elevation reference. */
+.lq-forecast-views { display: flex; justify-content: space-between; align-items: center; gap: .5rem; flex-wrap: wrap; }
+.lq-forecast-views [role="group"] { display: flex; gap: .3rem; }
+.lq-forecast-views .lq-demo-choice { padding: .28rem .5rem; font-size: .65rem; }
+.lq-forecast-panorama {
+  --lq-ground-height: 31%;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: inherit;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at 64% 28%, #1d304744, transparent 65%),
+    radial-gradient(1px 1px at 33% 46%, #fff, transparent),
+    radial-gradient(1px 1px at 73% 20%, #cfe0ff, transparent),
+    radial-gradient(1px 1px at 26% 63%, #cfe0ff, transparent),
+    radial-gradient(1px 1px at 54% 11%, #fff, transparent),
+    #080b12;
+  background-size: auto, 127px 69px, 137px 107px, 81px 97px, 177px 77px, auto;
+}
+.lq-horizon-air { position: absolute; inset: 5% 0 var(--lq-ground-height); overflow: hidden; }
+.lq-horizon-ground { border-top: 1px dashed #cbd7e8a8; }
+.lq-horizon-ground {
+  position: absolute;
+  inset: auto 0 0;
+  height: var(--lq-ground-height);
+  background: linear-gradient(180deg, #070c161f 20%, #070b15a6),
+    #77797c url("/landing/forecast-ground.webp") center / cover no-repeat;
+}
+.lq-horizon-body {
+  position: absolute;
+  opacity: var(--sky-opacity, 1);
+  left: var(--sky-x);
+  top: var(--sky-y);
+  width: .82rem;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: #e9a532 url("/landing/sun-sdo-171-4k.jpg") center / 125%;
+  box-shadow: 0 0 1rem .25rem #ffc07892, inset 0 0 .35rem #ffdc78;
+}
+.lq-horizon-body[data-body="earth"] {
+  width: 1.04rem;
+  background: #559cea url("/landing/earth-blue-marble-2k.jpg") 27% 50% / 190% 100%;
+  box-shadow: 0 0 .62rem .1rem #76c7f991, inset -.15rem -.08rem .32rem #060910;
+}
+.lq-horizon-cardinals {
+  display: flex;
+  justify-content: space-between;
+  position: absolute;
+  inset: auto .2rem .3rem;
+  color: #edf5ff;
+  text-shadow: 0 1px 3px black;
+  font: .61rem var(--lq-mono);
+}
+.lq-earth-track { stroke: #7bd8ffad; stroke-width: 1.25; stroke-dasharray: 1.4 1.4; }
