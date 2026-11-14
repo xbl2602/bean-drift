@@ -11,7 +11,7 @@ PR #9 的决定记录里建议"把 agent 能传的点数限制在 8 个以内"�
 
 1. 白名单加上 `get_point_timeline`、`compare_dates`、`find_sites`（现在 agent 能用 `registry.ts` 里的全部 6 个工具）。
 2. 系统提示：按问题选工具；`find_sites` 只是 0.25° 格子的粗筛，要转述 `provenance.note` 里的限制（格内平均坡度、一年数据、地球没有最低仰角），`matchedCells` 为 0 表示没有格子满足；最后一句改成"不能联网、跑代码、读文件、改数据，也不能认证某个位置对着陆是安全或最优的"。
-3. `compare_points` 对 agent 一次最多 **6 个点**（REST API 和 MCP 仍是 10 个）。超过时不执行，把 `too_many_points` 回给模型让它拆开问。
+3. `compare_points` 对 agent 一次最多 **6 个点**（REST API 和 MCP 仍是 10 个）。超过时不执行，把 `invalid_arguments` 回给模型让它拆开问。（2026-11-15 更正：这里最初写的是 `too_many_points`；PR #16 起，给模型看的工具说明里的上限和校验用同一个 6，超了由参数校验拦下，所以实际回的是 `invalid_arguments`。）
 4. 工具结果超过 65,536 字节时，不再抛 502（整个回答失败），而是把 `result_too_large` 回给模型，让它缩小范围重问。
 
 ## 为什么是 6，不是 8

@@ -18,7 +18,7 @@
 
 可用工具（白名单 `ALLOWED`，全部只读）：`get_point_conditions`、`compare_points`、`list_presets`、`get_point_timeline`、`compare_dates`、`find_sites`。
 `compare_points` 对本窗口一次最多 6 个点（API/MCP 仍是 10 个）：单点结果最大约 9.9 KB，而单个工具结果上限是 64 KB（65,536 字节）。
-工具结果超过上限时，把 `result_too_large` 回给模型让它缩小范围重问，不会让整个回答失败；参数点数超限同理回 `too_many_points`。
+工具结果超过上限时，把 `result_too_large` 回给模型让它缩小范围重问，不会让整个回答失败；参数点数超限（超过 6 个）由参数校验直接拦下，回 `invalid_arguments`，模型看到的工具说明里写的也是同一个上限。
 
 ## 路由负责人接入
 
