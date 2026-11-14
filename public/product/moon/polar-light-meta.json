@@ -1,0 +1,9 @@
+{
+  "file": "polar-light-4k.png",
+  "coverage": "latitudes poleward of 80 degrees; elsewhere R=255, G=255, B=0",
+  "R": "sunMarginDeg = R / 255 * 6 - 3 : best-season height of the Sun's upper limb above the terrain horizon; negative = permanently shadowed at ~1.9 km resolution",
+  "G": "fraction of the year with any part of the Sun's disc above the terrain horizon (36 azimuths x 6 season phases)",
+  "B": "proximity to the nearest permanently shadowed pixel: 1 inside, falling linearly to 0 at 20 km",
+  "method": "terrain horizon ray-marched to 160 km on a 600 m polar-stereographic grid resampled from LOLA ldem_16; Sun declination range +/-1.54 deg; Sun radius 0.267 deg",
+  "caveats": "model, not an observation; craters smaller than ~2 km are not resolved; eclipses by Earth ignored"
+}

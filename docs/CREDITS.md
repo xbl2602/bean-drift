@@ -11,6 +11,10 @@
 | NASA LRO LOLA 南极高度图 `LDEM_875S_10M` | MIT 镜像 https://imbrium.mit.edu/DATA/LOLA_GDR/POLAR/JP2/ | 10 m/像素，南纬 87.5° 至南极 | NASA 公开数据 | 原型的南极场景 |
 | NASA LROC NAC 阿波罗 11 号立体地形模型 `NAC_DTM_APOLLO11` | https://pds.lroc.im-ldi.com/data/LRO-L-LROC-5-RDR-V1.0/LROLRC_2001/DATA/SDP/NAC_DTM/APOLLO11/ | 2 m/像素 | NASA PDS 公开数据 | 原型的阿波罗 11 号场景 |
 | JPL Horizons | https://ssd.jpl.nasa.gov/horizons/ | — | 仅用于**校验**我们自实现的星历，未直接使用其数据 | 星历精度核对 |
+| NASA SVS "CGI Moon Kit" 彩色图 `lroc_color_poles_8k.tif`（LRO WAC 拼图，NASA/GSFC/Arizona State University） | https://svs.gsfc.nasa.gov/4720 | 8192×4096，全月简单圆柱投影；转成 `public/product/moon/color-8k.jpg`、`color-4k.jpg` | NASA SVS 要求署名 "NASA's Scientific Visualization Studio"；页面说明"为美观优化，不用于科学"——所以只当底图，数值计算用 LOLA。2026-11-14 ShanLe1224 登记 | Lunar Quest 产品页 2D/3D 底图、第一人称地面颜色 |
+| NASA SVS "CGI Moon Kit" 高度 `ldem_16_uint.tif`（LRO LOLA，NASA/GSFC） | https://svs.gsfc.nasa.gov/4720 | 5760×2880（1/16°，赤道约 1.9 km/像素），16 位整数，单位半米，偏移 10 km | 同上署名。生成脚本 `src/ui/product/data-build/build-moon-textures.mjs`，产物 `public/product/moon/`（relief/normal/slope 4K 图 + 648 块 16 位高度切片） | 3D 起伏与阴影、2D 光照/高度/坡度图层、第一人称地形 |
+| IAU 月面地名表（Gazetteer of Planetary Nomenclature，USGS Astrogeology 代 IAU 维护，NASA 资助）`MOON_nomenclature_center_pts.zip` | https://planetarynames.wr.usgs.gov/GIS_Downloads | 9087 条 IAU 已采纳的月面地名：名称、类型、中心经纬度、直径 | 下载页没有写使用条款；美国政府机构数据。转成 `public/product/moon/lunar-names.json`（脚本 `src/ui/product/data-build/build-lunar-names.mjs`）。2026-11-14 ShanLe1224 登记 | Lunar Quest "Search Location" 工具 |
+| 极区光照预计算 `public/product/moon/polar-light-4k.png`（**我们自己算的衍生数据**，输入是上面的 LOLA `ldem_16_uint.tif`） | 脚本 `src/ui/product/data-build/build-polar-light.mjs` | 南北纬 80° 以上；约 1.9 km 分辨率；永久阴影、全年光照比例、离永久阴影的距离 | **模型，不是观测**。自检：沙克尔顿、肖梅克、霍沃斯、福斯蒂尼坑底算出为永久阴影，沙克尔顿坑沿全年 87% 有光。2026-11-14 ShanLe1224 登记 | Solar Illumination、Water Ice Potential、Site Suitability 图层 |
 | NASA Moon Trek 瓦片（LRO WAC 全月影像拼图 `LRO_WAC_Mosaic_Global_303ppd_v02`、LOLA 渲染图） | https://trek.nasa.gov/tiles/Moon/EQ/ | WAC 最细约 83 m/像素；LOLA 渲染图约 666 m/像素；等距柱状投影 | NASA 数据；**使用条款未确认**（官方页面只写 "© 2016 Trek"），见 `docs/research/nasa-trek-tiles-for-frontend.md` | 计划：product page 2D 底图（尚未接入） |
 
 ## 2. 算法与代码来源
@@ -39,3 +43,16 @@
 | 点位 | 坐标 | 出处链接 | 核对人 | 日期 |
 |---|---|---|---|---|
 | 阿波罗 11 号 | 0.67416°N 23.47314°E | 原型使用值，来自 LROC 影像中"鹰号"下降级位置（见 PROJECT_CONTEXT），误差几米 | xbl2602 | |
+
+## 3D globe sky imagery (2026-11-14, ShanLe1224 / Codex)
+| Asset | Local file | Source and rights | Processing / limitations |
+|---|---|---|---|
+| NASA Blue Marble land/ocean/ice | public/product/sky/earth-8k.jpg and earth-4k.jpg | NASA Visible Earth, public domain NASA work; downloaded from https://commons.wikimedia.org/wiki/File:Nasa_land_ocean_ice_8192.jpg (original 8192 x 4096); background: https://svs.gsfc.nasa.gov/2915 | JPEG recompression and 4096 x 2048 fallback; no AI generation. Fixed reference map, not live weather or a calibrated Earth orientation model. |
+| NASA SDO AIA 171 Angstrom Sun, 2024-05-23 00:07:10 | public/product/sky/sun-sdo-4k.jpg | https://sdo.gsfc.nasa.gov/assets/img/browse/2024/05/23/20240523_000710_4096_0171.jpg ; usage: https://sdo.gsfc.nasa.gov/data/rules.php ; Courtesy of NASA/SDO and the AIA, EVE, and HMI science teams. Not copyrighted unless explicitly noted. | Original 4096 x 4096 JPEG, no AI generation. Fixed false-colour EUV reference image, not a live visible-light Sun. Position follows simulation time; the same Sun vector drives Moon shadows and Earth phase. |
+
+| NASA LROC 16K Moon colour map | public/product/moon/color-16k.jpg | NASA SVS CGI Moon Kit https://svs.gsfc.nasa.gov/4720 ; original https://svs.gsfc.nasa.gov/vis/a000000/a004700/a004720/lroc_color_poles_16k.tif ; credit NASA's Scientific Visualization Studio / NASA/GSFC/ASU | Same 2019 colour mosaic as the existing 4K/8K assets; 16384 x 8192, JPEG quality 95 with 4:4:4 chroma, no upscaling or AI generation. Offline builder: src/ui/product/data-build/build-moon-color-16k.mjs. Added 2026-11-14 by ShanLe1224 / Codex. |
+
+## Progressive close-up lunar imagery (2026-11-14, ShanLe1224 / Codex)
+- Display-only NASA Moon Trek WMTS layer LRO_WAC_Mosaic_Global_303ppd_v02. Public API documentation: https://trek.nasa.gov/tiles/apidoc/ ; capabilities https://trek.nasa.gov/tiles/Moon/EQ/LRO_WAC_Mosaic_Global_303ppd_v02/1.0.0/WMTSCapabilities.xml ; data credit NASA/GSFC/Arizona State University, LROC Team.
+- 256-pixel JPEG tiles, maximum level 8 (131072 x 65536 equivalent global imagery, approximately 83 m/pixel at the equator). Fetched on demand in the browser with four concurrent requests and a bounded cache; no API key. No AI-generated imagery.
+- These photographs contain acquisition-time shading. They improve visible surface detail only; they do not increase terrain-model resolution or change numerical sun/communication analysis. Existing simulated lighting is still applied. The local NASA global map remains the fallback when tiles are unavailable.

@@ -1,0 +1,41 @@
+{
+  "projection": "simple cylindrical (equirectangular); column 0 = 180°W, centre = 0°, row 0 = 90°N",
+  "moonRadiusM": 1737400,
+  "relief": {
+    "file": "relief-4k.png",
+    "minHeightM": -8981.5,
+    "maxHeightM": 10685.5,
+    "note": "8-bit, linear between min and max"
+  },
+  "slope": {
+    "file": "slope-4k.jpg",
+    "maxSlopeDeg": 45,
+    "note": "8-bit, 0..45 deg linear; computed at 1/16 deg (~1.9 km) spacing, so local slopes are understated"
+  },
+  "normal": {
+    "file": "normal-4k.jpg",
+    "frame": "tangent (R=east, G=north, B=up), encoded n*0.5+0.5"
+  },
+  "height16": {
+    "tiles": "height-tiles/{row}-{col}.png",
+    "tileDeg": 10,
+    "tilePx": 160,
+    "rowOrigin": "row 0 = 90N..80N, col 0 = 180W..170W",
+    "width": 5760,
+    "height": 2880,
+    "decode": "heightM = ((R << 8) | G) / 2 - 10000",
+    "pixelsPerDeg": 16
+  },
+  "color": {
+    "files": [
+      "color-16k.jpg",
+      "color-8k.jpg",
+      "color-4k.jpg"
+    ],
+    "highResolutionSource": "NASA SVS CGI Moon Kit lroc_color_poles_16k.tif (16384 x 8192), same 2019 map; JPEG quality 95, 4:4:4"
+  },
+  "sources": [
+    "NASA Scientific Visualization Studio, CGI Moon Kit (https://svs.gsfc.nasa.gov/4720): lroc_color_poles_8k.tif, ldem_16_uint.tif",
+    "Colour: LRO Wide Angle Camera mosaic, NASA/GSFC/Arizona State University. Heights: LRO LOLA, NASA/GSFC."
+  ]
+}
