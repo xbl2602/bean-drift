@@ -16,6 +16,10 @@
 保留 terrain、visibility、yearStats 的实际来源和可用状态。地形已接入整月概览数据；年统计目前覆盖 2030，不能冒充查询日期所属年份。自动测试不能保证模型永不幻觉。
 没有联网搜索、写数据库、shell 或任意文件访问能力。
 
+可用工具（白名单 `ALLOWED`，全部只读）：`get_point_conditions`、`compare_points`、`list_presets`、`get_point_timeline`、`compare_dates`、`find_sites`。
+`compare_points` 对本窗口一次最多 6 个点（API/MCP 仍是 10 个）：单点结果最大约 9.9 KB，而单个工具结果上限是 64 KB（65,536 字节）。
+工具结果超过上限时，把 `result_too_large` 回给模型让它缩小范围重问，不会让整个回答失败；参数点数超限同理回 `too_many_points`。
+
 ## 路由负责人接入
 
 本次没有修改他人拥有的 `app/api/`、`src/core/`、`src/lib/`、产品页面或部署配置。
