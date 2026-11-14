@@ -1,0 +1,162 @@
+.lq-demo {
+  margin-top: .75rem;
+  font-size: .8rem;
+  color: var(--lq-muted);
+}
+.lq-demo-caption {
+  font: .61rem/1.45 var(--lq-mono);
+  letter-spacing: .07em;
+  color: var(--lq-muted);
+}
+.lq-demo table {
+  width: 100%;
+  margin-top: .45rem;
+  border-collapse: collapse;
+  font: .71rem/1.4 var(--lq-mono);
+  font-variant-numeric: tabular-nums;
+}
+.lq-demo :is(th, td) { padding: .25rem .35rem; border: 1px solid var(--lq-line); }
+.lq-demo thead { background: #212c36; }
+.lq-demo tbody th { text-align: left; font-weight: 500; color: var(--lq-ink); }
+.lq-demo :is(thead th, td):not(:first-child) { text-align: right; }
+.lq-chart-controls { display: flex; gap: .35rem; margin: .5rem 0 .35rem; }
+.lq-demo-choice {
+  padding: .25rem .55rem;
+  border: 1px solid var(--lq-line);
+  border-radius: .35rem;
+  color: var(--lq-ink);
+  cursor: pointer;
+  font-size: .72rem;
+}
+.lq-demo-choice[aria-pressed="true"] { color: #101807; background: var(--lq-accent); border-color: var(--lq-accent); }
+.lq-demo :is(button, input):focus-visible { outline: 2px solid var(--lq-accent); outline-offset: 3px; }
+.lq-chart-row { display: grid; grid-template-columns: 4.2rem minmax(0, 1fr); align-items: center; gap: .3rem; font-size: .69rem; }
+.lq-chart-track { position: relative; height: .75rem; background: linear-gradient(90deg, transparent 49.7%, #8194a4 49.7%, #8194a4 50.3%, transparent 50.3%); }
+.lq-chart-track i { position: absolute; inset-block: .12rem; border-radius: 2px; background: var(--lq-sun); }
+.lq-chart-track i[data-body="earth"] { background: #7bd8ff; }
+.lq-chart-axis { display: flex; justify-content: space-between; margin-left: 4.5rem; font: .59rem var(--lq-mono); }
+.lq-pov-window {
+  overflow: hidden;
+  width: 100%;
+  height: clamp(7rem, 21vh, 14rem);
+  border: 1px solid var(--lq-line);
+  border-radius: .5rem;
+  background: #05070b;
+}
+.lq-pov-window img { width: 100%; height: 100%; object-fit: cover; }
+.lq-pov-demo figcaption { margin-top: .45rem; }
+.lq-forecast-sky {
+  position: relative;
+  height: clamp(6.5rem, 17vh, 11rem);
+  overflow: hidden;
+  margin: .45rem 0;
+  border: 1px solid var(--lq-line);
+  border-radius: .5rem;
+  background: #090c13 url("/landing/moon-pov-apollo-11.jpg") center center / 100% 100%;
+}
+.lq-forecast-horizon { position: absolute; inset: 63% 0 auto; border-top: 1px dashed #d8e5f078; }
+.lq-sky-marker { position: absolute; width: .68rem; aspect-ratio: 1; border-radius: 50%; transform: translate(-50%, -50%); }
+.lq-sky-marker[data-body="sun"] { background: #fff4c3; box-shadow: 0 0 .85rem .22rem #ffd37c9e; }
+.lq-sky-marker[data-body="earth"] { width: .92rem; background: #6bbfee url("/landing/earth-blue-marble-2k.jpg") center / 200% 100%; box-shadow: 0 0 .6rem .12rem #71bce8b0; }
+.lq-sky-compass { position: absolute; inset: auto 7% .25rem; display: flex; justify-content: space-between; color: white; text-shadow: 0 1px 4px black; font: .59rem var(--lq-mono); }
+.lq-forecast-time { display: grid; grid-template-columns: 1fr auto; gap: .2rem .45rem; align-items: center; color: var(--lq-ink); font-size: .71rem; }
+.lq-forecast-time strong { font: .66rem var(--lq-mono); color: var(--lq-accent); }
+.lq-forecast-time input { grid-column: 1 / -1; width: 100%; margin: .2rem 0; accent-color: var(--lq-accent); cursor: pointer; }
+.lq-sky-readings { display: flex; flex-wrap: wrap; gap: .25rem .6rem; margin: .25rem 0; color: var(--lq-ink); font-size: .7rem; }
+.lq-sky-readings i { display: inline-block; width: .45rem; height: .45rem; border-radius: 50%; margin-right: .15rem; background: var(--lq-sun); }
+.lq-sky-readings i[data-body="earth"] { background: #7bd8ff; }
+.lq-story .lq-group-sun { width: min(88vw, 48rem); }
+.lq-story .lq-card-goal { padding: 0; border-color: #ffd68a63; overflow: hidden; background: #0a0d15; }
+.lq-card-goal > h3 { padding: .85rem clamp(1rem, 4vw, 2.25rem); margin: 0; font: .73rem var(--lq-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--lq-sun); }
+.lq-goal-demo {
+  margin: 0;
+  padding: clamp(1.2rem, 4vw, 2.75rem);
+  border-top: 1px solid #ffd68a42;
+  background: linear-gradient(100deg, #080c14f9 12%, #080c14c4 56%, #080c142e), url("/landing/moon-pov-south-pole-earthrise.jpg") center / cover;
+}
+.lq-goal-demo .lq-demo-caption { color: var(--lq-sun); }
+.lq-goal-statement { margin: .65rem 0 1.6rem; font: 800 clamp(2rem, 5.6vw, 5rem)/.95 var(--lq-display); letter-spacing: -.045em; color: var(--lq-ink); }
+.lq-goal-statement em { color: var(--lq-sun); font-style: normal; }
+.lq-goal-route { display: grid; grid-template-columns: repeat(3, 1fr); gap: .5rem; color: var(--lq-ink); }
+.lq-goal-route li { position: relative; padding-top: .75rem; border-top: 1px solid #ffd68a70; }
+.lq-goal-route li::before { content: ""; position: absolute; top: -.22rem; left: 0; width: .38rem; aspect-ratio: 1; border-radius: 50%; background: var(--lq-sun); box-shadow: 0 0 .55rem #ffd68a90; }
+
+.lq-moon-demos {
+  position: absolute;
+  z-index: 1;
+  inset: 130svh 0 auto;
+  width: min(calc(100% - 2rem), 80rem);
+  margin-inline: auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  align-items: start;
+  gap: 1.25rem;
+  pointer-events: none;
+}
+.lq-moon-demos .lq-card { pointer-events: auto; }
+.lq-moon-intro { grid-column: 1 / -1; }
+.lq-moon-intro .lq-group-heading { margin: .4rem 0 .4rem; text-shadow: 0 2px 16px #03060b; }
+.lq-card-survey .lq-demo-caption { font-size: .68rem; }
+.lq-card-survey .lq-demo table { font-size: clamp(.76rem, 1.2vw, .92rem); }
+.lq-card-survey .lq-demo :is(th, td) { padding: .42rem .65rem; }
+.lq-card-survey .lq-chart-controls { margin-block: .8rem .5rem; }
+.lq-card-survey .lq-chart-row { grid-template-columns: 5.2rem minmax(0, 1fr); min-height: 1.65rem; font-size: .84rem; }
+.lq-card-survey .lq-chart-track { height: 1.15rem; }
+.lq-card-survey .lq-chart-axis { margin-left: 5.5rem; font-size: .72rem; }
+.lq-card-horizon .lq-pov-window { height: clamp(11rem, 32vh, 19rem); }
+/* A slow drift across the picture, as if turning your head. */
+.lq-card-horizon .lq-pov-window img { animation: lq-pov-drift 26s ease-in-out infinite alternate; }
+@keyframes lq-pov-drift {
+  from { transform: scale(1.12) translateX(-3%); }
+  to { transform: scale(1.3) translateX(3%); }
+}
+.lq-demo-note { margin-top: .8rem; font-size: .9rem; line-height: 1.55; color: var(--lq-muted); }
+
+/* Mission progress: four small ring gauges. */
+.lq-gauges { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .8rem .6rem; margin-top: .6rem; }
+.lq-gauge { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: .6rem; text-align: left; }
+.lq-gauge-ring {
+  display: grid;
+  place-items: center;
+  width: clamp(2.9rem, 8.5vh, 4.4rem);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: conic-gradient(var(--lq-gauge-color) calc(var(--lq-gauge-value) * 1%), #263342 0);
+}
+.lq-gauge-ring strong {
+  display: grid;
+  place-items: center;
+  width: 72%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: #131c27;
+  color: var(--lq-ink);
+  font: 700 clamp(.78rem, 2.3vh, 1.05rem) var(--lq-display);
+}
+.lq-gauge-label { display: block; color: var(--lq-ink); font-size: .78rem; font-weight: 650; line-height: 1.25; }
+.lq-gauge-detail { display: block; font: .62rem/1.4 var(--lq-mono); color: var(--lq-muted); }
+
+/* Keep the demos in the normal reading order when a pinned scene cannot fit. */
+@media (max-width: 500px), (max-height: 570px) {
+  .lq .lq-story { height: auto; }
+  .lq-moon-demos { position: relative; inset: auto; margin: 3rem auto 2rem; }
+  .lq .lq-stage { position: relative; height: auto; overflow: visible; }
+  .lq .lq-stage-canvas { position: sticky; top: 4.25rem; height: 30vh; display: block; }
+  .lq-group:is(.lq-group-moon, .lq-group-earth, .lq-group-sun) {
+    position: relative; inset: auto; width: auto; margin: 0 1rem 2.2rem;
+    transform: none; align-items: stretch; text-align: left;
+    visibility: visible !important; pointer-events: auto !important;
+  }
+  .lq-story .lq-group .lq-cards { grid-template-columns: 1fr; }
+  .lq-group [data-reveal] { opacity: 1 !important; transform: none !important; }
+  .lq .lq-rail { display: none; }
+}
+
+/* Too narrow for two columns: stack the survey above the first-person view. */
+@media (max-width: 900px) {
+  .lq-moon-demos { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lq-card-horizon .lq-pov-window img { animation: none; }
+}
