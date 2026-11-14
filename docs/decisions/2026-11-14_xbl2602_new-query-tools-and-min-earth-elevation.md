@@ -36,6 +36,6 @@
 
 - 返回结构只**新增**字段（`yearStats.bothVisibleFraction`、`assumptions`），旧字段一个没变（实测与改动前的输出逐项一致）。
 - **自然语言窗口还用不到新工具**：agent 有自己的白名单（`src/features/agent-search/logic/run-agent.ts`，`louis068` 的目录），需要他加。（他系统提示里"null 表示不可用"的过期措辞已由 PR #8 改对。）另外：`compare_points` 满 10 个点已是 64,938 字节，加上最低仰角后 68,942 字节，超过 agent 单个工具结果 65,536 字节的上限，建议他把 agent 能传的点数限制在 8 个以内。
-- **`next.config.ts` 改了**：三个新路由要在"打包哪些数据文件"那张表里登记，否则本地能跑、部署到 Vercel 后可能找不到文件。`find_sites` 还要读一年统计文件 `stats-4ppd.u16`（之前注释明确写"API 不读，不打包"，现在不成立了），所以 `/api/find-sites`、`/mcp`、`/api/agent` 要带上它，函数包各多约 14.5 MB（总数据约 55 MB，远小于 Vercel 的 250 MB 上限）。**没验证**：Vercel 用 Turbopack 构建，本机在工作目录里跑不了 Turbopack（它不接受指向别处的 node_modules 链接），只在 webpack 构建里确认了数据文件都进了对应路由的打包清单。**部署后请先用 `/api/find-sites` 和 `/api/timeline` 各调一次确认不是 500。**
+- **`next.config.ts` 改了**：三个新路由要在"打包哪些数据文件"那张表里登记，否则本地能跑、部署到 Vercel 后可能找不到文件。`find_sites` 还要读一年统计文件 `stats-4ppd.u16`（之前注释明确写"API 不读，不打包"，现在不成立了），所以 `/api/find-sites`、`/mcp`、`/api/agent` 要带上它，函数包各多约 14.5 MB（总数据约 55 MB，远小于 Vercel 的 250 MB 上限）。**已验证**：本机在工作目录里跑不了 Turbopack（它不接受指向别处的 node_modules 链接），但 PR #9 的 Vercel 预览部署（Turbopack 构建、真实无服务器函数）上，找位置、时间曲线、跨日期对比、带最低仰角的点位查询、MCP 都返回 200，数字与本机逐项一致（找位置第一名同为 −88.625°、−68.125°，同时可见 0.4765），说明数据文件（含 `stats-4ppd.u16`）都带上了。
 - `find_sites` 每次请求读约 19 MB 文件现筛（0.2~0.4 秒）。流量大时可以考虑缓存，但服务端不放可变模块级状态（AGENTS.md 5.3），所以现在没缓存。
 - 数据局限没变，反而更显眼了：0.25° 格子会抹平很小的"常亮峰"，当前数据里南纬 80° 以南最长断电最短的格子约 215 小时；想找"几乎常亮"的点，需要更细的数据（TODO Q5）。
