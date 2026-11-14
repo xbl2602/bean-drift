@@ -2,7 +2,7 @@
 // 读不到数据文件时降级成"不可用"（字段为 null + 说明），不让整个接口出错；错误细节不透传（可能带服务器路径）。
 import type { SkyAtPoint } from "../ephemeris/ephemeris";
 import type { HorizonSample, PointConditions, Provenance, TerrainParameters, Visibility, YearStats } from "../types";
-import { openPrecomputedMaps, readHorizonProfileAt, readTerrainAt } from "./precomputed-maps";
+import { readPointTerrainData } from "./terrain-source-routing";
 import { computeVisibility, computeYearStats, YEAR_STATS_HOURS } from "./point-visibility";
 import {
   emptyTerrain,
@@ -21,18 +21,6 @@ export interface TerrainGroups {
 }
 
 const round = (value: number, digits: number) => Number(value.toFixed(digits));
-
-const DEM_SOURCE = "NASA LRO LOLA global DEM LDEM_64 (473.8 m/pixel), averaged into 0.25 degree map cells (pipeline v1, public/data/v1/manifest.json)";
-
-function terrainProvenance(azimuths: number): Provenance {
-  return {
-    status: "ok",
-    source: DEM_SOURCE,
-    note:
-      "Height and slope are interpolated between map cells of 0.25 degrees (about 7.6 km); slope is the mean over a 474 m baseline inside the cell, not the slope at the exact point, so it is not a landing-safety slope. " +
-      `The horizon profile has ${azimuths} azimuths (${360 / azimuths} degree steps), computed from the cell centre with rays up to 300 km on a spherical Moon, and interpolated between cells.`,
-  };
-}
 
 /** 选填的"地球最低仰角"生效时，追加到说明里的一句；没传返回空串。 */
 function minElevationNote(minEarthElevationDeg: number | undefined): string {
@@ -83,9 +71,7 @@ function unavailableGroups(): TerrainGroups {
 
 export function buildTerrainGroups(latDeg: number, lonDeg: number, timeMs: number, sky: SkyAtPoint, minEarthElevationDeg?: number): TerrainGroups {
   try {
-    const maps = openPrecomputedMaps();
-    const terrain = readTerrainAt(maps, latDeg, lonDeg);
-    const profileDeg = readHorizonProfileAt(maps, latDeg, lonDeg);
+    const { source, terrain, horizonProfileDeg: profileDeg } = readPointTerrainData(latDeg, lonDeg);
     const azimuths = profileDeg.length;
     const horizonProfile: HorizonSample[] = profileDeg.map((elevationDeg, k) => ({ azimuthDeg: (k * 360) / azimuths, elevationDeg: round(elevationDeg, 2) }));
     return {
@@ -99,7 +85,7 @@ export function buildTerrainGroups(latDeg: number, lonDeg: number, timeMs: numbe
       visibility: computeVisibility(profileDeg, latDeg, lonDeg, timeMs, sky, minEarthElevationDeg),
       yearStats: computeYearStats(profileDeg, latDeg, lonDeg, minEarthElevationDeg),
       provenance: {
-        terrain: terrainProvenance(azimuths),
+        terrain: source.terrainProvenance(azimuths),
         visibility: visibilityProvenance(minEarthElevationDeg),
         yearStats: yearStatsProvenance(minEarthElevationDeg),
       },

@@ -9,7 +9,7 @@ const path = require('node:path');
 const { repoRoot } = require('./load-typescript-for-tests.cjs');
 
 const ALLOWED_READERS = {
-  'src/core/data/precomputed-maps.ts': '单点查询的唯一读取点：读某点的地形、地平线',
+  'src/core/data/precomputed-maps.ts': '全月预计算地图的底层读取函数（单点读取要经 terrain-source-routing.ts 才能调用它，见下面第二道关）',
   'src/core/data/site-search.ts': '"按条件找位置"要把整张高度、坡度、统计图读进内存，单独读取',
 };
 
@@ -22,6 +22,23 @@ function sourceFiles(dir) {
     return /\.(ts|tsx)$/.test(entry.name) && !/\.test\./.test(entry.name) ? [full] : [];
   });
 }
+
+// 第二道关：就算不碰文件系统，也不许绕过"选数据源"直接 import 底层读取函数（precomputed-maps）。
+// 单点读取只能走 terrain-source-routing.ts；site-search.ts 是整张图的搜索（不是单点），目前只认全月数据。
+// 以后"按条件找位置"要支持南极高精度图，要在那时单独做决定，所以它在白名单里是显式写出来的，不是被遗忘的。
+const ALLOWED_PRECOMPUTED_MAPS_IMPORTERS = {
+  'src/core/data/terrain-source-routing.ts': '单点读取的唯一入口，由它按位置选数据源',
+  'src/core/data/site-search.ts': '整张图搜索，只读全月数据（尚未支持按区域换数据源）',
+};
+
+test('only the routing module and the whole-map search import the low-level map readers', () => {
+  const importers = ['src', 'app']
+    .flatMap((root) => sourceFiles(path.join(repoRoot, root)))
+    .filter((file) => /from\s+["'][^"']*precomputed-maps["']/.test(fs.readFileSync(file, 'utf8')))
+    .map((file) => path.relative(repoRoot, file).split(path.sep).join('/'))
+    .sort();
+  assert.deepEqual(importers, Object.keys(ALLOWED_PRECOMPUTED_MAPS_IMPORTERS).sort(), 'A file imports precomputed-maps directly. Point reads must go through terrain-source-routing.ts.');
+});
 
 test('only the allow-listed files import the file system', () => {
   const readers = ['src', 'app']

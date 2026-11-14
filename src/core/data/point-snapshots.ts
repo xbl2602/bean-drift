@@ -4,7 +4,7 @@ import { skyAtLatLon } from "../ephemeris/ephemeris";
 import type { LunarPosition, PointQueryOptions, Provenance } from "../types";
 import { canonicalLonDeg } from "./point-conditions";
 import { computeVisibility, computeYearStats } from "./point-visibility";
-import { openPrecomputedMaps, readHorizonProfileAt, readTerrainAt } from "./precomputed-maps";
+import { readPointTerrainData } from "./terrain-source-routing";
 
 export interface BodySnapshot {
   azimuthDeg: number;
@@ -56,9 +56,7 @@ export function getPointAcrossTimes(position: LunarPosition, timesMs: readonly n
   const latDeg = position.latDeg;
   const lonDeg = canonicalLonDeg(position.lonDeg);
   const floorDeg = options.minEarthElevationDeg;
-  const maps = openPrecomputedMaps();
-  const terrain = readTerrainAt(maps, latDeg, lonDeg);
-  const profileDeg = readHorizonProfileAt(maps, latDeg, lonDeg);
+  const { terrain, horizonProfileDeg: profileDeg } = readPointTerrainData(latDeg, lonDeg);
   const year = computeYearStats(profileDeg, latDeg, lonDeg, floorDeg);
 
   const snapshots = timesMs.map((timeMs): TimeSnapshot => {
