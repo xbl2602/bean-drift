@@ -25,6 +25,7 @@ npm install        # 装依赖，只装在本目录的 node_modules/ 里，不�
 npm run dev        # 开发模式，打开 http://localhost:3000
 npm run build && npm start   # 生产模式
 npm run typecheck  # 类型检查
+npm test           # 跑测试（src/ 下所有 *.test.cjs；不需要密钥，不会调用 DeepSeek）
 ```
 
 完全卸载：删除本目录的 `node_modules/` 和 `.next/` 即可，没有装任何全局东西。
