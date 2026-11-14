@@ -10,17 +10,34 @@ export const lonDegSchema = z.number().min(-180).max(360).describe("Selenographi
 
 export const positionSchema = z.object({ latDeg: latDegSchema, lonDeg: lonDegSchema });
 
+const utcTimeInRange = z.iso.datetime().refine((value) => {
+  const ms = Date.parse(value);
+  return ms >= MIN_TIME_MS && ms < MAX_TIME_MS;
+}, "time must be between 2000-01-01 and 2100-01-01 (UTC)");
+
 /** 可选的 UTC 时间，必须带 Z，例如 2030-01-01T12:00:00Z。不传则用当前时间。 */
-export const timeUtcSchema = z.iso
-  .datetime()
-  .refine((value) => {
-    const ms = Date.parse(value);
-    return ms >= MIN_TIME_MS && ms < MAX_TIME_MS;
-  }, "time must be between 2000-01-01 and 2100-01-01 (UTC)")
+export const timeUtcSchema = utcTimeInRange.optional().describe("UTC time in ISO 8601 with a trailing Z, e.g. 2030-01-01T12:00:00Z. Defaults to now. Valid 2000-2100.");
+
+/** 必填的 UTC 时间（比较多个日期时用）。 */
+export const requiredTimeUtcSchema = utcTimeInRange.describe("UTC time in ISO 8601 with a trailing Z, e.g. 2030-01-01T12:00:00Z. Valid 2000-2100.");
+
+/**
+ * 通信要求的地球最低仰角（选填）。不传 = 只看地形，和整月地图、一年统计的默认口径一致。
+ * 注意：不传和传 0 不一样——传 0 还额外要求地球不低于光滑球面的水平线。
+ */
+export const minEarthElevationDegSchema = z
+  .number()
+  .min(0)
+  .max(60)
   .optional()
-  .describe("UTC time in ISO 8601 with a trailing Z, e.g. 2030-01-01T12:00:00Z. Defaults to now. Valid 2000-2100.");
+  .describe(
+    "Optional. Minimum elevation in degrees the Earth must be above to count as visible for direct communication (applied to the upper edge of the Earth's disk, like the terrain rule). Omit to use the terrain only. Affects the Earth only. 0 to 60.",
+  );
 
 export const MAX_COMPARE_POINTS = 10;
+/** 同一批点跨日期对比：点数 × 日期数不能太大，否则单次返回太大、算得也慢。 */
+export const MAX_COMPARE_DATES_POINTS = 5;
+export const MAX_COMPARE_DATES_TIMES = 8;
 
 export function resolveTimeMs(timeUtc: string | undefined): number {
   return timeUtc === undefined ? Date.now() : Date.parse(timeUtc);

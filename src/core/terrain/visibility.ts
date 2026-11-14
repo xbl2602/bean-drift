@@ -32,6 +32,15 @@ export function isDiskVisible(elevationDeg: number, radiusDeg: number, horizonDe
   return elevationDeg + radiusDeg > horizonDeg;
 }
 
+/**
+ * 有效地平线 = 地形地平线和"最低仰角"里较高的那个。
+ * minElevationDeg 不传（undefined）= 不加这条要求，只看地形：这是整月地图和一年统计的默认口径。
+ * 注意：不能用 0 代替"不传"——地形地平线可以是负的（比光滑球面的水平线还低），传 0 会改变结果。
+ */
+export function effectiveHorizonDeg(terrainHorizonDeg: number, minElevationDeg: number | undefined): number {
+  return minElevationDeg === undefined ? terrainHorizonDeg : Math.max(terrainHorizonDeg, minElevationDeg);
+}
+
 export interface VisibilityRuns {
   /** 可见的时间占比，0~1。 */
   visibleFraction: number;
