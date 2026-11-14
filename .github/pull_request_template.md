@@ -10,6 +10,6 @@
 ## 自检
 - [ ] 没有密钥、令牌、密码（`git diff --cached` 里搜过 key、token、secret、sk-、Bearer）
 - [ ] 提交时用的是 `git add <具体路径>`，没有 `git add .` 或 `git add -A`
-- [ ] `npm run typecheck` 通过（CI 也会跑）
+- [ ] `npm run typecheck` 和 `npm test` 都通过（CI 也会跑）
 - [ ] 新增了外部素材、数据源或 AI 生成内容的，已登记到 `docs/CREDITS.md`
 - [ ] 画面或渲染有改动的，已附截图
