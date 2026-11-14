@@ -3,8 +3,10 @@
 // 画面按屏幕实际像素渲染（4K 屏就是 4K）；太阳和阴影跟着底部时间轴走。
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
-import { getPointConditions } from "@/core/data";
 import { formatLatLon, type LatLon } from "../moon-frames";
+import { TerrainVisibilityPanel } from "../point-api/terrain-visibility-panel";
+import { usePointApi } from "../point-api/use-point-api";
+import { skyConditionsAt } from "../sky-conditions";
 import { usePointerGestures } from "../use-pointer-gestures";
 import { CompassTape } from "./compass-tape";
 import { buildFirstPersonScene, type FirstPersonScene } from "./first-person-scene";
@@ -30,7 +32,9 @@ export function FirstPersonView({ point, timeMs, onExit, onLoadingChange, onErro
   const resizeRef = useRef<(() => void) | null>(null);
   const [renderSize, setRenderSize] = useState("");
   useEffect(() => { resizeRef.current?.(); }, [render4k]);
-  const conditions = useMemo(() => getPointConditions(point, timeMs), [point, timeMs]);
+  // 太阳/地球的方向：随时间轴逐帧重算，直接用纯计算的星历；考虑地形遮挡的可见性和一年统计走 /api/point
+  const conditions = useMemo(() => skyConditionsAt(point, timeMs), [point, timeMs]);
+  const pointApi = usePointApi(point, timeMs);
   // 开场朝向：太阳在侧面（方位 +90°），阴影横穿画面最明显；太阳在地平线下就看向地球
   const initialYaw = conditions.sun.elevationDeg > 0 ? (conditions.sun.azimuthDeg + 90) % 360 : conditions.earth.azimuthDeg;
   const viewRef = useRef({ yawDeg: initialYaw, pitchDeg: -4, eyeHeightM: EYE_HEIGHT_MIN_M });
@@ -162,7 +166,7 @@ export function FirstPersonView({ point, timeMs, onExit, onLoadingChange, onErro
       </button>
 
       <div className="pointer-events-none absolute bottom-24 left-4 z-10 sm:left-6">
-        <div className="pointer-events-auto w-[min(21rem,calc(100vw-2rem))] rounded-xl border border-white/10 bg-black/55 p-4 text-sm backdrop-blur-md">
+        <div className="pointer-events-auto max-h-[calc(100vh-11.5rem)] w-[min(21rem,calc(100vw-2rem))] overflow-y-auto rounded-xl border border-white/10 bg-black/55 p-4 text-sm backdrop-blur-md">
           <p className="text-xs uppercase tracking-[0.2em] text-lime-300/80">Standing at</p>
           <p className="mt-1 font-mono text-base text-white">{formatLatLon(point)}</p>
           <div className="mt-2 flex items-center gap-2 text-xs">
@@ -181,13 +185,14 @@ export function FirstPersonView({ point, timeMs, onExit, onLoadingChange, onErro
             <dt className="text-white/50">Eye height</dt>
             <dd className="font-mono">{eyeHeightM < 10 ? `${eyeHeightM.toFixed(1)} m` : `${(eyeHeightM / 1000).toFixed(2)} km`}</dd>
           </dl>
+          <TerrainVisibilityPanel state={pointApi} />
           <div className="mt-3 flex gap-2">
             <LookButton label="Face the Sun" disabled={!sunUp} onClick={() => lookToward(conditions.sun.azimuthDeg, conditions.sun.elevationDeg)} />
             <LookButton label="Face Earth" disabled={!earthUp} onClick={() => lookToward(conditions.earth.azimuthDeg, conditions.earth.elevationDeg)} />
           </div>
           <p className="mt-3 text-[11px] leading-snug text-white/45">
             Drag or use arrow keys to look around (full 360°) · scroll to rise · Esc to return · use the timeline to move the Sun and shadows. Large terrain and shadows use NASA LOLA data (about 1.9 km
-            resolution). Small craters, bumps and soil grain within about 3 km are illustrative, not measured. Sun and Earth angles ignore terrain blocking.
+            resolution). Small craters, bumps and soil grain within about 3 km are illustrative, not measured. The Sun and Earth rows above are angles from a smooth sphere and ignore terrain blocking; the "Terrain-adjusted" block includes it.
           </p>
         </div>
       </div>

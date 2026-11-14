@@ -1,9 +1,9 @@
 // 一个点、一个时间的完整分析：实测量（高度、坡度）、星历量（太阳/地球角度，来自 src/core）、模型量（analysis-model.ts）。
 // 悬停读数、候选点卡片、对比表、导出都用这一个函数，保证各处数字一致。
-import { getPointConditions } from "@/core/data";
 import { sampleGround } from "../first-person/height-tiles";
 import type { SuitabilityWeights } from "../map-layers";
 import { localBasis, type LatLon } from "../moon-frames";
+import { skyConditionsAt } from "../sky-conditions";
 import { computeSiteMetrics, type SiteMetrics, type Vec3 } from "./analysis-model";
 import { samplePolarLight } from "./polar-light";
 import { monthSunSamples, sunBodyAt } from "./sun-samples";
@@ -28,7 +28,7 @@ export async function analyzePoint(point: LatLon, timeMs: number, weights: Suita
   const n = basis.east.clone().multiplyScalar(-ground.gradEast).addScaledVector(basis.north, -ground.gradNorth).add(basis.up).normalize();
   const up: Vec3 = [basis.up.x, basis.up.y, basis.up.z];
   const metrics = computeSiteMetrics({ latDeg: point.latDeg, up, normal: [n.x, n.y, n.z], slopeDeg: ground.slopeDeg, polar }, sunBodyAt(timeMs), monthSunSamples(timeMs), weights);
-  const sky = getPointConditions(point, timeMs);
+  const sky = skyConditionsAt(point, timeMs);
   return {
     ...metrics,
     latDeg: point.latDeg,

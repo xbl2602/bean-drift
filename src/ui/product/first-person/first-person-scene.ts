@@ -1,9 +1,9 @@
 // 第一人称场景的搭建（不含 React）：真实 LOLA 地形 + 真实时刻的太阳/地球 + 太阳投下的地形阴影。
 // 时间一变，太阳方向跟着变，阴影贴图每帧重算，所以阴影随时间移动、方向由太阳决定。
 import * as THREE from "three";
-import { getPointConditions } from "@/core/data";
 import { MOON_RADIUS_M, loadMoonTexture, pickColorTextureUrl } from "../moon-assets";
 import { azElToLocal, type LatLon } from "../moon-frames";
+import { skyConditionsAt } from "../sky-conditions";
 import { createStarfield, updateStarfield } from "../starfield";
 import { createGroundMaterial } from "./ground-material";
 import { loadHeightField } from "./height-tiles";
@@ -83,7 +83,7 @@ export async function buildFirstPersonScene(center: LatLon, renderer: THREE.WebG
   };
 
   const setTime = (timeMs: number): SkyState => {
-    const c = getPointConditions(center, timeMs);
+    const c = skyConditionsAt(center, timeMs);
     sunLight.position.copy(azElToLocal(c.sun.azimuthDeg, c.sun.elevationDeg)).multiplyScalar(SUN_LIGHT_DISTANCE_M);
     sunLight.visible = c.sun.elevationDeg > -1;
     placeInSky(sun, c.sun.azimuthDeg, c.sun.elevationDeg, eye);
