@@ -15,6 +15,8 @@ const R2D = 180 / Math.PI;
 export const MOON_RADIUS_KM = 1737.4;
 export const EARTH_RADIUS_KM = 6371.0;
 const AU_KM = 149597870.7;
+/** 太阳半径，km（IAU 2015 标称值），用来算太阳视半径。 */
+const SUN_RADIUS_KM = 695700;
 /** TT - UTC，秒。2017 年起有效，直到下一次闰秒。 */
 const TT_MINUS_UTC_S = 69.184;
 
@@ -161,7 +163,10 @@ export interface BodyAzEl {
 }
 
 export interface SkyAtPoint {
-  sun: BodyAzEl;
+  sun: BodyAzEl & {
+    distanceKm: number;
+    angularRadiusDeg: number;
+  };
   earth: BodyAzEl & {
     distanceKm: number;
     angularRadiusDeg: number;
@@ -201,10 +206,15 @@ export function skyAtLatLon(timeMs: number, latDeg: number, lonDeg: number): Sky
   });
 
   const earthDistanceKm = Math.hypot(...earthFromObserver);
+  const sunDistanceKm = Math.hypot(...sunFromObserver);
   // sun · earth = -1 表示"满地球"（新月）
   const cosPhase = sunDir[0] * earthDir[0] + sunDir[1] * earthDir[1] + sunDir[2] * earthDir[2];
   return {
-    sun: azEl(sunDir),
+    sun: {
+      ...azEl(sunDir),
+      distanceKm: sunDistanceKm,
+      angularRadiusDeg: Math.asin(SUN_RADIUS_KM / sunDistanceKm) * R2D,
+    },
     earth: {
       ...azEl(earthDir),
       distanceKm: earthDistanceKm,

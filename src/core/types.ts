@@ -25,8 +25,15 @@ export interface SkyDirection {
   aboveSphericalHorizon: boolean;
 }
 
+export interface SunSkyDirection extends SkyDirection {
+  /** 观察点到太阳的距离，km（太阳用低精度模型，取整到 1000 km）。 */
+  distanceKm: number;
+  /** 太阳视半径，度（约 0.27）。处理地形部分遮挡时要用。 */
+  angularRadiusDeg: number;
+}
+
 export interface EarthSkyDirection extends SkyDirection {
-  /** 月心到地心之外的观察点到地心的距离，km。 */
+  /** 观察点到地心的距离，km。 */
   distanceKm: number;
   /** 地球视半径，度。 */
   angularRadiusDeg: number;
@@ -34,20 +41,87 @@ export interface EarthSkyDirection extends SkyDirection {
   illuminatedFraction: number;
 }
 
-/** 点位参数（PointConditions）。尚未接入的字段为 null，并在 provenance 里说明。 */
+// ---- 下面三组（terrain / visibility / yearStats）是"先留好的接口"：永远存在，没有数据时字段为 null。 ----
+// 接入数据时只改 src/core/data/，调用方不用动。字段表和状态见 docs/SHARED_INTERFACES.md 第 2 节。
+// 怎么判断 null 的含义：看 provenance.<组>.status——unavailable = 还没接入；ok = 已接入，此时 null = "这里没有这个量"。
+
+/** 地平线剖面的一个采样：某个方位上地形挡住的仰角。 */
+export interface HorizonSample {
+  /** 方位角：正北 0°，向东增加。 */
+  azimuthDeg: number;
+  /** 地形遮挡仰角，度。 */
+  elevationDeg: number;
+}
+
+/** 地形（需要 LOLA 衍生数据，TODO Q4/Q5）。 */
+export interface TerrainParameters {
+  /** 海拔，米，相对 1737.4 km 参考球。 */
+  heightM: number | null;
+  /** 坡度，度。 */
+  slopeDeg: number | null;
+  /** 坡向：下坡方向的方位角，度（正北 0°，向东增加）。 */
+  aspectDeg: number | null;
+  /** 地平线剖面，按方位角排序。采样间隔写在 provenance.terrain.note。 */
+  horizonProfile: HorizonSample[] | null;
+  /** 以上数值来自多少米/像素的数据。 */
+  resolutionM: number | null;
+}
+
+/** 太阳或地球在"此刻"被地形遮挡后的可见性。需要 terrain 的地平线数据。 */
+export interface BodyVisibility {
+  /** 圆盘露在地形地平线之上的比例：0 = 全挡住，1 = 全可见。"可见"定义为 > 0。 */
+  diskVisibleFraction: number | null;
+  /** 下一次从地形地平线后升起（由不可见变可见）的时刻，UTC ISO 8601。 */
+  nextRiseUtc: string | null;
+  /** 下一次落到地形地平线之下（由可见变不可见）的时刻，UTC ISO 8601。 */
+  nextSetUtc: string | null;
+}
+
+export interface Visibility {
+  sun: BodyVisibility;
+  earth: BodyVisibility;
+}
+
+/** 一段连续时间。 */
+export interface TimeWindow {
+  startUtc: string;
+  endUtc: string;
+  durationH: number;
+}
+
+/** 一个天体在统计期内的可见性统计。太阳：断电 = 不可见；地球：断信号 = 不可见。 */
+export interface BodyYearStats {
+  /** 统计期内可见的时间占比，0~1。 */
+  visibleFraction: number | null;
+  /** 统计期内最长一次连续不可见，小时。 */
+  longestOutageH: number | null;
+  /** 连续可见的窗口列表（太阳：各月昼窗口）。 */
+  visibleWindows: TimeWindow[] | null;
+}
+
+/** 一年统计。公式待定（TODO Q1），由 pipeline 预计算。 */
+export interface YearStats {
+  /** 统计覆盖的时间范围，UTC ISO 8601。怎么取待 Q1 定。 */
+  periodStartUtc: string | null;
+  periodEndUtc: string | null;
+  sun: BodyYearStats;
+  earth: BodyYearStats;
+}
+
+/** 点位参数（PointConditions）。没有数据的字段为 null，并在 provenance 里说明。 */
 export interface PointConditions {
   position: LunarPosition;
   /** 查询时刻，UTC，ISO 8601。 */
   timeUtc: string;
-  sun: SkyDirection;
+  sun: SunSkyDirection;
   earth: EarthSkyDirection;
-  /** 地形（高度、坡度、坡向、地平线剖面）。需要 LOLA 衍生数据，尚未接入。 */
-  terrain: null;
-  /** 一年统计（日照比例、地球可见比例、最长断电/断信号）。公式待定（TODO Q1），尚未接入。 */
-  yearStats: null;
+  terrain: TerrainParameters;
+  visibility: Visibility;
+  yearStats: YearStats;
   provenance: {
     ephemeris: Provenance;
     terrain: Provenance;
+    visibility: Provenance;
     yearStats: Provenance;
   };
   /** 约定说明，方便调用方不用猜。 */
@@ -56,6 +130,9 @@ export interface PointConditions {
     azimuth: string;
     elevation: string;
     time: string;
+    height: string;
+    duration: string;
+    fraction: string;
     moonReferenceRadiusKm: number;
   };
 }

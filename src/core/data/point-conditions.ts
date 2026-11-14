@@ -1,8 +1,17 @@
 // 统一数据接口：给定月面位置和时间，返回点位参数。
-// 目前真实可用的只有"太阳/地球方位角与高度角"（星历）。地形和一年统计需要 pipeline 产出的衍生数据，
-// 还没接入，所以这里如实返回 null + 说明，而不是编一个数。接入后只改本文件，调用方不用动。
+// 目前真实可用的只有"太阳/地球的方位角、高度角、距离、视半径"（星历）。地形、遮挡后的可见性、一年统计
+// 需要 pipeline 产出的衍生数据，还没接入：接口已留好（见 unavailable-parameters.ts），字段如实返回 null + 说明，
+// 而不是编一个数。接入后只改 src/core/data/，调用方不用动。
 import { skyAtLatLon } from "../ephemeris/ephemeris";
 import type { LunarPosition, PointConditions } from "../types";
+import {
+  emptyTerrain,
+  emptyVisibility,
+  emptyYearStats,
+  unavailableTerrainProvenance,
+  unavailableVisibilityProvenance,
+  unavailableYearStatsProvenance,
+} from "./unavailable-parameters";
 
 /** 把经度规范到 [-180, 180]。 */
 export function normalizeLonDeg(lonDeg: number): number {
@@ -22,6 +31,9 @@ export function getPointConditions(position: LunarPosition, timeMs: number): Poi
       azimuthDeg: round(sky.sun.azimuthDeg, 3),
       elevationDeg: round(sky.sun.elevationDeg, 3),
       aboveSphericalHorizon: sky.sun.elevationDeg > 0,
+      // 太阳用低精度模型，最后几位没有意义，取整到 1000 km
+      distanceKm: Math.round(sky.sun.distanceKm / 1000) * 1000,
+      angularRadiusDeg: round(sky.sun.angularRadiusDeg, 4),
     },
     earth: {
       azimuthDeg: round(sky.earth.azimuthDeg, 3),
@@ -31,30 +43,27 @@ export function getPointConditions(position: LunarPosition, timeMs: number): Poi
       angularRadiusDeg: round(sky.earth.angularRadiusDeg, 4),
       illuminatedFraction: round(sky.earth.illuminatedFraction, 4),
     },
-    terrain: null,
-    yearStats: null,
+    terrain: emptyTerrain(),
+    visibility: emptyVisibility(),
+    yearStats: emptyYearStats(),
     provenance: {
       ephemeris: {
         status: "ok",
         source: "Truncated Meeus lunar theory + low-precision Sun + IAU lunar orientation (WGCCRE 2009); checked against JPL Horizons",
         note: "Accuracy about 0.02 degrees; fine for visualising illumination and comms windows, not for mission-grade planning. Angles are relative to a smooth 1737.4 km sphere (no terrain).",
       },
-      terrain: {
-        status: "unavailable",
-        source: "NASA LOLA (planned)",
-        note: "Terrain-derived values (height, slope, horizon profile, terrain occlusion) are not wired in yet. They need pipeline-derived data (see docs/DATA_FLOW.md).",
-      },
-      yearStats: {
-        status: "unavailable",
-        source: "pipeline (planned)",
-        note: "Year statistics are waiting on the metric definitions (docs/TODO.md Q1).",
-      },
+      terrain: unavailableTerrainProvenance(),
+      visibility: unavailableVisibilityProvenance(),
+      yearStats: unavailableYearStatsProvenance(),
     },
     conventions: {
       longitude: "selenographic degrees, east positive, normalized to [-180, 180]",
       azimuth: "compass bearing in degrees: north = 0, increasing toward east",
       elevation: "degrees above the local horizontal of a smooth sphere; 90 = zenith",
       time: "UTC, ISO 8601",
+      height: "meters above the 1737.4 km reference sphere",
+      duration: "hours",
+      fraction: "ratio from 0 to 1",
       moonReferenceRadiusKm: 1737.4,
     },
   };

@@ -5,7 +5,9 @@ import { getPointConditionsForQuery, pointConditionsInputSchema } from "../logic
 export const getPointConditionsTool = defineReadTool({
   name: "get_point_conditions",
   description:
-    "Get lunar surface conditions at one point and time: the Sun's and Earth's azimuth/elevation (relative to a smooth-sphere horizon, no terrain occlusion), Earth's distance and phase. Terrain and year statistics are not available yet and are returned as null with a provenance note.",
+    "Get lunar surface conditions at one point and time. Available now: the Sun's and Earth's azimuth/elevation (relative to a smooth-sphere horizon, no terrain occlusion), distances, apparent radii and Earth's phase. " +
+    "The response also has three groups that are not computed yet: terrain (height, slope, aspect, horizon profile), visibility (terrain-aware disk visibility and next rise/set of the Sun and Earth) and yearStats (visible fraction, longest outage, visible windows). " +
+    "Their fields are null; check provenance.terrain / provenance.visibility / provenance.yearStats: status 'unavailable' means not wired in yet, so null does not mean there is no terrain.",
   access: "read",
   inputSchema: pointConditionsInputSchema,
   run: getPointConditionsForQuery,
