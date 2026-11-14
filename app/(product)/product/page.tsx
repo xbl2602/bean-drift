@@ -1,18 +1,13 @@
-// product page 占位页。负责人：ShanLe1224。可以整个替换。
-// 要数据时请调用 /api/point、/api/compare、/api/presets（接口说明见 docs/SHARED_INTERFACES.md），不要自己算星历。
-import Link from "next/link";
+// Lunar Quest 产品页。负责人：ShanLe1224。
+// 页面本身只负责挂载；地图、3D、第一人称、菜单都在 src/ui/product/。landing page 用指向 /product 的按钮进入这里。
+import type { Metadata } from "next";
+import { LunarQuestApp } from "@/ui/product/lunar-quest-app";
+
+export const metadata: Metadata = {
+  title: "Lunar Quest",
+  description: "Explore the whole Moon in 4K with real sunlight and shadows, then stand anywhere in first person.",
+};
 
 export default function ProductPage() {
-  return (
-    <main className="mx-auto flex min-h-screen max-w-3xl flex-col justify-center gap-6 px-6">
-      <p className="text-sm uppercase tracking-widest text-[var(--muted)]">Product page · placeholder</p>
-      <h1 className="text-4xl font-semibold">Lunar map</h1>
-      <p className="text-[var(--muted)]">The 2D whole-Moon map, timeline and layers will live here.</p>
-      <div>
-        <Link href="/" className="text-[var(--accent)] underline-offset-4 hover:underline">
-          ← Back to landing page
-        </Link>
-      </div>
-    </main>
-  );
+  return <LunarQuestApp />;
 }
