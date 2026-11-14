@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { searchLunarData, type SearchResult } from "./search-client";
@@ -6,11 +6,17 @@ import styles from "./lunar-search.module.css";
 
 const EXAMPLES = [
   { label: "Explore landing sites", question: "List the available lunar landing site presets and their coordinates." },
-  { label: "Sun at the south pole", question: "What is the Sun's elevation at the lunar south pole at 2030-01-01T12:00:00Z?" },
+  { label: "Find flat sunny sites", question: "Find south polar sites south of -85 latitude with slope under 5 degrees and longest darkness under 250 hours." },
   { label: "Compare two locations", question: "Compare the lunar south pole and Apollo 11 at 2030-01-01T12:00:00Z." },
+  { label: "14-day south pole timeline", question: "Show the sunlight and Earth visibility windows at the lunar south pole from 2030-01-01T00:00:00Z to 2030-01-15T00:00:00Z." },
 ];
 const TOOL_LABELS: Record<string, string> = {
-  list_presets: "Lunar locations", get_point_conditions: "Point conditions", compare_points: "Site comparison",
+  list_presets: "Lunar locations",
+  get_point_conditions: "Point conditions",
+  compare_points: "Site comparison",
+  get_point_timeline: "Visibility timeline",
+  compare_dates: "Date comparison",
+  find_sites: "Site finder",
 };
 
 /** Self-contained product-page widget. Calls only the site's /api/agent route. */
@@ -38,7 +44,6 @@ export function LunarSearch() {
     const timer = setTimeout(() => { timedOut = true; controller.abort(); }, 30000);
     try {
       const response = await searchLunarData(message, controller.signal);
-      controller.signal.throwIfAborted();
       if (active.current === controller) { setResult(response); setNotice("Answer ready."); }
     } catch (cause) {
       if (active.current !== controller) return;
@@ -81,7 +86,7 @@ export function LunarSearch() {
           </button>
         </div>
       </form>
-      <p id={`${id}-hint`} className={styles.hint}>Include a location and UTC date. Each search is independent. Ctrl/Cmd + Enter to search.</p>
+      <p id={`${id}-hint`} className={styles.hint}>Include a location and UTC date for a specific calculation. Each search is independent.</p>
       <div className={styles.examples} aria-label="Example questions">
         {EXAMPLES.map(example => <button type="button" key={example.label} disabled={pending} onClick={() => choose(example.question)}>{example.label}<span aria-hidden="true"> +</span></button>)}
       </div>
@@ -100,7 +105,7 @@ export function LunarSearch() {
           </details>)}
         </div> : <p className={styles.hint}>No lunar calculation tool was used for this answer.</p>}
       </article> : null}
-      <footer className={styles.footer}><span aria-hidden="true">◌</span><p>Exploration, not mission planning. Positions use an analytical approximation; terrain uses a coarse whole-Moon map. Annual statistics currently cover 2030, independent of the selected date. Check each result’s provenance and period.</p></footer>
+      <footer className={styles.footer}><span aria-hidden="true">◌</span><p>Exploration, not mission planning. Positions use an analytical approximation. Terrain and yearly statistics come from a coarse whole-Moon map, not site-scale surveys.</p></footer>
     </section>
   );
 }
