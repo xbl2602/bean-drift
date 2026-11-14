@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#04060a">
+<title>Bean Drift · 月球着陆点导航器</title>
+<meta name="description" content="在月面任意一点、任意时刻，算出太阳与地球的高度角、地形遮挡与断续窗口。全月每一点都可查，也都能被程序调用。">
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+<div class="grain" aria-hidden="true"></div>
+<div class="vignette" aria-hidden="true"></div>
+<div class="cursor-glow" id="cursor-glow" aria-hidden="true"></div>
+<div class="scroll-progress" aria-hidden="true"><i id="scroll-bar"></i></div>
+
+<header class="nav" id="nav">
+  <a class="brand" href="#top" aria-label="Bean Drift 首页">
+    <span class="brand-mark" aria-hidden="true"></span>
+    <span class="brand-name">BEAN DRIFT</span>
+    <span class="brand-sub">LUNAR LANDING SITE NAVIGATOR</span>
+  </a>
+  <nav class="nav-links" aria-label="主导航">
+    <a href="#terrain">地形</a>
+    <a href="#map">地图</a>
+    <a href="#agent">智能体</a>
+    <a href="#interface">接口</a>
+    <a href="#deploy">部署</a>
+  </nav>
+  <div class="nav-status"><i aria-hidden="true"></i> 只读工具 3 个</div>
+</header>
+
+<main id="top">
+
+  <!-- 01 HERO -->
+  <section class="hero" aria-label="项目概览">
+    <canvas id="moon-canvas" aria-hidden="true"></canvas>
+    <div class="node-layer" id="node-layer" aria-hidden="true"></div>
+    <div class="reticle" id="reticle" aria-hidden="true">
+      <i class="r-tick r-t0"></i><i class="r-tick r-t1"></i><i class="r-tick r-t2"></i><i class="r-tick r-t3"></i>
+      <span class="r-cross"></span>
+      <span class="r-label">SOUTH POLE · LOLA 10 m</span>
+    </div>
+    <div class="hero-fade" aria-hidden="true"></div>
+
+    <div class="hero-inner wrap">
+      <div class="hero-copy">
+        <p class="eyebrow">NASA SPACE APPS CHALLENGE · KUALA LUMPUR 2026</p>
+        <h1>光照与通信，<br><span>在这里同时成立。</span></h1>
+        <p class="lede">在月面任意一点、任意时刻，算出太阳与地球的高度角、地形遮挡与断续窗口。全月每一点都可查，也都能被你的程序直接调用。</p>
+        <div class="hero-cta">
+          <a class="btn btn-primary" href="#map">进入月面地图 <span aria-hidden="true">↗</span></a>
+          <a class="btn btn-ghost" href="#interface">查看开放接口</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="hero-rail">
+      <div class="rail-item"><span class="rail-k">ELEVATION</span><b>LOLA 10 m/px</b></div>
+      <div class="rail-item"><span class="rail-k">EPHEMERIS</span><b>0.02° 星历精度</b></div>
+      <div class="rail-item"><span class="rail-k">PRECOMPUTED</span><b>8,760 h / 年</b></div>
+      <div class="rail-item"><span class="rail-k">MCP TOOLS</span><b>3 个 · 全部只读</b></div>
+      <div class="rail-live"><i aria-hidden="true"></i><span id="hero-clock">SUN 000.0° / EL +0.0°</span></div>
+    </div>
+  </section>
+
+  <!-- 02 PROBLEM -->
+  <section class="section problem" id="terrain">
+    <div class="wrap split">
+      <div class="split-copy">
+        <h2>月球没有大气，<br><span>地平线就是地形本身。</span></h2>
+        <p>太阳的视半径只有 0.27°，地球约 0.9°。一座 20° 的山脊，可以同时遮住发电的太阳和通信的地球。平滑球面上的高度角，说明不了你能不能活过这个月夜。</p>
+        <p>我们要找的，是这两条视线同时成立的那一小块地面。</p>
+        <dl class="facts">
+          <div><dt>月昼</dt><dd>29.5 地球日</dd></div>
+          <div><dt>太阳视半径</dt><dd>0.27°</dd></div>
+          <div><dt>地球视半径</dt><dd>0.9°</dd></div>
+        </dl>
+      </div>
+      <div class="split-visual">
+        <figure class="horizon-figure">
+          <figcaption><span>射线追踪 · 单点地平线剖面</span><span id="hz-caption">89.71°S 62.5°E</span></figcaption>
+          <svg id="hz-svg" viewBox="0 0 720 420" role="img" aria-label="月面地平线剖面与太阳、地球视线示意图">
+            <defs>
+              <linearGradient id="hz-ground" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#1a222c"/><stop offset="1" stop-color="#070a0f"/>
+              </linearGradient>
+              <linearGradient id="hz-sun" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0" stop-color="#ffb361" stop-opacity="0"/><stop offset="1" stop-color="#ffb361" stop-opacity=".95"/>
+              </linearGradient>
+              <linearGradient id="hz-earth" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0" stop-color="#7fd7ea" stop-opacity="0"/><stop offset="1" stop-color="#7fd7ea" stop-opacity=".95"/>
+              </linearGradient>
+              <radialGradient id="hz-sun-glow"><stop offset="0" stop-color="#ffd6a0" stop-opacity=".9"/><stop offset="1" stop-color="#ffb361" stop-opacity="0"/></radialGradient>
+              <pattern id="hz-grid" width="60" height="60" patternUnits="userSpaceOnUse"><path d="M60 0H0V60" fill="none" stroke="rgba(150,180,205,.08)" stroke-width="1"/></pattern>
+            </defs>
+            <rect width="720" height="420" fill="url(#hz-grid)"/>
+            <g id="hz-rays"></g>
+            <path id="hz-ground-path" fill="url(#hz-ground)" stroke="#3a4a5a" stroke-width="1.2"/>
+            <line id="hz-station" x1="0" y1="0" x2="0" y2="0" stroke="#e8eef5" stroke-width="1.2" stroke-dasharray="3 4"/>
+            <circle id="hz-station-dot" r="3.5" fill="#eef2f7"/>
+            <g id="hz-labels"></g>
+          </svg>
+          <div class="hz-legend">
+            <span class="lg lg-sun">太阳视线</span>
+            <span class="lg lg-earth">地球视线</span>
+            <span class="lg lg-terrain">地形遮挡</span>
+          </div>
+        </figure>
+        <div class="hz-status" id="hz-status"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 03 MAP + TIMELINE -->
+  <section class="section mapsec" id="map">
+    <div class="wrap">
+      <div class="mapsec-head">
+        <h2>拖动时间，<br><span>看阴影走过这片月面。</span></h2>
+        <p>4,200 × 4,200 格真实 LOLA 高程，逐小时的真实太阳位置。切换图层，或者点任意一点，拿到那一处的完整参数。</p>
+      </div>
+
+      <div class="map-shell">
+        <div class="map-stage" id="map-stage">
+          <canvas id="map-canvas" aria-label="月面光照与地形交互地图"></canvas>
+          <div class="map-hud map-hud-tl">
+            <span class="dot" aria-hidden="true"></span><span id="map-date">2026-11-14 12:00 UTC</span>
+          </div>
+          <div class="map-hud map-hud-tr" id="map-cursor">89.71°S / 62.50°E</div>
+          <div class="map-cross" id="map-cross" aria-hidden="true"><i class="cx"></i><i class="cy"></i></div>
+          <div class="map-pin" id="map-pin" aria-hidden="true"><i></i><b>●</b></div>
+          <div class="map-card" id="map-card" hidden>
+            <header><span id="card-title">SHACKLETON RIM</span><button type="button" class="card-close" id="card-close" aria-label="关闭参数卡">×</button></header>
+            <div class="card-grid" id="card-grid"></div>
+            <div class="card-chart"><span>地平线剖面 · 144 方位</span><canvas id="horizon-canvas" aria-label="地平线剖面"></canvas></div>
+          </div>
+        </div>
+
+        <aside class="map-side">
+          <div class="side-block">
+            <div class="side-label">图层</div>
+            <div class="layers" role="tablist" aria-label="地图图层">
+              <button type="button" class="layer is-active" data-layer="light" role="tab" aria-selected="true">光照与阴影</button>
+              <button type="button" class="layer" data-layer="height" role="tab" aria-selected="false">高程</button>
+              <button type="button" class="layer" data-layer="slope" role="tab" aria-selected="false">坡度</button>
+              <button type="button" class="layer" data-layer="sun" role="tab" aria-selected="false">年日照比例</button>
+              <button type="button" class="layer" data-layer="earth" role="tab" aria-selected="false">年地球可见</button>
+            </div>
+          </div>
+
+          <div class="side-block">
+            <div class="side-label">时间轴 <b id="time-label">11-14 12:00Z</b></div>
+            <input type="range" id="time-slider" min="0" max="8759" value="313" step="1" aria-label="时间轴，逐小时">
+            <div class="time-ends"><span>2026-11</span><span>2027-10</span></div>
+          </div>
+
+          <div class="side-block readouts">
+            <div><span>SUN AZ</span><b id="ro-sun-az">58.0°</b></div>
+            <div><span>SUN EL</span><b id="ro-sun-el">+1.7°</b></div>
+            <div><span>EARTH AZ</span><b id="ro-earth-az">295.6°</b></div>
+            <div><span>EARTH EL</span><b id="ro-earth-el">−4.0°</b></div>
+          </div>
+
+          <p class="side-note">图上每一点的高程、坡度与地平线剖面都由真实 DEM 现场计算。年比例为一整年 8,760 小时的可见性统计。</p>
+        </aside>
+      </div>
+
+      <ul class="claims">
+        <li><b>逐点地平线</b><span>不是平滑球面，是这一点向外 144 个方位的实测山脊仰角。</span></li>
+        <li><b>逐时星历</b><span>太阳与地球的方位角和高度角，一年逐小时，误差约 0.02°。</span></li>
+        <li><b>一份实现</b><span>网页、REST、MCP 与智能体，调用的是同一个 logic 函数。</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 04 AGENT -->
+  <section class="section agent" id="agent">
+    <div class="wrap split split-rev">
+      <div class="split-copy">
+        <h2>不用点地图，<br><span>直接问它。</span></h2>
+        <p>智能体只被允许调用三个只读工具：查单点、对比多点、列预设点。它拿到的数据，和你手点地图拿到的是同一份。</p>
+        <p>它不能写数据、不能改配置、不能碰数据库。问题问错了，它只能重新问一次地形。</p>
+        <div class="tool-list">
+          <div><code>get_point_conditions</code><span>单点参数</span></div>
+          <div><code>compare_points</code><span>多点对比</span></div>
+          <div><code>list_presets</code><span>预设着陆点</span></div>
+        </div>
+      </div>
+      <div class="split-visual">
+        <div class="chat" id="chat">
+          <div class="chat-bar"><span>AGENT · DEEPSEEK</span><span class="chat-live"><i></i>READ ONLY</span></div>
+          <div class="chat-body" id="chat-body"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 05 FIRST PERSON -->
+  <section class="fp" id="firstperson">
+    <div class="fp-sticky">
+      <canvas id="fp-canvas" aria-hidden="true"></canvas>
+      <div class="fp-fade" aria-hidden="true"></div>
+      <div class="fp-copy wrap">
+        <p class="eyebrow">APOLLO 11 · TRANQUILITY BASE</p>
+        <h2>再靠近一点，<br><span>站到月面上。</span></h2>
+        <p>LROC 2 米高程，1.6 米眼高，太阳在 11°。石块、陨石坑和缓坡的影子被拉得很长，近处可见的每一道明暗，都是这一刻真实的光。</p>
+        <div class="fp-readouts">
+          <div><span>EYE HEIGHT</span><b>1.6 m</b></div>
+          <div><span>SUN ELEVATION</span><b id="fp-sun-el">+11.2°</b></div>
+          <div><span>SUN AZIMUTH</span><b id="fp-sun-az">91.7°</b></div>
+          <div><span>EPOCH</span><b>2026-11-16 00:00Z</b></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 06 INTERFACE -->
+  <section class="section interface" id="interface">
+    <div class="wrap">
+      <p class="eyebrow">OPEN INTERFACE</p>
+      <div class="iface-head">
+        <h2>一个地址，<br><span>同时是网站、API 和 MCP 服务器。</span></h2>
+        <p>页面读 <code>GET /api/point</code>，AI 读 <code>POST /mcp</code>。路由不同，下面调用的是同一个函数。</p>
+      </div>
+
+      <div class="iface-grid">
+        <div class="term">
+          <div class="term-bar">
+            <span class="term-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+            <span>MCP · STREAMABLE HTTP · POST /mcp</span>
+            <button type="button" class="term-replay" id="term-replay">重播</button>
+          </div>
+          <pre class="term-body" id="mcp-term" aria-live="polite"></pre>
+          <div class="term-foot">
+            <span class="chip chip-on">只读</span><span class="chip">无状态</span><span class="chip">无需密钥</span><span class="chip">JSON-RPC 2.0</span>
+          </div>
+        </div>
+
+        <div class="iface-side">
+          <div class="code-card">
+            <div class="code-head"><span>REST · 单点参数</span><button type="button" class="copy" data-copy="curl -s &quot;https://bean-drift.vercel.app/api/point?latDeg=-89.71&amp;lonDeg=62.5&amp;time=2026-11-14T12:00:00Z&quot;">复制</button></div>
+            <pre>curl -s "https://bean-drift.vercel.app/api/point\
+?latDeg=-89.71&amp;lonDeg=62.5\
+&amp;time=2026-11-14T12:00:00Z"</pre>
+          </div>
+          <div class="code-card">
+            <div class="code-head"><span>MCP · 客户端配置</span><button type="button" class="copy" data-copy="{&quot;mcpServers&quot;:{&quot;bean-drift&quot;:{&quot;type&quot;:&quot;http&quot;,&quot;url&quot;:&quot;https://bean-drift.vercel.app/mcp&quot;}}}">复制</button></div>
+            <pre>{
+  "mcpServers": {
+    "bean-drift": {
+      "type": "http",
+      "url": "https://bean-drift.vercel.app/mcp"
+    }
+  }
+}</pre>
+          </div>
+          <div class="code-card code-card-wide">
+            <div class="code-head"><span>返回 · PointConditions</span><span class="ok">200 OK</span></div>
+            <pre id="rest-preview"></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 07 DEPLOY -->
+  <section class="section deploy" id="deploy">
+    <div class="wrap">
+      <p class="eyebrow">DEPLOYMENT</p>
+      <div class="deploy-head">
+        <h2>一份代码，<br><span>三种跑法。</span></h2>
+        <p>线上、容器、本机，同一个 <code>/mcp</code> 地址，同一份 logic。不装全局依赖，不动系统环境。</p>
+      </div>
+      <div class="deploy-grid">
+        <article class="deploy-card">
+          <header><span class="deploy-k">01</span><h3>VERCEL</h3><span class="deploy-tag">线上主线</span></header>
+          <p>推送到 main 即部署，同一个地址同时提供网页、REST 与 MCP。</p>
+          <div class="cmd"><code>git push origin main</code><button type="button" class="copy" data-copy="git push origin main">复制</button></div>
+          <footer>需要：一个 GitHub 仓库 · 一个 Vercel 账号</footer>
+        </article>
+        <article class="deploy-card">
+          <header><span class="deploy-k">02</span><h3>DOCKER</h3><span class="deploy-tag">零污染</span></header>
+          <p>容器里跑完整服务，宿主机不需要 Node，也不留下任何东西。</p>
+          <div class="cmd"><code>docker compose up --build</code><button type="button" class="copy" data-copy="docker compose up --build">复制</button></div>
+          <footer>需要：Docker Desktop 或 Docker Engine</footer>
+        </article>
+        <article class="deploy-card">
+          <header><span class="deploy-k">03</span><h3>本地</h3><span class="deploy-tag">调试友好</span></header>
+          <p>依赖只装进项目目录，删掉 node_modules 就等于卸载干净。</p>
+          <div class="cmd"><code>npm install &amp;&amp; npm run dev</code><button type="button" class="copy" data-copy="npm install && npm run dev">复制</button></div>
+          <footer>需要：Node.js 24 · 无全局安装</footer>
+        </article>
+      </div>
+      <div class="deploy-strip">
+        <span><i class="ok-dot" aria-hidden="true"></i>同一个 <code>/mcp</code> 地址</span>
+        <span>同一份 <code>src/features/*/logic</code></span>
+        <span>不依赖任何平台专属特性</span>
+        <span>无密钥即可启动</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 08 CTA -->
+  <section class="section closing">
+    <div class="wrap closing-inner">
+      <div>
+        <h2>从月面全图，<br><span>开始你的下一次任务。</span></h2>
+        <p class="closing-tag">READ THE LIGHT. KEEP THE LINK.</p>
+      </div>
+      <div class="closing-cta">
+        <a class="btn btn-primary" href="#map">进入月面地图 <span aria-hidden="true">↗</span></a>
+        <a class="btn btn-ghost" href="#interface">复制接口地址</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="wrap footer-inner">
+    <div class="footer-brand"><span class="brand-mark" aria-hidden="true"></span>BEAN DRIFT</div>
+    <p>地形：NASA LOLA 10 m/px、LROC NAC。星历：Meeus 月球理论，对照 JPL Horizons 校验。本页为演示页面，接口返回取自仓库内本地部署的真实响应。</p>
+    <p class="footer-meta">NASA SPACE APPS CHALLENGE · KUALA LUMPUR · 2026 · 只读演示</p>
+  </div>
+</footer>
+
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.js" } }
+</script>
+<script type="module" src="./js/main.js"></script>
+</body>
+</html>

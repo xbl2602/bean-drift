@@ -1,0 +1,52 @@
+# 部署与本地运行（DEPLOYMENT）
+
+> 维护人：`xbl2602`。三种跑法用同一份代码：Vercel（线上主线）、Docker、本地。
+> 目前网页、API、MCP **不需要任何环境变量和密钥**。
+
+## 线上（Vercel）
+
+- Vercel 项目：**还没创建**。创建后在这里登记项目名和线上地址（只登记这两样，不登记任何密钥）。
+- 关联 GitHub 仓库后：**推送到 `main` 自动部署到正式环境**，推送其他分支会生成预览地址。
+- Node 版本固定为 24.x（`package.json` 的 `engines`）。
+- 密钥只放在 Vercel 后台（Project → Settings → Environment Variables），**不要**写进仓库。现在还没有任何要配的。
+- 自检：打开 `<域名>/api/health` 应返回 `{"status":"ok","service":"bean-drift"}`。
+
+> ⚠️ **新建的 Vercel 项目默认开启登录保护（Vercel Authentication）**：没登录 Vercel 的人打开地址会被 302 跳转到登录页（包括评委）。需要 `xbl2602` 在 Vercel 后台 Project → Settings → Deployment Protection 里把它关掉（或改成只保护预览），网站才对外公开。AI 工具尝试关闭时可能被权限系统拦下，这一步留给人手动做。
+
+## 本地运行（不用 Docker）
+
+需要：Node.js 22 或更新（已用 24 测试）。
+
+```
+npm install        # 装依赖，只装在本目录的 node_modules/ 里，不改系统
+npm run dev        # 开发模式，打开 http://localhost:3000
+npm run build && npm start   # 生产模式
+npm run typecheck  # 类型检查
+```
+
+完全卸载：删除本目录的 `node_modules/` 和 `.next/` 即可，没有装任何全局东西。
+
+## Docker
+
+```
+docker compose up --build        # 然后打开 http://localhost:3000
+# 或：docker build -t bean-drift . && docker run -p 3000:3000 bean-drift
+```
+
+> ⚠️ **Dockerfile 还没有真正构建验证过。** 第一次使用请先跑一遍，把结果告诉 `xbl2602`，并把这条提示改掉。
+
+## 快速验证接口
+
+```
+curl "<域名>/api/point?latDeg=-89.71&lonDeg=62.5"
+curl -X POST <域名>/mcp -H "content-type: application/json" -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+```
+
+接口说明见 [SHARED_INTERFACES.md](SHARED_INTERFACES.md)。
+
+## 部署记录
+
+每次正式部署后在这里追加一行：日期、做了什么、结果。
+
+| 日期 | 事件 |
+|---|---|

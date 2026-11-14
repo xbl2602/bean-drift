@@ -1,0 +1,34 @@
+# ---- Secrets: NEVER commit. Real values live only in the Vercel dashboard (and in the owner's own .env.local). ----
+.env
+.env.*
+!.env.example
+
+# ---- dependencies / build output ----
+node_modules/
+.next/
+dist/
+
+# ---- raw NASA downloads, too big for git (the Apollo 11 TIF is over GitHub's 100 MB limit) ----
+# The .LBL / .XML labels stay; prototypes/lunar-scene-demo/tools/*.py rebuild data/derived from them,
+# and docs/PROJECT_CONTEXT.md lists where to download them again.
+prototypes/lunar-scene-demo/data/lola/*.JP2
+prototypes/lunar-scene-demo/data/lroc/*.TIF
+data/raw/
+
+# ---- per-person identity note (who is operating the AI on this machine). Local only, NEVER published. ----
+# The committed template is IDENTITY.example.md.
+IDENTITY.md
+
+# ---- per-machine / per-AI-tool local settings (each person's own paths and permissions) ----
+.claude/
+.opencode/
+.codex/
+.cursor/
+
+# ---- OS / editor noise ----
+.DS_Store
+Thumbs.db
+
+# ---- Next.js / TypeScript generated ----
+*.tsbuildinfo
+next-env.d.ts

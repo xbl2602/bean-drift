@@ -1,0 +1,11 @@
+# 本地一键启动：docker compose up --build   然后打开 http://localhost:3000
+# 密钥放在你自己的 .env.local（已被 git 忽略），不要写进这个文件。
+services:
+  web:
+    build: .
+    ports:
+      - "3000:3000"
+    env_file:
+      - path: .env.local
+        required: false
+    restart: unless-stopped

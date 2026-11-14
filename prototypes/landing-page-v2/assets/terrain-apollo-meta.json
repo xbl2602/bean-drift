@@ -1,0 +1,17 @@
+{
+    "size":  640,
+    "spacingM":  6.5969,
+    "minM":  -39,
+    "maxM":  67,
+    "site":  {
+                 "lat":  0.67416,
+                 "lon":  23.47314,
+                 "name":  "Apollo 11 Tranquility Base"
+             },
+    "source":  "LROC NAC DTM APOLLO11 v1.9, 2 m/px, cropped 4.2 km, resampled to 640",
+    "sunAzDeg":  91.722,
+    "sunElDeg":  11.193,
+    "earthAzDeg":  273.179,
+    "earthElDeg":  62.409,
+    "dateUtc":  "2026-11-16T00:00:00Z"
+}

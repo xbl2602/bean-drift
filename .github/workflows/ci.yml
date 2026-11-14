@@ -1,0 +1,21 @@
+# AGENTS.md 第 10 节：main 必须随时保持"能跑起来"。每个 PR 和每次推送到 main 都跑一遍类型检查和构建。
+# 目前网页、API、MCP 不需要任何环境变量，所以这里不需要配置任何密钥。
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run build

@@ -1,0 +1,28 @@
+# 目录归属。规则本身在 AGENTS.md 第 2 节，这里只是让 GitHub 能自动要求"这个目录的负责人"来审核。
+# 起作用的前提：在 GitHub 给 main 开分支保护，并勾选 "Require review from Code Owners"。
+# 同一路径匹配多条时，以最后一条为准。没写用户名的路径表示"没有负责人，谁都可以改"。
+
+# 默认：项目经理（共用区 src/core、src/lib、pipeline、app/api、app/mcp、部署与配置文件、AGENTS.md、共享文档）
+*                              @xbl2602
+
+# 后端：各类小功能
+/src/features/                 @louis068
+
+# 前端：landing page
+/app/(landing)/                @chanjy0806
+/src/ui/landing/               @chanjy0806
+/public/landing/               @chanjy0806
+
+# 前端：product page
+/app/(product)/                @ShanLe1224
+/src/ui/product/               @ShanLe1224
+/public/product/               @ShanLe1224
+
+# pitch 视频
+/pitch/                        @leeziqi0531-debug
+
+# 任何人都可以新建或追加的记录（AGENTS.md 第 14.4 节）：不指定负责人
+/docs/decisions/
+/docs/meetings/
+/docs/logs/
+/docs/CREDITS.md

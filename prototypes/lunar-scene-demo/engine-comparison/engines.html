@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="data:,">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Engine comparison</title>
+<style>
+  body{margin:0;min-height:100vh;display:grid;place-items:center;background:#05070c;color:#d8e0ee;font:16px/1.6 system-ui,sans-serif}
+  main{max-width:560px;padding:32px}
+  h1{font-size:20px;margin:0 0 4px}
+  p{color:#8c98ad;margin:0 0 20px}
+  a{display:block;padding:14px 18px;margin:10px 0;border:1px solid #243047;border-radius:10px;color:#d8e0ee;text-decoration:none;background:#0b101a}
+  a:hover{border-color:#5b8cff}
+  small{color:#8c98ad;display:block}
+</style>
+</head>
+<body>
+<main>
+  <a href="../index.html" style="display:inline-block;padding:6px 12px;margin:0 0 18px;font-size:13px">&#8962; Home</a>
+  <h1>同一场景，三个引擎</h1>
+  <p>几何和贴图完全相同，只有引擎自带的光照、阴影、后期处理不同。首次加载约 10–25 秒（程序化生成）。拖动 = 环顾，滚轮 = 缩放。</p>
+  <a href="../three.html">three.js（已继续升级）<small>月壤专用光照 + 实例化岩石 + 级联阴影 + 泛光 + AgX；地球带大气壳和夜间灯光。可加参数 ?tm=aces ?ls=0 ?sun=7 做对比</small></a>
+  <a href="../lola.html">月球南极（真实 NASA LOLA 地形 + 时间拖条）<small>three.js，10 米/像素真实高度数据；底部时间拖条按真实星历移动太阳、地球和星空（自转/月相/公转四档步长），远处阴影随时间重算。加 ?spot=a 换到更平缓、太阳和地球可见时间更长的位置，?t=2026-11-14T12:00 设定时间</small></a>
+  <a href="babylon.html">Babylon.js<small>PBR + CascadedShadowGenerator + DefaultRenderingPipeline</small></a>
+  <a href="playcanvas.html">PlayCanvas<small>StandardMaterial + 级联阴影 + CameraFrame</small></a>
+</main>
+</body>
+</html>

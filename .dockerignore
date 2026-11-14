@@ -1,0 +1,13 @@
+node_modules
+.next
+.git
+.env*
+!.env.example
+prototypes
+docs
+IDENTITY.md
+data
+.claude
+.opencode
+.codex
+.cursor
