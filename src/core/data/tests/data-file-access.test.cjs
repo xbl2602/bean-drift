@@ -11,6 +11,7 @@ const { repoRoot } = require('./load-typescript-for-tests.cjs');
 const ALLOWED_READERS = {
   'src/core/data/precomputed-maps.ts': '全月预计算地图的底层读取函数（单点读取要经 terrain-source-routing.ts 才能调用它，见下面第二道关）',
   'src/core/data/site-search.ts': '"按条件找位置"要把整张高度、坡度、统计图读进内存，单独读取',
+  'src/features/agent-search/logic/gazetteer.ts': 'agent 的 IAU 月面地名表查找，读的是 public/product/moon/lunar-names.json（不是预计算地图）；已列入 next.config.ts 的 /api/agent 打包清单',
 };
 
 const FS_IMPORT = /(?:from|require\()\s*["'](?:node:)?fs(?:\/promises)?["']/;
