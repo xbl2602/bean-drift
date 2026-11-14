@@ -36,7 +36,9 @@ test('real point tool returns unchanged data and unavailable terrain provenance'
       count++;
       if (count === 1) return call('get_point_conditions', args);
       const data = JSON.parse(messages.at(-1).content);
-      assert.equal(data.terrain, null);
+      // The terrain group always exists; while the data is not wired in every field is null
+      // and provenance says 'unavailable' (docs/SHARED_INTERFACES.md section 2).
+      assert.ok(data.terrain && Object.values(data.terrain).every(value => value === null));
       assert.equal(data.provenance.terrain.status, 'unavailable');
       return answer;
     },
