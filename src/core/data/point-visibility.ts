@@ -6,6 +6,7 @@ import type { BodyVisibility, BodyYearStats, TimeWindow, Visibility, YearStats }
 
 const HOUR_MS = 3_600_000;
 /** 一年统计的统计期：2030-01-01 起 8760 小时，逐小时取样（TODO Q1 的决定）。 */
+/** 一年统计不指定起点时的默认起点。 */
 export const YEAR_STATS_START_MS = Date.UTC(2030, 0, 1);
 export const YEAR_STATS_HOURS = 8760;
 /** 找"下一次升起/落下"：最多往后找 60 天（够覆盖一个朔望月和地球的天平动周期），每 10 分钟取一次样。 */
@@ -106,13 +107,19 @@ export function computeVisibility(
   return { sun: build(sky.sun, "sun"), earth: build(sky.earth, "earth") };
 }
 
-/** 一年统计：逐小时取样 YEAR_STATS_HOURS 步，统计太阳（断电）和地球（断信号）。 */
-export function computeYearStats(profileDeg: number[], latDeg: number, lonDeg: number, minEarthElevationDeg?: number): YearStats {
+/** 一年统计：从 startMs 起逐小时取样 YEAR_STATS_HOURS 步，统计太阳（断电）和地球（断信号）。 */
+export function computeYearStats(
+  profileDeg: number[],
+  latDeg: number,
+  lonDeg: number,
+  minEarthElevationDeg?: number,
+  startMs: number = YEAR_STATS_START_MS,
+): YearStats {
   const sun = new Uint8Array(YEAR_STATS_HOURS);
   const earth = new Uint8Array(YEAR_STATS_HOURS);
   let bothHours = 0;
   for (let hour = 0; hour < YEAR_STATS_HOURS; hour++) {
-    const visible = bodiesVisibleAt(profileDeg, latDeg, lonDeg, YEAR_STATS_START_MS + hour * HOUR_MS, minEarthElevationDeg);
+    const visible = bodiesVisibleAt(profileDeg, latDeg, lonDeg, startMs + hour * HOUR_MS, minEarthElevationDeg);
     sun[hour] = visible.sun ? 1 : 0;
     earth[hour] = visible.earth ? 1 : 0;
     if (visible.sun && visible.earth) bothHours += 1;
@@ -120,8 +127,8 @@ export function computeYearStats(profileDeg: number[], latDeg: number, lonDeg: n
   const summarize = (flags: Uint8Array): BodyYearStats => {
     const runs = summarizeVisibilityRuns(flags, 1);
     const windows: TimeWindow[] = runs.visibleWindows.map((w) => ({
-      startUtc: new Date(YEAR_STATS_START_MS + w.startStep * HOUR_MS).toISOString(),
-      endUtc: new Date(YEAR_STATS_START_MS + w.endStep * HOUR_MS).toISOString(),
+      startUtc: new Date(startMs + w.startStep * HOUR_MS).toISOString(),
+      endUtc: new Date(startMs + w.endStep * HOUR_MS).toISOString(),
       durationH: w.endStep - w.startStep,
     }));
     return {
@@ -133,8 +140,8 @@ export function computeYearStats(profileDeg: number[], latDeg: number, lonDeg: n
     };
   };
   return {
-    periodStartUtc: new Date(YEAR_STATS_START_MS).toISOString(),
-    periodEndUtc: new Date(YEAR_STATS_START_MS + YEAR_STATS_HOURS * HOUR_MS).toISOString(),
+    periodStartUtc: new Date(startMs).toISOString(),
+    periodEndUtc: new Date(startMs + YEAR_STATS_HOURS * HOUR_MS).toISOString(),
     sun: summarize(sun),
     earth: summarize(earth),
     bothVisibleFraction: Number((bothHours / YEAR_STATS_HOURS).toFixed(4)),

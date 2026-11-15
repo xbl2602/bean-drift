@@ -77,7 +77,7 @@
 
 ### 2.5 一年统计（`yearStats`）✅
 
-统计期固定为 **2030-01-01T00:00:00Z 起的 8760 小时（整年），逐小时取样**（TODO Q1 的决定，见上面的 decisions 文件）。**不随查询时刻变**。FEATURE_SPEC 术语：**断电** = 太阳被地形挡住的连续时段，**断信号** = 地球被地形挡住的连续时段。口径：圆盘上缘高于地形地平线算可见；被统计期首尾截断的时段按截断后的长度计入。`yearStats.sun` 和 `yearStats.earth` **结构相同**：
+统计期默认是 **2030-01-01T00:00:00Z 起的 8760 小时（整年），逐小时取样**（TODO Q1 的决定，见上面的 decisions 文件）。**不随查询时刻 `time` 变**；想换起点，传 `statsStart`（见 2.5.3）。FEATURE_SPEC 术语：**断电** = 太阳被地形挡住的连续时段，**断信号** = 地球被地形挡住的连续时段。口径：圆盘上缘高于地形地平线算可见；被统计期首尾截断的时段按截断后的长度计入。`yearStats.sun` 和 `yearStats.earth` **结构相同**：
 
 | 字段 | 含义 | 单位 | 状态 |
 |---|---|---|---|
@@ -88,6 +88,16 @@
 | `yearStats.<sun/earth>.meanVisibleWindowH` | 统计期内所有连续可见时段的平均时长（L7"平均单次信号时间"，地球一栏）。从未可见 = 0 | 小时 | ✅ |
 | `yearStats.<sun/earth>.visibleWindows` | 连续可见的窗口列表 `[{ startUtc, endUtc, durationH }]`（太阳：各月昼窗口）。一个点最多约几十条 | UTC、小时 | ✅ |
 | `yearStats.bothVisibleFraction` | 统计期内太阳和地球**同时**可见的时间占比（和 `sun`、`earth` 并列，不在它们里面）。选址要两者都满足，这个比单看任一个更有说服力。整月地图里同名的一层 `bothFraction` 与它同口径 | 比例 0~1 | ✅ |
+
+### 2.5.3 选填输入：统计期起点（`statsStart`）✅（2026-11-15）
+
+默认的一年统计固定从 2030-01-01 起，但任务要的往往是"发射/着陆那一刻之后的一年"。**输入**（不是输出）：`GET /api/point`、`POST /api/compare`、`get_point_conditions`、`compare_points` 接受可选的 `statsStart`（UTC，ISO 8601，带 Z，例如 `2027-03-01T00:00:00Z`）。
+
+- **不传 = 和以前完全一致**（2030-01-01 起），整月地图、`find_sites` 也仍然是这一年。**整月地图和 `find_sites` 不接受 `statsStart`**：它们是 pipeline 预先算好的静态文件，换年份要重跑 pipeline。
+- 传了之后：统计期是 `statsStart` 起的 8760 小时（`yearStats.periodStartUtc` / `periodEndUtc` 就是它），规则不变。除 `yearStats` 和 `provenance.yearStats` 外，返回里其他字段不受影响；`provenance.yearStats.note` 会写明"起点是调用方选的"。
+- 范围：`statsStart` 在 2000-01-01 到 2099-01-01 之间（起点加 8760 小时必须还在星历适用的 2000~2100 年内），否则返回 400。
+- 星历精度在这个范围内都靠得住：对照 JPL Horizons，2005/2015/2026~2030/2035/2043/2060/2090 年的 8 个月面观测点，太阳和地球方向最大偏差 0.013°（自动测试 `src/core/ephemeris/tests/ephemeris-vs-horizons.test.cjs`）。
+- `GET /api/timeline`、`POST /api/compare-dates` 暂不接受 `statsStart`（`compare-dates` 里每个点的 `yearStats` 仍是 2030 年那一年）。
 
 ### 2.5.2 选填假设：地球最低仰角（`minEarthElevationDeg`）✅
 
@@ -138,8 +148,8 @@ pipeline 把上面的统计对**整个月面每个 0.25° 格子**算好，放�
 | 方法 路径 | 参数 | 返回 |
 |---|---|---|
 | `GET /api/health` | — | `{ "status": "ok", "service": "bean-drift" }` |
-| `GET /api/point` | query：`latDeg`（-90~90）、`lonDeg`（-180~360）、`time`（可选，默认现在）、`minEarthElevationDeg`（可选，见 2.5.2） | `PointConditions` |
-| `POST /api/compare` | JSON：`{ "points": [{ "latDeg", "lonDeg" }, ...1~10 个], "time"?: "...", "minEarthElevationDeg"?: n }` | `{ "timeUtc", "results": PointConditions[] }`，顺序与输入一致 |
+| `GET /api/point` | query：`latDeg`（-90~90）、`lonDeg`（-180~360）、`time`（可选，默认现在）、`minEarthElevationDeg`（可选，见 2.5.2）、`statsStart`（可选，见 2.5.3） | `PointConditions` |
+| `POST /api/compare` | JSON：`{ "points": [{ "latDeg", "lonDeg" }, ...1~10 个], "time"?: "...", "minEarthElevationDeg"?: n, "statsStart"?: "...Z" }` | `{ "timeUtc", "results": PointConditions[] }`，顺序与输入一致 |
 | `GET /api/presets` | — | `{ "presets": Preset[] }`（`Preset` 见 `src/core/types.ts`） |
 | `GET /api/timeline` | query：`latDeg`、`lonDeg`（必填）；`time`（起点，默认现在）、`durationH`（1~744，默认 720）、`stepMin`（曲线间隔，10~1440 分钟，默认约 144 个点）、`minEarthElevationDeg` | `PointTimeline`，见 3.1 |
 | `POST /api/compare-dates` | JSON：`{ "points": [{ "latDeg", "lonDeg" }, ...1~5 个], "times": ["...Z", ...1~8 个], "minEarthElevationDeg"?: n }` | `{ "timesUtc", "points": PointAcrossTimes[], "provenance" }`，见 3.2 |

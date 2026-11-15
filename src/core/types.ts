@@ -124,6 +124,11 @@ export interface PointQueryOptions {
    * 只影响地球，不影响太阳。
    */
   minEarthElevationDeg?: number;
+  /**
+   * 一年统计（yearStats）从哪一刻开始算，毫秒时间戳（UTC）；不传 = 2030-01-01T00:00:00Z。
+   * 统计期固定是 8760 小时，所以传"发射时刻"就得到"发射后一年"。
+   */
+  statsStartMs?: number;
 }
 
 /** 点位参数（PointConditions）。没有数据的字段为 null，并在 provenance 里说明。 */
