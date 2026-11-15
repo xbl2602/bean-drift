@@ -1,4 +1,4 @@
-import type { ReadTool } from "../../../core/tool";
+﻿import type { ReadTool } from "../../../core/tool";
 
 export type ToolCall = { id: string; name: string; arguments: unknown };
 export type Message =
@@ -20,5 +20,6 @@ export class AgentError extends Error {
 }
 export const LIMITS = Object.freeze({
   messageChars: 2000, bodyBytes: 8192, modelCalls: 4, toolCalls: 8,
-  outputTokens: 1200, resultBytes: 65536, responseBytes: 131072, timeoutMs: 25000,
+  outputTokens: 2400, resultBytes: 65536, responseBytes: 131072, timeoutMs: 25000,
 });
+

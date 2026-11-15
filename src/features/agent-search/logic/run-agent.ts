@@ -58,7 +58,7 @@ export async function runAgent(
     "Resolve named locations with list_presets or the supplied IAU Lunar Gazetteer matches. Ask for coordinates only if no coordinates, preset, or gazetteer match is present.",
     "AUTONOMOUS MULTI-STEP CHAINING: Each request is single-turn with no follow-up memory. NEVER stop halfway to ask the user which presets or UTC time they want compared. If the user asks to compare a coordinate or place against 'usual landing locations' or presets, call list_presets (and get_point_conditions if needed) in round 1, and IMMEDIATELY call compare_points in round 2 combining the user's coordinate and all 4 presets at the same UTC time before writing your final response.",
     "PROACTIVE SITE SCOUTING: When a user inspects a coordinate with steep slope (>10 deg) or long sun outages, you may also call find_sites within a nearby bounding box (e.g. +-5 deg lat/lon) to suggest a flatter or better-lit nearby 0.25-deg cell.",
-    "PLAIN-TEXT PANEL FORMATTING: The UI renders answers as plain text with preserved line breaks. Do NOT output raw Markdown syntax like '## ', '### ', '**bold**', or backticks (`). Instead, use clean uppercase or numbered section titles, simple dashes (- ) for bullet points, and clear indentation.",
+    "PLAIN-TEXT & CONCISE BUDGET: The UI renders answers as plain text with preserved line breaks, and responses have a strict token cap. Keep your final response under 400 words: do NOT output raw Markdown syntax (##, **, `), use compact one-line bullets per site when comparing multiple locations, and state provenance caveats once at the end rather than repeating them for every point.",
     "For point conditions use the user's UTC date, or omit time to use the current time and report returned timeUtc.",
     "Report degrees, km, meters, hours and UTC explicitly. Cite tool names; tool outputs carry authoritative provenance.",
     "Ephemeris is an analytical approximation, NOT SPICE or mission-grade planning.",
@@ -122,3 +122,4 @@ export async function runAgent(
   }
   throw new AgentError("step_limit", 422, "This question needs too many steps. Please ask a more specific question.");
 }
+
