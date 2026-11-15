@@ -7,6 +7,7 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { AnswerText } from "@/features/agent-search/ui/answer-text";
 import { AnswerVisuals } from "@/features/agent-search/ui/answer-visuals";
+import type { SelectedLunarLocation } from "@/features/agent-search/ui/lunar-search";
 import { ToolIcon } from "../../menu/tool-menu";
 import { toolInfo } from "../../menu/tools";
 import type { AgentSource } from "./agent-client";
@@ -33,7 +34,7 @@ const ANSWER_MAX_TYPING_MS = 1400;
 /** 已经打过字的消息，再次打开面板时直接显示全文。 */
 const typedIds = new Set<number>();
 
-export function AiChat() {
+export function AiChat({ onSelectLocation }: { onSelectLocation?: (loc: SelectedLunarLocation) => void }) {
   const { messages, pending, greeted } = useChat();
   const listRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -73,6 +74,7 @@ export function AiChat() {
             onProgress={() => setTypingTick((tick) => tick + 1)}
             onTyped={() => { typedIds.add(message.id); if (message.role === "assistant" && message.kind === "greeting") markGreeted(); }}
             onQuestion={pickExample}
+            onSelectLocation={onSelectLocation}
           />
         ))}
         {greeted && !hasQuestions && (
@@ -122,7 +124,7 @@ export function AiChat() {
   );
 }
 
-function MessageRow({ message, animate, onProgress, onTyped, onQuestion }: { message: ChatMessage; animate: boolean; onProgress: () => void; onTyped: () => void; onQuestion: (question: string) => void }) {
+function MessageRow({ message, animate, onProgress, onTyped, onQuestion, onSelectLocation }: { message: ChatMessage; animate: boolean; onProgress: () => void; onTyped: () => void; onQuestion: (question: string) => void; onSelectLocation?: (loc: SelectedLunarLocation) => void }) {
   const [typed, setTyped] = useState(!animate);
   if (message.role === "user") {
     return (
@@ -145,7 +147,7 @@ function MessageRow({ message, animate, onProgress, onTyped, onQuestion }: { mes
       {message.kind === "answer" && typed ? (
         <>
           <div className="break-words [&_h4]:mb-1 [&_h4]:mt-3 [&_h4]:font-semibold [&_h4]:text-white [&_li]:my-0.5 [&_p+p]:mt-2 [&_strong]:font-semibold [&_strong]:text-white [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-4"><AnswerText text={message.text} /></div>
-          <div className="text-slate-200"><AnswerVisuals sources={message.sources} onQuestion={onQuestion} /></div>
+          <div className="text-slate-200"><AnswerVisuals sources={message.sources} onQuestion={onQuestion} onSelectLocation={onSelectLocation} /></div>
         </>
       ) : (
         <TypedText text={message.text} animate={animate} charMs={charMs} onProgress={onProgress} onDone={() => { setTyped(true); onTyped(); }} />
