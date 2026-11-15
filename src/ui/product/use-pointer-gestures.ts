@@ -1,12 +1,14 @@
 "use client";
-// 统一处理鼠标/触摸手势：拖动、滚轮或双指缩放、单击（移动距离很小才算单击，拖完松手不算）、悬停。
+// 统一处理鼠标/触摸手势：拖动、滚轮或双指缩放、单击选点、双击（或双击触摸）、悬停；拖动和缩放不会触发点击。
 // 坐标一律是相对容器左上角的 CSS 像素。
+import { isDoubleMapTap, type MapTap } from "./map-tap";
 import { useEffect, useRef, type RefObject } from "react";
 
 export interface PointerGestureHandlers {
   onPan?: (dxPx: number, dyPx: number) => void;
   /** factor > 1 放大。 */
   onZoom?: (factor: number, xPx: number, yPx: number) => void;
+  onDoubleTap?: (xPx: number, yPx: number) => void;
   onTap?: (xPx: number, yPx: number) => void;
   onHover?: (xPx: number | null, yPx: number | null) => void;
   /**
@@ -26,6 +28,7 @@ export function usePointerGestures(ref: RefObject<HTMLElement | null>, handlers:
     const el = ref.current;
     if (!el) return;
     const pointers = new Map<number, { x: number; y: number }>();
+    let lastTap: MapTap | null = null;
     let travelPx = 0;
     let pinchDistance = 0;
 
@@ -39,10 +42,11 @@ export function usePointerGestures(ref: RefObject<HTMLElement | null>, handlers:
     };
 
     const down = (e: PointerEvent) => {
+      if (e.button !== 0) return;
       if (handlersRef.current.capturePointer !== false) el.setPointerCapture(e.pointerId);
       pointers.set(e.pointerId, local(e));
       if (pointers.size === 1) travelPx = 0;
-      if (pointers.size === 2) pinchDistance = pinchState().distance;
+      if (pointers.size === 2) { pinchDistance = pinchState().distance; travelPx = Infinity; lastTap = null; }
     };
     const move = (e: PointerEvent) => {
       const p = local(e);
@@ -60,21 +64,31 @@ export function usePointerGestures(ref: RefObject<HTMLElement | null>, handlers:
         return;
       }
       travelPx += Math.hypot(p.x - prev.x, p.y - prev.y);
+      if (travelPx > TAP_MAX_TRAVEL_PX) lastTap = null;
       handlersRef.current.onPan?.(p.x - prev.x, p.y - prev.y);
       handlersRef.current.onHover?.(p.x, p.y);
     };
     const up = (e: PointerEvent) => {
+      if (!pointers.has(e.pointerId)) return;
       const wasSingle = pointers.size === 1;
       pointers.delete(e.pointerId);
       if (wasSingle && e.type === "pointerup" && travelPx <= TAP_MAX_TRAVEL_PX) {
         const p = local(e);
-        handlersRef.current.onTap?.(p.x, p.y);
-      }
+        const tap: MapTap = { ...p, timeMs: performance.now(), pointerType: e.pointerType };
+        if (handlersRef.current.onDoubleTap && isDoubleMapTap(lastTap, tap)) {
+          lastTap = null;
+          handlersRef.current.onDoubleTap(p.x, p.y);
+        } else {
+          lastTap = tap;
+          handlersRef.current.onTap?.(p.x, p.y);
+        }
+      } else { lastTap = null; }
     };
     const leave = () => {
       if (pointers.size === 0) handlersRef.current.onHover?.(null, null);
     };
     const wheel = (e: WheelEvent) => {
+      lastTap = null;
       if (!handlersRef.current.onZoom) return;
       e.preventDefault();
       const p = local(e);

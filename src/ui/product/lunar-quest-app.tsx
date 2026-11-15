@@ -117,6 +117,13 @@ export function LunarQuestApp() {
     // 除了教程，其它工具都是在地图上用的：从第一人称回到地图
     if (standingAt) leaveFirstPerson();
   };
+  const selectMenuTool = (tool: ToolId) => {
+    if (tool !== "compare") return selectTool(tool);
+    setDraftSite(null);
+    setSelectedSiteId(null);
+    selectTool("site");
+    setNotice("Pick a location on the Moon, then choose Add to comparison.");
+  };
   const closeTool = () => {
     // 关掉图层工具的面板 = 不再看这个图层，回到月面影像
     if (activeInfo?.layer) setLayers((current) => ({ ...current, base: "color" }));
@@ -135,7 +142,7 @@ export function LunarQuestApp() {
     setStandingAt(null);
   };
   const saveSite = (point: LatLon, name?: string) => {
-    setNotice(addSite(point, name) ? `Saved ${name ?? "site"} at ${formatLatLon(point)}` : `The site list is full (${MAX_SITES}). Remove one first.`);
+    setNotice(addSite(point, name) ? `Added ${name ?? "site"} to comparison` : `The site list is full (${MAX_SITES}). Remove one first.`);
   };
   const changeAppMode = (mode: AppMode) => {
     if (mode === appMode) return;
@@ -196,7 +203,10 @@ export function LunarQuestApp() {
       setSelectedSiteId(null);
     }
     else if (clickMode === "measure") setMeasurePoints((points) => [...points, { latDeg: point.latDeg, lonDeg: normalizeLonDeg(point.lonDeg) }]);
-    else enterFirstPerson(point);
+    else {
+      const picked = { latDeg: point.latDeg, lonDeg: normalizeLonDeg(point.lonDeg) };
+      setSearchTarget({ ...picked, label: t("sim.picked"), detail: formatLatLon(picked), spanDeg: 25 });
+    }
   };
   const saveDraft = () => {
     if (!draftSite) return;
@@ -204,7 +214,7 @@ export function LunarQuestApp() {
     if (!site) return setNotice(`The site list is full (${MAX_SITES}). Delete one first.`);
     setDraftSite(null);
     setSelectedSiteId(site.id);
-    setNotice(`Saved ${site.name} at ${formatLatLon(site)}`);
+    setNotice(`Added ${site.name} to comparison`);
   };
   const goTo = (target: SearchTarget) => {
     setSearchTarget(target);
@@ -235,7 +245,7 @@ export function LunarQuestApp() {
     ? rightPanelFor(activeTool)
     : appMode === "landing-sites" && landingSiteId ? "standard"
     : appMode === "find-data" && simResultsOpen ? "wide" : null;
-  const viewProps = { timeMs, layers, annotations, focus, rightPanel, cursor, onPick: handlePick, onHover: setHover, onLoadingChange: setLoading, onError: setError };
+  const viewProps = { timeMs, layers, annotations, focus, rightPanel, cursor, onPick: handlePick, onDoublePick: exploring && clickMode !== "measure" ? enterFirstPerson : undefined, onHover: setHover, onLoadingChange: setLoading, onError: setError };
 
   return (
     <main lang={locale} data-theme={theme} className="lunar-explorer fixed inset-0 overflow-hidden bg-black text-white" style={{ "--compare-height": `${compareHeight}dvh`, "--rail-space": comparing ? `calc(100dvh - ${compareHeight}dvh)` : "100dvh" } as React.CSSProperties}>
@@ -249,7 +259,7 @@ export function LunarQuestApp() {
       )}
 
       </div>
-      {exploring && <ToolMenu activeTool={activeTool} onSelect={selectTool} onHome={resetExplorer} onGroupOpen={closeTool} />}
+      {exploring && <ToolMenu activeTool={activeTool} onSelect={selectMenuTool} onHome={resetExplorer} onGroupOpen={closeTool} />}
       {!standingAt && <ModeSwitch mode={appMode} onChange={changeAppMode} tutorialOpen={activeTool === "tutorial"} aiOpen={activeTool === "ai"} settingsOpen={activeTool === "settings"} onTutorial={openTutorial} onAi={toggleAi} onSettings={toggleSettings} />}
       {!standingAt && <ViewControls mode={mapMode} onModeChange={changeMode} layers={layers} onLayersChange={setLayers} />}
 

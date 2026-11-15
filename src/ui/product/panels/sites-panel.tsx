@@ -1,8 +1,6 @@
 "use client";
-// Select Landing Site：打开后光标变成"选点"图标，点击地图放下一个标记（先是草稿，白色），
-// 右侧浮动面板只显示这一个点（刚放的标记，或刚保存的那个）的经纬度和各项数值；可以起名、保存。
-// 已保存的点不在这里列出：底部的按钮直接打开 Evaluate → Compare Landing Sites，在那里看、比较和删除。
-// 未保存的标记不单独设删除按钮：点别处它会挪过去，关掉或换掉这个工具它就消失。
+// Pick a location, inspect its data, then optionally send it to the comparison window.
+// Location details stay here; comparison candidates are managed in the bottom comparison window.
 import type { PointAnalysis } from "../analysis/point-analysis";
 import type { SiteAnalyses } from "../analysis/use-point-analysis";
 import type { LatLon } from "../moon-frames";
@@ -46,7 +44,7 @@ export function SitesPanel(props: SitesPanelProps) {
 
       {draft && (
         <SiteCard
-          tag="New marker · not saved"
+          tag="Selected location"
           name={draft.name}
           onName={props.onDraftName}
           point={draft}
@@ -54,8 +52,8 @@ export function SitesPanel(props: SitesPanelProps) {
           photo={<SitePhoto point={draft} name={draft.name} timeMs={props.timeMs} onStandHere={() => props.onStandHere(draft)} />}
           actions={
             <>
-              <PanelButton primary onClick={props.onSaveDraft} disabled={full || draft.name.trim() === ""}>Save site</PanelButton>
-              <PanelButton onClick={() => props.onStandHere(draft)}>Stand here</PanelButton>
+
+              <div className="col-span-2"><PanelButton onClick={() => props.onStandHere(draft)}>Stand here</PanelButton></div>
             </>
           }
         />
@@ -64,7 +62,7 @@ export function SitesPanel(props: SitesPanelProps) {
 
       {selected && (
         <SiteCard
-          tag="Saved site"
+          tag="Comparison candidate"
           name={selected.name}
           onName={(name) => props.onRename(selected.id, name)}
           point={selected}
@@ -72,17 +70,17 @@ export function SitesPanel(props: SitesPanelProps) {
           photo={<SitePhoto point={selected} name={selected.name} timeMs={props.timeMs} onStandHere={() => props.onStandHere(selected)} />}
           actions={
             <>
-              <PanelButton onClick={() => props.onRemove(selected.id)}>Delete site</PanelButton>
-              <PanelButton onClick={() => props.onStandHere(selected)}>Stand here</PanelButton>
+
+              <div className="col-span-2"><PanelButton onClick={() => props.onStandHere(selected)}>Stand here</PanelButton></div>
             </>
           }
         />
       )}
 
       <div className="mt-5 border-t border-white/10 pt-4">
-        <p className="text-[11px] leading-snug text-slate-400">Want to see saved sites side by side?</p>
-        <button type="button" onClick={props.onCompare} className="mt-2 flex w-full items-center justify-between gap-2 rounded-xl border border-white/15 bg-white/[0.04] px-3.5 py-2.5 text-left text-sm font-medium text-white transition hover:border-lime-300/40 hover:bg-lime-300/10">
-          <span>Compare landing sites<span className="ml-2 font-mono text-[11px] font-normal text-slate-400">{sites.length} saved</span></span>
+        <p className="text-[11px] leading-snug text-slate-400">Want to compare this location?</p>
+        <button type="button" onClick={props.onCompare} disabled={(!draft && sites.length === 0) || Boolean(draft && (full || !draft.name.trim()))} className="mt-2 flex w-full items-center justify-between gap-2 rounded-xl border border-white/15 bg-white/[0.04] px-3.5 py-2.5 text-left text-sm font-medium text-white transition disabled:cursor-not-allowed disabled:opacity-40 hover:border-lime-300/40 hover:bg-lime-300/10">
+          <span>{draft ? "Add to comparison" : sites.length ? "Compare landing sites" : "Pick a location first"}<span className="ml-2 font-mono text-[11px] font-normal text-slate-400">{sites.length} selected</span></span>
           <span aria-hidden="true" className="text-lime-300">→</span>
         </button>
       </div>

@@ -31,7 +31,7 @@ interface Map2dRuntime {
   frame: number;
 }
 
-export function Map2dView({ timeMs, layers, annotations, focus, cursor, onPick, onHover, onLoadingChange, onError }: MapViewProps) {
+export function Map2dView({ timeMs, layers, annotations, focus, cursor, onPick, onDoublePick, onHover, onLoadingChange, onError }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const runtimeRef = useRef<Map2dRuntime | null>(null);
   const settingsRef = useRef({ timeMs, layers, annotations });
@@ -154,6 +154,10 @@ export function Map2dView({ timeMs, layers, annotations, focus, cursor, onPick, 
       rt.mapCamera = zoomCameraAt(rt.mapCamera, rt.screen, factor, x, y);
       requestRender();
     },
+    onDoubleTap: onDoublePick ? (x, y) => {
+      const point = latLonAt(x, y);
+      if (point) onDoublePick(point);
+    } : undefined,
     onTap: (x, y) => {
       const point = latLonAt(x, y);
       if (point) onPick(point);
