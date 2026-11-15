@@ -1,7 +1,7 @@
 "use client";
 
 // A small Moon in the corner of the all-sky chart: the Moon seen from straight above the site
-// (North at the top, East on the right, the site at the centre), lit by the Sun exactly as it is at
+// (North at the top, East on the right, the site at the centre; the Sun and Earth are placed as in the sky chart, overhead = centre), lit by the Sun exactly as it is at
 // the chosen time. It shows what the dome cannot: whether the ground under you is in daylight, how
 // close it is to the sunrise or sunset line, and which way the Sun and Earth lie around the site.
 // The Moon's own orbit is ignored; the picture is centred on the Moon, as in the sky chart.
@@ -14,6 +14,11 @@ type Direction = { azimuthDeg: number; elevationDeg: number };
 const DEG = Math.PI / 180;
 const SIZE = 144; // drawing size in pixels; the canvas is shown smaller so it stays sharp
 const GLOBE_RADIUS = 56;
+const MARKER_MAX_RADIUS = 68;
+const smooth01 = (x: number) => {
+  const t = Math.min(1, Math.max(0, x));
+  return t * t * (3 - 2 * t);
+};
 const MAP_URL = "/landing/moon-color-4k.jpg";
 const MAP_WIDTH = 1024;
 const MAP_HEIGHT = 512;
@@ -75,12 +80,18 @@ export function MoonGlobe({ sun, earth, latDeg, lonDeg }: { sun: Direction; eart
     const draw = () => {
       context.clearRect(0, 0, SIZE, SIZE);
       const disc = discRef.current;
-      if (!disc) return;
       const { sun: sunDirection, earth: earthDirection } = skyRef.current;
       const light = toVector(sunDirection);
       const earthLight = toVector(earthDirection);
+      if (!disc) {
+        // Until the surface map has loaded, show a plain dark disc so the markers do not pop in late.
+        context.fillStyle = "#0d121b";
+        context.beginPath();
+        context.arc(SIZE / 2, SIZE / 2, GLOBE_RADIUS, 0, Math.PI * 2);
+        context.fill();
+      }
       const image = context.createImageData(SIZE, SIZE);
-      for (let i = 0; i < SIZE * SIZE; i++) {
+      for (let i = 0; disc && i < SIZE * SIZE; i++) {
         const o = i * 3;
         const nz = disc.normal[o + 2];
         if (nz === 0 && disc.normal[o] === 0 && disc.normal[o + 1] === 0) continue;
@@ -95,7 +106,36 @@ export function MoonGlobe({ sun, earth, latDeg, lonDeg }: { sun: Direction; eart
         image.data[px + 2] = Math.min(255, disc.rgb[o + 2] * shade * limb * 345 + 4);
         image.data[px + 3] = 255;
       }
-      context.putImageData(image, 0, 0);
+      if (disc) context.putImageData(image, 0, 0);
+
+      // The Sun and Earth, placed like in the sky chart: straight overhead is the centre of the disc and the
+      // horizon is its edge, so a body glides smoothly across the globe instead of jumping around the rim.
+      // Just past the horizon it drifts outside the edge and fades out; it never switches on or off suddenly.
+      const marker = (direction: Direction, colour: string, size: number) => {
+        const elevation = Math.max(direction.elevationDeg, -30);
+        const az = direction.azimuthDeg * DEG;
+        const distance = Math.min(MARKER_MAX_RADIUS, GLOBE_RADIUS * ((90 - elevation) / 90));
+        const x = SIZE / 2 + Math.sin(az) * distance;
+        const y = SIZE / 2 - Math.cos(az) * distance;
+        const presence = smooth01((elevation + 24) / 24); // fades in over the 24 degrees below the horizon
+        const filled = smooth01((elevation + 2) / 10); // hollow below the horizon, solid above it
+        context.save();
+        context.globalAlpha = presence * (0.45 + 0.55 * filled);
+        context.shadowColor = colour;
+        context.shadowBlur = 8 * filled;
+        context.fillStyle = colour;
+        context.strokeStyle = colour;
+        context.lineWidth = 1.6;
+        context.beginPath();
+        context.arc(x, y, size, 0, Math.PI * 2);
+        context.globalAlpha *= filled;
+        context.fill();
+        context.globalAlpha = presence * (0.45 + 0.55 * filled);
+        context.stroke();
+        context.restore();
+      };
+      marker(earthDirection, "#6cc4ff", 3.6);
+      marker(sunDirection, "#ffd66b", 4.6);
 
       // The site, at the centre of the disc.
       context.strokeStyle = "#ffe08a";
@@ -107,25 +147,6 @@ export function MoonGlobe({ sun, earth, latDeg, lonDeg }: { sun: Direction; eart
       context.beginPath();
       context.arc(SIZE / 2, SIZE / 2, 1.6, 0, Math.PI * 2);
       context.fill();
-
-      // The Sun and Earth around the rim, in the direction they lie from the site (filled: above the horizon).
-      const marker = (direction: Direction, colour: string, size: number) => {
-        const az = direction.azimuthDeg * DEG;
-        const x = SIZE / 2 + Math.sin(az) * (GLOBE_RADIUS + 9);
-        const y = SIZE / 2 - Math.cos(az) * (GLOBE_RADIUS + 9);
-        const isUp = direction.elevationDeg >= 0;
-        context.globalAlpha = isUp ? 1 : 0.4;
-        context.fillStyle = colour;
-        context.strokeStyle = colour;
-        context.lineWidth = 1.6;
-        context.beginPath();
-        context.arc(x, y, size, 0, Math.PI * 2);
-        if (isUp) context.fill();
-        else context.stroke();
-        context.globalAlpha = 1;
-      };
-      marker(sunDirection, "#ffd66b", 4.6);
-      marker(earthDirection, "#6cc4ff", 3.6);
     };
     drawRef.current = draw;
 
