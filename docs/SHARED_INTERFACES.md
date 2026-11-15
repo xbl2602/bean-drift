@@ -162,6 +162,7 @@ pipeline 把上面的统计对**整个月面每个 0.25° 格子**算好，放�
 | `GET /api/presets` | — | `{ "presets": Preset[] }`（`Preset` 见 `src/core/types.ts`） |
 | `GET /api/timeline` | query：`latDeg`、`lonDeg`（必填）；`time`（起点，默认现在）、`durationH`（1~744，默认 720）、`stepMin`（曲线间隔，10~1440 分钟，默认约 144 个点）、`minEarthElevationDeg` | `PointTimeline`，见 3.1 |
 | `POST /api/compare-dates` | JSON：`{ "points": [{ "latDeg", "lonDeg" }, ...1~5 个], "times": ["...Z", ...1~8 个], "minEarthElevationDeg"?: n }` | `{ "timesUtc", "points": PointAcrossTimes[], "provenance" }`，见 3.2 |
+| `GET /api/energy` | query：`latDeg`、`lonDeg`（必填）；`time`（起点，默认现在）、`durationH`（1~8760，默认 720） | `SolarEnergyEstimate`，见 3.4 |
 | `POST /api/find-sites` | JSON，条件都选填：`maxSlopeDeg`、`minSunVisibleFraction`、`minEarthVisibleFraction`、`minBothVisibleFraction`、`maxLongestSunOutageH`、`maxLongestEarthOutageH`、`latMinDeg`/`latMaxDeg`/`lonMinDeg`/`lonMaxDeg`（框，不能跨 180° 经线）、`rankBy`、`limit`（1~20，默认 10）、`minSeparationKm`（默认 50） | `FindSitesResult`，见 3.3 |
 
 示例：
@@ -198,6 +199,23 @@ POST /api/find-sites   { "maxSlopeDeg": 15, "maxLongestSunOutageH": 300, "latMax
 | `points[i].snapshots[j]` | 第 j 个时刻（与 `timesUtc[j]` 对应）：`{ timeUtc, sun, earth }`，`sun`/`earth` 都是 `{ azimuthDeg, elevationDeg, diskVisibleFraction, nextRiseUtc, nextSetUtc }`，含义同 2.2、2.4 |
 | `points[i].assumptions` | 同 2.5.2 |
 
+### 3.4 太阳能量估算（`SolarEnergyEstimate`）✅（2026-11-15）
+
+类型在 `src/core/data/solar-energy.ts`。一个点、一段时间（最长 8760 小时 = 一年）里，**直射阳光**落在每平方米板子上的能量，以及最长黑夜要多少电池。可见规则和 3.1 一致（圆盘上缘高于地形地平线；圆盘只露出一部分时按露出的面积比例算）。
+
+| 字段 | 含义 | 单位 |
+|---|---|---|
+| `position`、`startUtc`、`endUtc`、`durationH`、`sampleStepMin` | 查询的点和时间范围；≤744 小时用 10 分钟一步，更长用 30 分钟一步（实际步长为了整除时间段会有微小调整，以 `sampleStepMin` 为准） | 度、UTC、小时、分钟 |
+| `energyWhPerM2` | 这段时间每平方米板子收到的能量，三种朝向：`sunTracking`（始终正对太阳）、`verticalTracking`（竖直放置、绕竖直轴转向太阳方位，南北极低太阳角时常见）、`horizontal`（水平放平；脚下视为水平地面，局部坡度忽略） | Wh/m² |
+| `meanPowerWPerM2`、`peakPowerWPerM2` | 上面的能量除以时间长度；采样点里的最大瞬时功率 | W/m² |
+| `sunVisibleFraction` | 太阳圆盘露出任何一部分的时间占比 | 比例 0~1 |
+| `longestSunOutageH` | 最长一次连续看不到太阳 | 小时 |
+| `batteryWhPerWForLongestOutage` | 靠电池撑过最长黑夜，每 1 W 恒定负载要多少 Wh（= 最长黑夜小时数；**不含**放电深度、电池效率、保温） | Wh/W |
+| `assumptions` | `solarConstantWPerM2At1Au` = 1360.8（SORCE/TIM，Kopp & Lean 2011，按日地距离平方反比修正）；`panelEfficiency`、`dust` 为 `null` | — |
+| `provenance` | 来源与口径，地形数据集跟着这个点用的数据走（0.25° 或南极 160 m） | — |
+
+**这是"入射能量"，不是"发电量"**：不含板子效率、灰尘、衰减、温度、地形反射光。想知道发电量，自己乘上板子效率和面积。验证：赤道阿波罗 11 号点一个朔望月水平板的能量与"半个月白天、sin 形状"的理论值 307 kWh/m² 相差 3%（测试 `src/features/solar-energy/tests/`）。**这个功能没有加进 agent 窗口的白名单**（那份名单在 `src/features/agent-search/logic/run-agent.ts`，归 louis068），MCP 已可用。
+
 ### 3.3 按条件找位置（`FindSitesResult`）
 
 类型在 `src/core/terrain/site-search.ts`、`src/core/data/site-search.ts`。在 2.5.1 的整月预计算地图里筛选，**每次请求读一遍文件（约 19 MB）现筛，约 0.2~0.4 秒**。
@@ -225,6 +243,7 @@ POST /api/find-sites   { "maxSlopeDeg": 15, "maxLongestSunOutageH": 300, "latMax
 | `get_point_timeline` | 一个点一段时间里太阳/地球的曲线和可见时间段（参数同 `GET /api/timeline`），见 3.1 | 读 |
 | `compare_dates` | 同一批点在几个时刻的对比（参数同 `POST /api/compare-dates`），见 3.2 | 读 |
 | `find_sites` | 按条件在整个月面找位置（参数同 `POST /api/find-sites`），见 3.3 | 读 |
+| `get_solar_energy_estimate` | 一个点一段时间能晒到多少太阳、最长黑夜要多少电池（参数同 `GET /api/energy`），见 3.4 | 读 |
 
 **还没做的候选能力**：查询整月图层在某点/某区域的值（图层目前只作为静态文件给网页用）。
 

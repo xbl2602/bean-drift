@@ -54,6 +54,7 @@ const nextConfig: NextConfig = {
     "/api/point": mapDataFiles,
     "/api/compare": mapDataFiles,
     "/api/timeline": mapDataFiles,
+    "/api/energy": mapDataFiles,
     "/api/compare-dates": mapDataFiles,
     "/api/find-sites": siteSearchDataFiles,
     "/api/agent": [...allToolDataFiles, ...gazetteerDataFiles],
