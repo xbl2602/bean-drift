@@ -35,6 +35,14 @@ const MIN_PIXEL_RATIO = 1.5;
 const MAX_PIXEL_RATIO = 2;
 const FLOOR_PIXEL_RATIO = 1.1;
 const LINK_FADE_PER_S = 5;
+/**
+ * The part of the picture (fractions of the canvas, y from the top) where radio links are allowed: the area around
+ * the satellite and the ground to its right, below the Earth. A base is only linked while it is inside, so a link
+ * never runs off the edge of the screen, whatever its size. A base that is already linked may drift LINK_REGION_HOLD
+ * past the edge before its link closes, so a base sitting right on the edge does not flicker.
+ */
+const LINK_REGION = { left: 0.55, right: 0.96, top: 0.25, bottom: 0.97 };
+const LINK_REGION_HOLD = 0.03;
 
 const TEXTURES = {
   moonColor: "/landing/moon-color-4k.jpg",
@@ -57,7 +65,7 @@ const smooth = (a: number, b: number, x: number) => {
   return t * t * (3 - 2 * t);
 };
 
-type BaseState = { id: string; direction: Vec3; marker: ThreeNamespace.Sprite; strength: number; link: RadioLink };
+type BaseState = { id: string; direction: Vec3; marker: ThreeNamespace.Sprite; strength: number; link: RadioLink; quiet: boolean };
 
 async function buildScene(canvas: HTMLCanvasElement) {
   const [THREE, roundedBox] = await Promise.all([import("three"), import("three/examples/jsm/geometries/RoundedBoxGeometry.js")]);
@@ -143,7 +151,7 @@ async function buildScene(canvas: HTMLCanvasElement) {
     const link = new RadioLink(THREE, linkTextures, baseLinkStyle);
     link.group.visible = false;
     scene.add(link.group);
-    return { id: base.id, direction, marker, strength: 0, link };
+    return { id: base.id, direction, marker, strength: 0, link, quiet: base.quiet === true };
   });
 
   // ---- Earth, fixed in the camera's frame so it is always at the upper right ----
@@ -277,7 +285,14 @@ async function buildScene(canvas: HTMLCanvasElement) {
     const visible: { id: string; distance: number }[] = [];
     for (const base of bases) {
       const view = canSee(terrain, base.direction, satelliteInMoon);
-      if (view.visible) visible.push({ id: base.id, distance: view.distance });
+      if (!view.visible) continue;
+      // Where is the base on the screen? Only bases inside the allowed part of the picture can be linked.
+      const world = moonGroup.localToWorld(base.marker.position.clone()).project(camera);
+      const hold = linked.includes(base.id) ? LINK_REGION_HOLD : 0;
+      const x = (world.x + 1) / 2;
+      const y = (1 - world.y) / 2;
+      const inside = world.z < 1 && x >= LINK_REGION.left - hold && x <= LINK_REGION.right + hold && y >= LINK_REGION.top - hold && y <= LINK_REGION.bottom + hold;
+      if (inside) visible.push({ id: base.id, distance: view.distance });
     }
     visible.sort((a, b) => a.distance - b.distance);
     const currentCount = bases.filter((base) => base.strength > 0.05).length;
@@ -296,7 +311,7 @@ async function buildScene(canvas: HTMLCanvasElement) {
       base.strength += (target - base.strength) * Math.min(1, stepS * rate);
       if (Math.abs(target - base.strength) < 0.004) base.strength = target;
       const world = moonGroup.localToWorld(base.marker.position.clone());
-      (base.marker.material as ThreeNamespace.SpriteMaterial).opacity = 0.4 + 0.5 * base.strength;
+      (base.marker.material as ThreeNamespace.SpriteMaterial).opacity = base.quiet ? 0.9 * base.strength : 0.4 + 0.5 * base.strength;
       base.marker.scale.setScalar(0.5 + 0.5 * base.strength);
       base.link.update(feed, world, base.strength, timeS, base.direction[0] * 3.7);
       base.link.ripple(0, world, base.strength, timeS, 2.4, base.direction[2]);

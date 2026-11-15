@@ -5,7 +5,7 @@
 // Positions come from story-timeline.ts and the drawing from space-renderer.ts; this file connects
 // them to the page and reveals the feature cards.
 
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { STORY_CHAPTERS } from "./feature-content";
 import { StoryDemo } from "./story-demos";
 import { clamp01, globeRotation, lightFromScreen } from "./space-math";
@@ -21,6 +21,10 @@ const CARD_STAGGER = 0.45;
 /** How quickly the scene catches up with the scrollbar, per second; lower = smoother, floatier. */
 const SCROLL_CATCH_UP_PER_S = 9;
 const TWO_PI = Math.PI * 2;
+/** Breathing room kept above and below a chapter's cards, in CSS pixels. */
+const GROUP_MARGIN_PX = 16;
+/** Never shrink a chapter below this fraction: smaller would be unreadable (shorter screens use the stacked layout instead). */
+const MIN_GROUP_FIT = 0.55;
 
 /** Cards in a group appear one after another as the group's visibility goes 0 -> 1. */
 function revealCardGroup(group: HTMLElement | null, visibility: number): void {
@@ -40,6 +44,7 @@ function revealCardGroup(group: HTMLElement | null, visibility: number): void {
 
 export function ScrollStory() {
   const sectionRef = useRef<HTMLElement>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const groupRefs = useRef<(HTMLDivElement | null)[]>([]);
   const railRefs = useRef<(HTMLLIElement | null)[]>([]);
@@ -98,6 +103,29 @@ export function ScrollStory() {
 
   useAnimatedCanvas(canvasRef, createStoryRenderer, buildScene, 0, true);
 
+  // The chapters are centred in the space below the fixed bar. If a screen is too short for a whole chapter, shrink that
+  // chapter (never below MIN_GROUP_FIT) instead of letting its top slide under the bar and its bottom off the screen.
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage) return;
+    const fit = () => {
+      const barPx = parseFloat(getComputedStyle(stage).getPropertyValue("--lq-bar-h")) * parseFloat(getComputedStyle(document.documentElement).fontSize) || 68;
+      const availablePx = stage.clientHeight - barPx - 2 * GROUP_MARGIN_PX;
+      groupRefs.current.forEach((group) => {
+        if (!group) return;
+        // offsetHeight ignores transforms, so shrinking a group does not change what is measured here
+        const naturalPx = group.offsetHeight;
+        const scale = naturalPx > availablePx && naturalPx > 0 ? Math.max(availablePx / naturalPx, MIN_GROUP_FIT) : 1;
+        group.style.setProperty("--lq-fit", scale.toFixed(3));
+      });
+    };
+    fit();
+    const observer = new ResizeObserver(fit);
+    observer.observe(stage);
+    groupRefs.current.forEach((group) => group && observer.observe(group));
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <section ref={sectionRef} className="lq-story" aria-label="What Lunar Quest does">
       {/* Scrolls past while the Moon rises behind it: numbers on the left, the view on the right. */}
@@ -119,7 +147,7 @@ export function ScrollStory() {
           </p>
         </article>
       </section>
-      <div className="lq-stage">
+      <div ref={stageRef} className="lq-stage">
         <canvas ref={canvasRef} className="lq-space-canvas lq-stage-canvas" aria-hidden="true" />
 
         {STORY_CHAPTERS.slice(1).map((chapter, index) => (

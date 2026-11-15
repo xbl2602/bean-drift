@@ -2,20 +2,12 @@
 
 import Link from "next/link";
 import { MoonSkyCanvas } from "./moon-sky-canvas";
+import { Topbar } from "./topbar";
 
 export function HeroSection() {
   return (
     <>
-      <nav className="lq-topbar" aria-label="Main">
-        <Link className="lq-wordmark" href="#home">Lunar Quest</Link>
-        <span className="lq-topbar-note">NASA Space Apps Challenge · Lunar Landing Site Navigator</span>
-        <div className="lq-topbar-actions">
-          <Link className="lq-topbar-tools" href="#mission-tools">AI &amp; integrations</Link>
-          <Link href="/product" className="lq-button lq-topbar-cta">
-            Try Now <span aria-hidden="true">↗</span>
-          </Link>
-        </div>
-      </nav>
+      <Topbar />
 
       <header className="lq-hero" id="home">
         <MoonSkyCanvas />
