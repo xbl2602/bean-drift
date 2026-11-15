@@ -17,6 +17,9 @@ export const LANDING_FILTERS: ReadonlyArray<{ id: LandingFilter; label: string }
   { id: "robotic", label: "Robotic landing sites" },
 ];
 
+/** 地图标记和清单里的颜色：载人（阿波罗）琥珀色，无人青绿色。 */
+export const LANDING_KIND_COLORS: Record<LandingSiteKind, string> = { human: "#fbbf24", robotic: "#5eead4" };
+
 export interface HistoricLandingSite extends LatLon {
   id: string;
   kind: LandingSiteKind;

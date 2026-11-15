@@ -7,7 +7,7 @@ import type { LatLon } from "../moon-frames";
 import { PanelShell } from "../panels/panel-shell";
 import { SiteReport } from "../panels/site-report";
 import { usePointApi } from "../point-api/use-point-api";
-import { filterLandingSites, LANDING_FILTERS, loadHistoricLandingSites, type HistoricLandingSite, type LandingFilter } from "./historic-landing-sites";
+import { filterLandingSites, LANDING_FILTERS, LANDING_KIND_COLORS, loadHistoricLandingSites, type HistoricLandingSite, type LandingFilter } from "./historic-landing-sites";
 
 export type LandingSitesState = { status: "loading" } | { status: "ready"; sites: HistoricLandingSite[] } | { status: "error" };
 
@@ -56,6 +56,7 @@ export function LandingSitesMode({ state, selectedId, filter, onFilterChange, on
               {LANDING_FILTERS.map((option) => (
                 <label key={option.id} className="flex cursor-pointer items-center gap-2 text-xs text-slate-200">
                   <input type="radio" name="landing-filter" value={option.id} checked={filter === option.id} onChange={() => onFilterChange(option.id)} className="accent-lime-300" />
+                  {option.id !== "all" && <span aria-hidden="true" className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: LANDING_KIND_COLORS[option.id] }} />}
                   <span>{option.label}</span>
                   <span className="text-[10px] text-slate-500">{filterLandingSites(allSites, option.id).length}</span>
                 </label>
@@ -73,7 +74,7 @@ export function LandingSitesMode({ state, selectedId, filter, onFilterChange, on
                   onClick={() => onSelect(site)}
                   className={`w-full rounded-xl border px-3 py-2 text-left transition ${site.id === selectedId ? "border-lime-300/40 bg-lime-300/15" : "border-white/10 bg-white/[0.04] hover:bg-white/10"}`}
                 >
-                  <span className="block whitespace-nowrap text-sm font-semibold">{site.mission}</span>
+                  <span className="flex items-center gap-2 whitespace-nowrap text-sm font-semibold"><span aria-hidden="true" className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: LANDING_KIND_COLORS[site.kind] }} />{site.mission}</span>
                   <span className="block whitespace-nowrap text-[11px] text-slate-400">{site.landedUtc.slice(0, 4)} · {site.agency}</span>
                 </button>
               </li>

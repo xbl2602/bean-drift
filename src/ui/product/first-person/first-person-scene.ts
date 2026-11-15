@@ -14,6 +14,7 @@ import { createGroundMaterial } from "./ground-material";
 import { createRockField } from "./rock-field";
 import { loadHeightField } from "./height-tiles";
 import { createEarth, fallbackEarthTexture, orientEarth, sizeEarth } from "./earth-sky";
+import { createSkyPaths } from "./sky-paths";
 import { createSun, placeInSky, SKY_DISTANCE_M } from "./sky-objects";
 import { createTerrainDetail } from "./terrain-detail";
 import { buildTerrainPatch } from "./terrain-patch";
@@ -135,7 +136,9 @@ export async function buildFirstPersonScene(center: LatLon, renderer: THREE.WebG
   const sun = createSun();
   const earth = createEarth(earthTexture);
   const stars = createStarfield(SKY_DISTANCE_M * 1.2);
-  scene.add(sun, earth, stars);
+  // 太阳和地球在天上的轨迹（点线），比太阳、地球稍近一点，免得盖住它们
+  const skyPaths = createSkyPaths(center, SKY_DISTANCE_M * 0.95);
+  scene.add(sun, earth, stars, skyPaths.group);
 
   const camera = new THREE.PerspectiveCamera(70, 1, 0.3, SKY_DISTANCE_M * 1.5);
   const eye = new THREE.Vector3();
@@ -176,7 +179,10 @@ export async function buildFirstPersonScene(center: LatLon, renderer: THREE.WebG
     // 白天曝光下星星应该几乎看不见（阿波罗照片里就是这样）；太阳落下后再亮起来
     // 离屏画布（对比表快照）没有显示尺寸，clientWidth 是 0：按缩小一半显示估算星点大小
     const shownWidth = renderer.domElement.clientWidth || renderer.domElement.width / 2;
-    updateStarfield(stars, renderer.domElement.width / Math.max(shownWidth, 1), c.sun.elevationDeg > 0 ? 0.25 : 1);
+    const pixelRatio = renderer.domElement.width / Math.max(shownWidth, 1);
+    // 星星：白天也保留得比较清楚（真实相机按白天曝光几乎拍不到星星，这里为了好看留着），夜里更亮
+    updateStarfield(stars, pixelRatio, c.sun.elevationDeg > 0 ? 0.75 : 1.6);
+    skyPaths.update(timeMs, eye, pixelRatio);
     earthLight.position.copy(azElToLocal(c.earth.azimuthDeg, c.earth.elevationDeg)).multiplyScalar(1000);
     // 地球光的强弱看地球的相位：太阳和地球在天上离得越远（夹角接近 180°），地球越"满"，照下来的光越多；地球在地平线下就没有
     const sunEarthCos = azElToLocal(c.sun.azimuthDeg, c.sun.elevationDeg).dot(azElToLocal(c.earth.azimuthDeg, c.earth.elevationDeg));
@@ -247,6 +253,7 @@ export async function buildFirstPersonScene(center: LatLon, renderer: THREE.WebG
     startGroundYM: footOffsetM,
     dispose: () => {
       earthTexture.dispose();
+      skyPaths.dispose();
       ground.dispose();
       rocks.dispose();
       // 阴影贴图挂在灯上，不随网格释放，要单独释放

@@ -1,5 +1,7 @@
 "use client";
 // 底部时间轴（2D、3D、第一人称都显示）：拖动或播放，太阳位置随之改变，昼夜线和阴影跟着动。时间一律 UTC。
+// 地图上：滑块以当前时间为中点，左右各 15 天。第一人称（loop）：滑块从最左边开始，往后 30 天（略多于一个月球日），
+// 播到最右边就回到最左边接着播，可以一直看太阳升起、落下、再升起。
 import { useEffect, useRef, useState } from "react";
 import { DateTimePicker } from "./date-time-picker";
 import { bodyToLatLon, formatLatLon, sunDirectionBody } from "../moon-frames";
@@ -17,10 +19,17 @@ const MAX_TIME_MS = Date.UTC(2099, 11, 31, 23, 59);
 interface TimelineBarProps {
   timeMs: number;
   onTimeChange: (timeMs: number) => void;
+  /** 第一人称用：滑块从左端（进入时的时刻）开始，播到右端回到左端循环。 */
+  loop?: boolean;
 }
 
-export function TimelineBar({ timeMs, onTimeChange }: TimelineBarProps) {
+export function TimelineBar({ timeMs, onTimeChange, loop = false }: TimelineBarProps) {
   const [anchorMs, setAnchorMs] = useState(timeMs);
+  const anchorRef = useRef(anchorMs);
+  anchorRef.current = anchorMs;
+  // 滑块范围（小时，相对 anchor）：地图上 -15 天..+15 天，第一人称 0..+30 天
+  const minH = loop ? 0 : -HALF_RANGE_H;
+  const maxH = loop ? 2 * HALF_RANGE_H : HALF_RANGE_H;
   const [playing, setPlaying] = useState(false);
   const [speedIndex, setSpeedIndex] = useState(1);
   const timeRef = useRef(timeMs);
@@ -36,17 +45,19 @@ export function TimelineBar({ timeMs, onTimeChange }: TimelineBarProps) {
       const next = timeRef.current + Math.min(now - last, 100) * SPEEDS[speedIndex].simulatedMsPerRealMs;
       last = now;
       if (next >= MAX_TIME_MS) return setPlaying(false);
+      // 第一人称：播到右端，回到左端接着播
+      if (loop && next > anchorRef.current + 2 * HALF_RANGE_H * HOUR_MS) return onTimeChange(anchorRef.current);
       onTimeChange(next);
     };
     frame = requestAnimationFrame(step);
     return () => cancelAnimationFrame(frame);
-  }, [playing, speedIndex, onTimeChange]);
+  }, [playing, speedIndex, onTimeChange, loop]);
 
-  // 播放把时间推到滑块范围之外时，把滑块的中点挪到当前时间
+  // 时间跑到滑块范围之外时（地图上播放超过 15 天、或别处改了时间），把滑块重新对准当前时间
   const offsetH = (timeMs - anchorMs) / HOUR_MS;
   useEffect(() => {
-    if (Math.abs(offsetH) > HALF_RANGE_H) setAnchorMs(timeMs);
-  }, [offsetH, timeMs]);
+    if (offsetH < minH - 0.01 || offsetH > maxH + 0.01) setAnchorMs(timeMs);
+  }, [offsetH, timeMs, minH, maxH]);
 
   const jumpTo = (ms: number) => {
     const clamped = Math.min(Math.max(ms, MIN_TIME_MS), MAX_TIME_MS);
@@ -71,12 +82,12 @@ export function TimelineBar({ timeMs, onTimeChange }: TimelineBarProps) {
         </button>
         <input
           type="range"
-          min={-HALF_RANGE_H}
-          max={HALF_RANGE_H}
+          min={minH}
+          max={maxH}
           step={0.25}
-          value={Math.max(-HALF_RANGE_H, Math.min(HALF_RANGE_H, offsetH))}
+          value={Math.max(minH, Math.min(maxH, offsetH))}
           onChange={(e) => onTimeChange(anchorMs + Number(e.target.value) * HOUR_MS)}
-          aria-label="Move time up to 15 days either way; the Sun and shadows follow"
+          aria-label={loop ? "Move time forward up to 30 days, about one lunar day; the Sun and shadows follow" : "Move time up to 15 days either way; the Sun and shadows follow"}
           className="min-w-0 flex-1 accent-lime-300"
         />
         <DateTimePicker timeMs={timeMs} onApply={jumpTo} onOpen={() => setPlaying(false)} />

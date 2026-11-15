@@ -25,7 +25,7 @@ import { TimelineBar } from "./timeline/timeline-bar";
 import { ViewControls, type MapMode } from "./view-controls";
 import { DEFAULT_APP_MODE, rememberAppMode, rememberedAppMode, type AppMode } from "./modes/app-modes";
 import { FindDataMode } from "./modes/find-data-mode";
-import { filterLandingSites, type HistoricLandingSite, type LandingFilter } from "./modes/historic-landing-sites";
+import { filterLandingSites, LANDING_KIND_COLORS, type HistoricLandingSite, type LandingFilter } from "./modes/historic-landing-sites";
 import { LandingSitesMode, useHistoricLandingSites } from "./modes/landing-sites-mode";
 import { ModeSwitch } from "./modes/mode-switch";
 
@@ -240,7 +240,7 @@ export function LunarQuestApp() {
   const annotations = useMemo<MapAnnotations>(() => {
     // 每个模式只画自己的标记：着陆点模式画任务着陆点，查数据模式画查询的位置
     if (appMode === "landing-sites") {
-      return { sites: landingSites.map((site) => ({ id: site.id, name: site.mission, latDeg: site.latDeg, lonDeg: site.lonDeg, createdAt: site.landedUtc })), measurePoints: [], searchPin: null, selectedSiteId: landingSiteId };
+      return { sites: landingSites.map((site) => ({ id: site.id, name: site.mission, latDeg: site.latDeg, lonDeg: site.lonDeg, createdAt: site.landedUtc, markerColor: LANDING_KIND_COLORS[site.kind] })), measurePoints: [], searchPin: null, selectedSiteId: landingSiteId };
     }
     if (appMode === "find-data") return { sites: [], measurePoints: [], searchPin: findTarget };
     return { sites, measurePoints, searchPin: searchTarget, draftSite: draftSite ? { latDeg: draftSite.latDeg, lonDeg: draftSite.lonDeg, label: draftSite.name || "New marker" } : null, selectedSiteId };
@@ -323,7 +323,7 @@ export function LunarQuestApp() {
         </div>
       )}
       <div className={`pointer-events-none absolute inset-x-0 top-0 ${comparing ? "bottom-[var(--compare-height)]" : "bottom-0"}`}><div className="pointer-events-auto contents">
-      <TimelineBar key={`timeline-${viewRevision}`} timeMs={timeMs} onTimeChange={setTimeMs} />
+      <TimelineBar key={`timeline-${viewRevision}-${standingAt ? "first-person" : "map"}`} timeMs={timeMs} onTimeChange={setTimeMs} loop={!!standingAt} />
       </div></div>
       <p className={`pointer-events-none absolute ${comparing ? "hidden" : "xl:block"} bottom-0.5 right-3 z-10 hidden text-[10px] text-white/35 hidden`}>
         NASA SVS CGI Moon Kit · NASA Moon Trek / LROC Team / ASU · LRO LOLA · IAU/USGS names · Earth: NASA Blue Marble · Sun: NASA/SDO AIA (false colour)
