@@ -25,6 +25,7 @@ import { MAX_SITES, nextSiteName, useSavedSites } from "./sites/use-saved-sites"
 import { TimelineBar } from "./timeline/timeline-bar";
 import { ViewControls, type MapMode } from "./view-controls";
 import { useAnnounceMapReady } from "./use-announce-map-ready";
+import { useSmoothWheelScroll } from "./use-smooth-wheel-scroll";
 import { DEFAULT_APP_MODE, rememberAppMode, rememberedAppMode, type AppMode } from "./modes/app-modes";
 import { FindDataMode } from "./modes/find-data-mode";
 import { LandingSitesMode, usePresetSites } from "./modes/landing-sites-mode";
@@ -40,6 +41,7 @@ const LANDING_PICK_RADIUS_DEG = 8;
 
 export function LunarQuestApp() {
   const t = useT();
+  useSmoothWheelScroll(); // 所有面板的鼠标滚轮滚动：每帧连续滑动，不再一格一跳
   const { locale } = useSettings();
   const theme = useResolvedTheme();
   const [compareHeight, setCompareHeight] = useState(DEFAULT_COMPARE_HEIGHT_DVH);

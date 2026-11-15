@@ -26,7 +26,7 @@ export function ViewControls({ mode, onModeChange, layers, onLayersChange }: Vie
           <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18" /></svg>
         </button>
       )}
-      <div className="flex rounded-full border border-white/15 bg-black/55 p-1 lunar-glass backdrop-blur-md">
+      <div data-tour="light-grid" className="flex rounded-full border border-white/15 bg-black/55 p-1 lunar-glass backdrop-blur-md">
         <IconToggle
           label="Sunlight and shadow (surface imagery only)"
           pressed={layers.sunlight}
