@@ -413,3 +413,6 @@
 @media (max-width: 500px), (max-height: 570px) {
   .lq-group .lq-gauge-ring { --lq-gauge-fill: var(--lq-gauge-value); --lq-gauge-n: var(--lq-gauge-value); transition: none; }
 }
+
+/* The Moon globe in the corner of the all-sky chart. */
+.lq-moon-globe { position: absolute; left: .45rem; bottom: .45rem; width: clamp(4.6rem, 11vh, 6.2rem); height: auto; aspect-ratio: 1; pointer-events: none; filter: drop-shadow(0 0 6px #0008); }

@@ -10,6 +10,7 @@ import { type CSSProperties, useEffect, useRef, useState } from "react";
 import { angle, DAY_MS } from "./demo-data";
 import { FORECAST_FRAME_HOURS, FORECAST_FRAMES, FORECAST_START_UTC } from "./forecast-frames";
 import { HorizonForecast } from "./horizon-forecast";
+import { MoonGlobe } from "./moon-globe";
 
 const FIRST_DAY = Date.parse(FORECAST_START_UTC);
 const FRAME_DAYS = FORECAST_FRAME_HOURS / 24;
@@ -18,6 +19,8 @@ const PLAY_DAYS_PER_S = 1.4;
 /** Near the top of the sky the Sun sweeps across the compass in a few hours; slow playback there so it reads as one glide. */
 const ZENITH_SLOW_FROM_DEG = 70;
 const DOME_RADIUS = 100;
+/** Apollo 11 (the forecast samples are for this site). */
+const SITE = { latDeg: 0.67416, lonDeg: 23.47314 };
 const DEG = Math.PI / 180;
 const dateLabel = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
 const timeLabel = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: "UTC" });
@@ -185,6 +188,7 @@ export function SkyForecast() {
           </g>
         </svg>
         )}
+        {view === "dome" && <MoonGlobe sun={sky.sun} earth={sky.earth} latDeg={SITE.latDeg} lonDeg={SITE.lonDeg} />}
       </div>
       <div className="lq-forecast-time">
         <button
@@ -229,7 +233,7 @@ export function SkyForecast() {
         <span><i data-body="sun" /> Sun <b>{angle(sky.sun.elevationDeg)}</b><em>{sky.sun.elevationDeg < 0 ? "below" : ""}</em></span>
         <span><i data-body="earth" /> Earth <b>{angle(sky.earth.elevationDeg)}</b><em>{sky.earth.elevationDeg < 0 ? "below" : ""}</em></span>
       </div>
-      <p className="lq-demo-caption">{view === "horizon" ? <>Simulated sky above a 1969 Apollo 11 photo. Local terrain does not affect sky visibility. Photo: Neil Armstrong / NASA.</> : "LOOKING UP · RING = HORIZON · DASHES = SUN AND EARTH PATHS"}</p>
+      <p className="lq-demo-caption">{view === "horizon" ? <>Simulated sky above a 1969 Apollo 11 photo. Local terrain does not affect sky visibility. Photo: Neil Armstrong / NASA.</> : "LOOKING UP · RING = HORIZON · DASHES = SUN AND EARTH PATHS · INSET = THE MOON, SITE AT CENTRE"}</p>
     </div>
   );
 }

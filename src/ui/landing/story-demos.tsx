@@ -21,13 +21,12 @@ export function StoryDemo({ kind }: { kind: "survey" | "horizon" | "forecast" | 
       return (
         <figure className="lq-demo lq-pov-demo">
           <LookAroundPanorama
-            src="/landing/apollo-17-boulder.jpg"
-            alt="Apollo 17 astronaut beside a house-sized boulder on the Taurus-Littrow valley floor, with sunlit hills beyond and a black sky"
-            width={2400}
-            height={2486}
-            focusY={0.44}
+            src="/landing/apollo-15-hadley.webp"
+            alt="Sunlit lunar hills, boulders and the Apollo 15 rover at Hadley–Apennine"
+            width={3200}
+            height={572}
           />
-          <figcaption className="lq-demo-caption">APOLLO 17 · TAURUS-LITTROW · NASA / JSC</figcaption>
+          <figcaption className="lq-demo-caption">APOLLO 15 · HADLEY–APENNINE · NASA / USGS</figcaption>
         </figure>
       );
     case "forecast":
