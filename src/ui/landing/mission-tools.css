@@ -132,21 +132,18 @@
   left: 50%;
   width: 100vw;
   margin-left: -50vw;
-  top: calc(100% - var(--lq-stage-h));
+  top: 0;
   height: 420vh;
   z-index: -1;
   overflow: clip;
   pointer-events: none;
 }
-/* Pinned to the bottom of the screen: once its top reaches (screen height - its own height) it stays there
-   while the cards slide up over it. */
-.lq-analysis-pin { position: sticky; top: calc(100svh - var(--lq-stage-h)); height: var(--lq-stage-h); }
+/* The backdrop fills the whole screen and stays put (sticky) while the headline and cards scroll over it. */
+.lq-analysis-pin { position: sticky; top: 0; height: 100svh; }
 .lq-comms-stage {
   position: relative;
-  width: min(100vw, 80rem);
+  width: 100%;
   height: 100%;
-  margin-inline: auto;
-  mask-image: linear-gradient(180deg, transparent, #000 14%);
 }
 .lq-comms-stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 @media (max-width: 560px) {
@@ -160,8 +157,8 @@
   content: "";
   position: absolute;
   z-index: -1;
-  inset: -2rem 8% -2rem -3rem;
-  background: radial-gradient(ellipse at 28% 50%, #03060ef0 0%, #03060ec2 45%, transparent 78%);
+  inset: -5rem -14% -5rem -8rem;
+  background: radial-gradient(ellipse 62% 66% at 30% 50%, #03060ed0 0%, #03060e8a 45%, transparent 100%);
   pointer-events: none;
 }
 @media (max-width: 560px) {

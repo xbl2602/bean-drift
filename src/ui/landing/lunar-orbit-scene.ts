@@ -21,13 +21,13 @@ import { buildSatelliteParts, GROUP_ORIGIN, type PartKind } from "./satellite-mo
 type Three = typeof ThreeNamespace;
 
 const ALTITUDE = 5.5; // scene units (about 96 km at this scale)
-const SATELLITE_SCALE = 0.62;
+const SATELLITE_SCALE = 0.5;
 const GROUND_SPEED_RAD_PER_S = 0.012; // how fast the Moon turns under the satellite (sped up for the picture)
 const SUN_DIRECTION: Vec3 = [-0.28, -0.88, 0.38]; // low over the horizon, so the ground throws long shadows
 const CAMERA_OFFSET: Vec3 = [-7.2, 2.4, 4.6];
 const CAMERA_ROLL_DEG = -24;
-const SATELLITE_SCREEN = { x: 0.74, y: 0.62 };
-const EARTH_SCREEN = { x: 0.85, y: 0.2 };
+const SATELLITE_SCREEN = { x: 0.74, y: 0.68 };
+const EARTH_SCREEN = { x: 0.86, y: 0.22 };
 const EARTH_DISTANCE = 420;
 const EARTH_ANGULAR_RADIUS = 0.07;
 // Drawn at 1.5x to 2x the screen size and scaled down: smooth edges even on ordinary screens.
@@ -96,7 +96,7 @@ async function buildScene(canvas: HTMLCanvasElement) {
   moonColor.wrapS = moonRelief.wrapS = THREE.RepeatWrapping;
 
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(38, 2, 0.05, 3000);
+  const camera = new THREE.PerspectiveCamera(42, 2, 0.05, 3000);
 
   // ---- stars ----
   {
@@ -376,7 +376,7 @@ export function createLunarOrbitRenderer(canvas: HTMLCanvasElement): CanvasRende
       const grid = canvas.closest("section")?.querySelector(".lq-tools-grid");
       if (wrapper && grid) {
         const gridTop = grid.getBoundingClientRect().top;
-        wrapper.style.opacity = (0.22 + 0.7 * smooth(window.innerHeight * 0.1, window.innerHeight * 0.75, gridTop)).toFixed(3);
+        wrapper.style.opacity = (0.82 + 0.18 * smooth(window.innerHeight * 0.1, window.innerHeight * 0.75, gridTop)).toFixed(3);
       }
       if (!built) return;
       built.update(timeS);
