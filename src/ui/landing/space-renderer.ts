@@ -2,6 +2,7 @@
 // Callers describe the scene in CSS pixels with y pointing down, like the rest of the page;
 // this file handles device pixels, textures and talking to the GPU.
 
+import { createAdaptivePixelRatio } from "./adaptive-pixel-ratio";
 import { buildFullscreenProgram, type CanvasRenderer, createFullscreenQuad, loadGlobeTexture } from "./gl-utils";
 import { SPACE_FRAGMENT_SHADER } from "./space-shaders";
 
@@ -27,8 +28,8 @@ export type SpaceScene = {
 };
 
 const MAX_BODIES = 4;
-/** Draw at screen resolution and no more (2026-11-15: GPU headroom beats supersampling). */
-const MAX_PIXEL_RATIO = 1;
+/** Sharp stars and globe detail up to 2x screens; lowered on slow GPUs (adaptive-pixel-ratio.ts). */
+const MAX_PIXEL_RATIO = 2;
 const KIND_INDEX: Record<BodyKind, number> = { moon: 0, earth: 1, sun: 2 };
 
 export const EARTH_TEXTURE_URL = "/landing/earth-blue-marble-2k.jpg";
@@ -83,25 +84,31 @@ export function createSpaceRenderer(canvas: HTMLCanvasElement, options: SpaceRen
   let pixelRatio = 1;
   let heightPx = 0;
 
+  /** Sizes the drawing buffer to the canvas at the current pixel ratio. */
+  const resizeBuffer = () => {
+    pixelRatio = resolution.current();
+    const widthPx = canvas.clientWidth;
+    heightPx = canvas.clientHeight;
+    const bufferWidth = Math.max(1, Math.round(widthPx * pixelRatio));
+    const bufferHeight = Math.max(1, Math.round(heightPx * pixelRatio));
+    if (canvas.width !== bufferWidth || canvas.height !== bufferHeight) {
+      canvas.width = bufferWidth;
+      canvas.height = bufferHeight;
+      gl.viewport(0, 0, bufferWidth, bufferHeight);
+    }
+    return { widthPx, heightPx };
+  };
+  // Follows screen density and zoom; draws fewer pixels if this GPU cannot keep up.
+  const resolution = createAdaptivePixelRatio({ maxRatio: MAX_PIXEL_RATIO }, () => resizeBuffer());
+
   return {
     ready,
 
-    resize() {
-      pixelRatio = Math.min(window.devicePixelRatio || 1, MAX_PIXEL_RATIO);
-      const widthPx = canvas.clientWidth;
-      heightPx = canvas.clientHeight;
-      const bufferWidth = Math.max(1, Math.round(widthPx * pixelRatio));
-      const bufferHeight = Math.max(1, Math.round(heightPx * pixelRatio));
-      if (canvas.width !== bufferWidth || canvas.height !== bufferHeight) {
-        canvas.width = bufferWidth;
-        canvas.height = bufferHeight;
-        gl.viewport(0, 0, bufferWidth, bufferHeight);
-      }
-      return { widthPx, heightPx };
-    },
+    resize: resizeBuffer,
 
     render(scene) {
       if (gl.isContextLost()) return;
+      resolution.noteFrame(performance.now());
       const count = Math.min(scene.bodies.length, MAX_BODIES);
       for (let i = 0; i < count; i++) {
         const body = scene.bodies[i];
@@ -127,6 +134,7 @@ export function createSpaceRenderer(canvas: HTMLCanvasElement, options: SpaceRen
     dispose() {
       // Free our GPU objects but keep the context alive: a canvas hands back the same context if
       // the component mounts again (React does this in development), and a lost one cannot be reused.
+      resolution.dispose();
       textures.forEach((texture) => gl.deleteTexture(texture));
       gl.deleteBuffer(quad);
       gl.deleteProgram(program);
