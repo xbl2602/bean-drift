@@ -1,8 +1,9 @@
-import type { SearchResult } from "./search-client";
+﻿import type { SearchResult } from "./search-client";
 import { comparisonPoints, coordinates, percent, pointVisualSchema, presetsVisualSchema, timeLabel, timelineVisualSchema, type PointVisual, type TimelineVisual } from "./visual-data";
 import styles from "./answer-visuals.module.css";
 import { nearbyMapSchema } from "../logic/nearby-map";
 import { NearbyMap } from "./nearby-map";
+import type { SelectedLunarLocation } from "./lunar-search";
 
 function Meter({ label, value }: { label: string; value: number | null }) {
   return <div className={styles.metric}><div><span>{label}</span><strong>{percent(value)}</strong></div>
@@ -32,12 +33,12 @@ function Horizon({ point }: { point: PointVisual }) {
   </figure>;
 }
 
-function PointCard({ point, number }: { point: PointVisual; number: number }) {
+function PointCard({ point, number, onSelectLocation }: { point: PointVisual; number: number; onSelectLocation?: (loc: SelectedLunarLocation) => void }) {
   const annual = point.yearStats;
   const annualAvailable = point.provenance.yearStats.status === "ok" && annual.periodStartUtc && annual.periodEndUtc;
   return <section className={styles.card} aria-label={`Location ${number}`}>
     <div className={styles.kicker}>LOCATION {String(number).padStart(2, "0")}</div>
-    <h4>{coordinates(point.position)}</h4><p className={styles.note}>{timeLabel(point.timeUtc)}</p>
+    <h4>{onSelectLocation ? <button type="button" onClick={() => onSelectLocation({ latDeg: point.position.latDeg, lonDeg: point.position.lonDeg, label: `Location ${number} (${coordinates(point.position)})` })} style={{ all: "unset", cursor: "pointer", textDecoration: "underline", textUnderlineOffset: "3px" }}>{coordinates(point.position)} ↗</button> : coordinates(point.position)}</h4><p className={styles.note}>{timeLabel(point.timeUtc)}</p>
     <Horizon point={point} />
     <div className={styles.pair}><div>Sun elevation<strong>{point.sun.elevationDeg.toFixed(1)}°</strong></div><div>Earth elevation<strong>{point.earth.elevationDeg.toFixed(1)}°</strong></div></div>
     <p className={styles.note}>Visible disk now: Sun {percent(point.provenance.visibility.status === "ok" ? point.visibility.sun.diskVisibleFraction : null)} · Earth {percent(point.provenance.visibility.status === "ok" ? point.visibility.earth.diskVisibleFraction : null)}</p>
@@ -67,18 +68,18 @@ function TimelineCard({ data }: { data: TimelineVisual }) {
   </section>;
 }
 
-export function AnswerVisuals({ sources, onQuestion }: { sources: SearchResult["sources"]; onQuestion: (question: string) => void }) {
+export function AnswerVisuals({ sources, onQuestion, onSelectLocation }: { sources: SearchResult["sources"]; onQuestion: (question: string) => void; onSelectLocation?: (loc: SelectedLunarLocation) => void }) {
   return <div className={styles.visuals}>{sources.map((source, index) => {
     let content;
     if (source.tool === "lunar_gazetteer") {
       const parsed = nearbyMapSchema.safeParse(source.result);
-      if (parsed.success) content = <div className={styles.comparison}>{parsed.data.locations.map((location, i) => <NearbyMap key={i} location={location} />)}</div>;
+      if (parsed.success) content = <div className={styles.comparison}>{parsed.data.locations.map((location, i) => <NearbyMap key={i} location={location} onSelectLocation={onSelectLocation} />)}</div>;
     } else if (source.tool === "get_point_conditions") {
       const parsed = pointVisualSchema.safeParse(source.result);
-      if (parsed.success) content = <PointCard point={parsed.data} number={1} />;
+      if (parsed.success) content = <PointCard point={parsed.data} number={1} onSelectLocation={onSelectLocation} />;
     } else if (source.tool === "compare_points") {
       const points = comparisonPoints(source.result);
-      if (points.length) content = <div className={styles.comparison}>{points.map((point, i) => <PointCard key={i} point={point} number={i + 1} />)}</div>;
+      if (points.length) content = <div className={styles.comparison}>{points.map((point, i) => <PointCard key={i} point={point} number={i + 1} onSelectLocation={onSelectLocation} />)}</div>;
     } else if (source.tool === "get_point_timeline") {
       const parsed = timelineVisualSchema.safeParse(source.result);
       if (parsed.success && parsed.data.provenance.status === "ok") content = <TimelineCard data={parsed.data} />;
@@ -89,3 +90,4 @@ export function AnswerVisuals({ sources, onQuestion }: { sources: SearchResult["
     return content ? <div key={index}><p className={styles.source}>FROM STRUCTURED DATA · SOURCE #{index + 1}</p>{content}</div> : null;
   })}</div>;
 }
+
