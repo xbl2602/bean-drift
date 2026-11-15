@@ -155,7 +155,7 @@ export function SearchPanel({ selected, onGoTo, onStandHere, onSaveSite, onClose
           </span>
           <span className="flex gap-2">
             <ResultButton primary onClick={() => onStandHere(selected)}>Stand here</ResultButton>
-            <ResultButton onClick={() => onSaveSite(selected, selected.label)}>Save site</ResultButton>
+            <ResultButton onClick={() => onSaveSite(selected, selected.label)}>Add to comparison</ResultButton>
           </span>
         </div>
       )}

@@ -50,7 +50,7 @@ export const TOOLS: ToolInfo[] = [
   { id: "ice", category: "science", label: "Water Ice Potential", hint: "Spot cold, shadowed places where water ice may hide", icon: "M12 2v20M4 6l16 12M20 6 4 18M9 4l3 3 3-3M9 20l3-3 3 3", layer: "ice" },
   { id: "slope", category: "science", label: "Surface Slope", hint: "See where the ground is flat enough to land", icon: "M3 20h18L21 6 3 20Zm11-4.500V20", layer: "slope" },
   { id: "suitability", category: "evaluate", label: "Site Suitability", hint: "Score every place by the things you care about", icon: "m12 3 2.700 5.600 6.100.900-4.400 4.300 1 6.100L12 17l-5.400 2.900 1-6.100L3.200 9.500l6.100-.900L12 3Z", layer: "suitability" },
-  { id: "compare", category: "evaluate", label: "Compare Landing Sites", hint: "Put your saved sites side by side", icon: "M5 20V10m7 10V4m7 16v-7" },
+  { id: "compare", category: "evaluate", label: "Compare Landing Sites", hint: "Put selected sites side by side", icon: "M5 20V10m7 10V4m7 16v-7" },
   { id: "export", category: "evaluate", label: "Export Results", hint: "Download your sites and results as a file", icon: "M12 4v11m0 0-4-4m4 4 4-4M5 19h14" },
 ];
 

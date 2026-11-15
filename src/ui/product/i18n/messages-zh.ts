@@ -37,7 +37,7 @@ export const zhHans: Record<MessageKey, string> = {
   "tool.search.label": "搜索地点",
   "tool.search.hint": "跳到某个环形山、着陆点或坐标",
   "tool.site.label": "选择着陆点",
-  "tool.site.hint": "放一个图钉，查看数据，保存为候选点",
+  "tool.site.hint": "放一个图钉，查看数据，加入选址比较",
   "tool.measure.label": "测量距离",
   "tool.measure.hint": "点几个点，看看它们相距多远",
   "tool.elevation.label": "地形与高度",

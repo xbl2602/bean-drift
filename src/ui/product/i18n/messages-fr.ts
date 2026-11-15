@@ -37,7 +37,7 @@ export const fr: Record<MessageKey, string> = {
   "tool.search.label": "Rechercher un lieu",
   "tool.search.hint": "Aller à un cratère, un site d'alunissage ou des coordonnées",
   "tool.site.label": "Choisir un site",
-  "tool.site.hint": "Placez une épingle, voyez ses données et enregistrez-la comme candidate",
+  "tool.site.hint": "Placez une épingle, consultez ses données et ajoutez-la à la comparaison",
   "tool.measure.label": "Mesurer une distance",
   "tool.measure.hint": "Cliquez sur des points pour voir leur distance",
   "tool.elevation.label": "Relief et altitude",

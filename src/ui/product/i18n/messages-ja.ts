@@ -37,7 +37,7 @@ export const ja: Record<MessageKey, string> = {
   "tool.search.label": "場所を検索",
   "tool.search.hint": "クレーター、着陸地点、座標へ移動",
   "tool.site.label": "着陸地点を選ぶ",
-  "tool.site.hint": "ピンを置いてデータを見て、候補として保存",
+  "tool.site.hint": "ピンを置いてデータを確認し、比較に追加",
   "tool.measure.label": "距離を測る",
   "tool.measure.hint": "点をクリックして距離を確認",
   "tool.elevation.label": "地形と標高",
