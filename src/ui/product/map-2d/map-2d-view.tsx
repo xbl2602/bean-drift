@@ -10,10 +10,12 @@ import { monthSunSamples, sunBodyAt } from "../analysis/sun-samples";
 import type { LayerSettings } from "../map-layers";
 import type { FocusRequest, MapViewProps } from "../map-view-props";
 import { bodyToLatLon, sunDirectionBody, type LatLon } from "../moon-frames";
+import { prefersReducedMotion } from "../motion/smooth-value";
 import { AnnotationLayer } from "../overlay/annotations";
 import { usePointerGestures } from "../use-pointer-gestures";
 import { createMap2dMaterial } from "./map-2d-material";
 import { clampCamera, initialCamera, latLonToScreen, panCamera, screenToUv, uvToLatLon, zoomCameraAt, type MapCamera, type ScreenSize } from "./map-2d-camera";
+import { mapCameraOnFlight, startMapFlight, type MapFlight } from "./map-2d-flight";
 
 interface Map2dRuntime {
   renderer: THREE.WebGLRenderer;
@@ -27,6 +29,8 @@ interface Map2dRuntime {
   /** 上一次为哪个底图图层请求过细版本数据贴图（只在图层变了时再请求）。 */
   fineRequestedFor: LayerSettings["base"] | null;
   mapCamera: MapCamera;
+  /** 正在进行的自动飞行（点着陆点、搜索定位）；用户一拖一缩就取消。 */
+  flight: MapFlight | null;
   screen: ScreenSize;
   frame: number;
 }
@@ -44,10 +48,12 @@ export function Map2dView({ timeMs, layers, annotations, focus, cursor, onPick, 
     if (!rt || rt.frame) return;
     rt.frame = requestAnimationFrame(() => {
       rt.frame = 0;
+      const stillFlying = advanceFlight(rt);
       const { timeMs: t, layers: l, annotations: a } = settingsRef.current;
       applyUniforms(rt, t, l);
       rt.renderer.render(rt.scene, rt.camera3);
       rt.overlay.draw(a, (point) => latLonToScreen(rt.mapCamera, rt.screen, point), rt.screen.widthPx);
+      if (stillFlying) requestRender();
     });
   };
 
@@ -79,7 +85,7 @@ export function Map2dView({ timeMs, layers, annotations, focus, cursor, onPick, 
         const subSolar = bodyToLatLon(sunDirectionBody(settingsRef.current.timeMs));
         const pending = focusRef.current;
         const mapCamera = pending ? cameraForFocus(pending, screen) : initialCamera(screen, subSolar.lonDeg - 45);
-        runtimeRef.current = { atlases, textures, fineRequestedFor: null, renderer, scene, camera3: new THREE.Camera(), material, analysisUniforms, overlay: new AnnotationLayer(container), mapCamera, screen, frame: 0 };
+        runtimeRef.current = { atlases, textures, fineRequestedFor: null, renderer, scene, camera3: new THREE.Camera(), material, analysisUniforms, overlay: new AnnotationLayer(container), mapCamera, flight: null, screen, frame: 0 };
         resize();
         onLoadingChange(false);
         textures.request(["relief", "slope", "polar"], "coarse");
@@ -129,7 +135,13 @@ export function Map2dView({ timeMs, layers, annotations, focus, cursor, onPick, 
   useEffect(() => {
     const rt = runtimeRef.current;
     if (!focus || !rt) return;
-    rt.mapCamera = cameraForFocus(focus, rt.screen);
+    const target = cameraForFocus(focus, rt.screen);
+    if (prefersReducedMotion()) {
+      rt.flight = null;
+      rt.mapCamera = target;
+    } else {
+      rt.flight = startMapFlight(target, performance.now(), rt.flight, rt.mapCamera);
+    }
     requestRender();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 只在收到新的定位请求时执行
   }, [focus?.seq]);
@@ -145,12 +157,14 @@ export function Map2dView({ timeMs, layers, annotations, focus, cursor, onPick, 
     onPan: (dx, dy) => {
       const rt = runtimeRef.current;
       if (!rt) return;
+      rt.flight = null;
       rt.mapCamera = panCamera(rt.mapCamera, rt.screen, dx, dy);
       requestRender();
     },
     onZoom: (factor, x, y) => {
       const rt = runtimeRef.current;
       if (!rt) return;
+      rt.flight = null;
       rt.mapCamera = zoomCameraAt(rt.mapCamera, rt.screen, factor, x, y);
       requestRender();
     },
@@ -166,6 +180,15 @@ export function Map2dView({ timeMs, layers, annotations, focus, cursor, onPick, 
   });
 
   return <div ref={containerRef} className="absolute inset-0 cursor-crosshair touch-none select-none" style={cursor ? { cursor } : undefined} />;
+}
+
+/** 飞行中：把视野推进到此刻的位置，飞完就收起飞行。返回 true 表示还没飞完，要再画下一帧。 */
+function advanceFlight(rt: Map2dRuntime): boolean {
+  if (!rt.flight) return false;
+  const { camera, arrived } = mapCameraOnFlight(rt.flight, performance.now(), rt.screen);
+  rt.mapCamera = camera;
+  if (arrived) rt.flight = null;
+  return !arrived;
 }
 
 /** 把请求的位置放到屏幕中央，横向大约显示 spanDeg 度。 */

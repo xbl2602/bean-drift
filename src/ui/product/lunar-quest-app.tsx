@@ -151,14 +151,13 @@ export function LunarQuestApp() {
     setAppMode(mode);
     rememberAppMode(mode);
     if (mode === "landing-sites") setLandingVisited(true);
-    // 换模式时收起 Explore 的工具和未保存标记（AI Tools 和设置三个模式通用，保持打开），离开第一人称；三个模式进来都先看 3D 地球仪
+    // 换模式时收起 Explore 的工具和未保存标记（AI Tools 和设置三个模式通用，保持打开），离开第一人称；视图（3D 球 / 2D 平面图）保持用户当前在看的那个，不强制切回 3D
     setActiveTool((current) => (current === "ai" || current === "settings" ? current : null));
     setDraftSite(null);
     setStandingAt(null);
     setError(null);
     setFocus(null);
     setLayers((current) => ({ ...current, base: "color" }));
-    setMapMode("3d");
   };
   /** 导览讲的是 Explore 里的工具：先切到 Explore 再开始。 */
   const openTutorial = () => {
@@ -176,7 +175,7 @@ export function LunarQuestApp() {
   const selectLandingSite = (site: HistoricLandingSite) => {
     if (rightToolOpen) setActiveTool(null); // 讲解面板和 AI / 设置面板都在右边，点了着陆点就看讲解
     setLandingSiteId(site.id);
-    setMapMode("3d");
+    // 不强制切 3D：用户在 2D 平面图里点着陆点，就留在 2D，平面图自己会居中到这个点（3D 球则飞过去）
     requestFocus(site, 45);
   };
   const lookUpPoint = (target: SearchTarget) => {

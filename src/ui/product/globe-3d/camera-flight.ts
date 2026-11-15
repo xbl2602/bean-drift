@@ -52,16 +52,25 @@ export class CameraMotionTracker {
   }
 }
 
-/** 从此刻的运动状态出发，飞到 target（相机的目标位置）。current 为空表示当前没有在飞。 */
-export function startCameraFlight(target: THREE.Vector3, nowMs: number, current: CameraFlight | null, tracker: CameraMotionTracker): CameraFlight | null {
+/**
+ * 从此刻的运动状态出发，飞到 target（相机的目标位置）。current 为空表示当前没有在飞。
+ * cameraPosition 是相机此刻在画面上的位置：镜头是静止的时候，就从这里起飞。
+ */
+export function startCameraFlight(target: THREE.Vector3, nowMs: number, current: CameraFlight | null, tracker: CameraMotionTracker, cameraPosition: THREE.Vector3): CameraFlight {
   let startS = nowMs / 1000;
   let state = current ? flightStateAt(current, startS) : null;
   if (!state) {
     const observed = tracker.latest();
-    if (!observed) return null;
-    // 从最后画出来的那一帧接着飞，起点和画面上的位置完全一致
-    startS = observed.tS;
-    state = observed;
+    if (observed && startS - observed.tS <= MAX_SAMPLE_GAP_S) {
+      // 镜头刚刚还在动（比如用户刚拖完，还在惯性滑动）：从最后画出来的那一帧接着飞，起点和画面上的位置完全一致
+      startS = observed.tS;
+      state = observed;
+    } else {
+      // 记录是空的（页面刚打开），或最后一帧已经是很久以前（镜头静止了）：从相机现在的位置起飞，速度和加速度都是 0。
+      // 不能照用旧记录：旧记录的时刻早就过了，飞行会在第一帧就被判成"已到达"，镜头直接瞬移、没有动画。
+      const here = poseOf(cameraPosition, startS);
+      state = { phi: stillAt(here.phi), theta: stillAt(here.theta), logRadius: stillAt(here.logRadius) };
+    }
   }
   const goal = poseOf(target, startS);
   const thetaTo = state.theta.value + wrapAngle(goal.theta - state.theta.value);
@@ -94,6 +103,10 @@ function flightStateAt(flight: CameraFlight, tS: number) {
     theta: axisAt(flight.theta, elapsed, flight.durationS),
     logRadius: axisAt(flight.logRadius, elapsed, flight.durationS),
   };
+}
+
+function stillAt(value: number): AxisState {
+  return { value, rate: 0, accel: 0 };
 }
 
 function axisAt(axis: Axis, elapsedS: number, durationS: number): AxisState {
