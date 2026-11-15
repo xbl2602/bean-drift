@@ -10,7 +10,7 @@ import { azElToLocal, type LatLon } from "../moon-frames";
 import { skyConditionsAt } from "../sky-conditions";
 import { createStarfield, updateStarfield } from "../starfield";
 import { loadNearbyCraters, type RealCrater } from "./crater-catalog";
-import { createGroundMaterial } from "./ground-material";
+import { createGroundMaterial, sampleGroundAlbedo } from "./ground-material";
 import { createRockField } from "./rock-field";
 import { loadHeightField } from "./height-tiles";
 import { createEarth, fallbackEarthTexture, orientEarth, sizeEarth } from "./earth-sky";
@@ -78,16 +78,34 @@ export function openingYawDeg(center: LatLon, timeMs: number): number {
 export const OPENING_PITCH_DEG = -4;
 
 /**
- * 白天的曝光：像宇航员的相机一样是固定的（月面没有大气，阳光强度不随太阳高度变，阿波罗相机也是按固定的"晴天曝光"拍）。
- * 定法：反照率 0.15 的平地、太阳高 45°、侧光时，画面上是中灰（sRGB 约 125，和阿波罗照片里阳光下的月壤差不多）；第谷坑底这种亮的新鲜撞击坑、背着太阳看时最亮，约 200，不会变成一片白。
- * 太阳低时地面就是更暗、影子更长，但朝向太阳的坡面依然亮——这是真实的样子，不再把画面整体提亮。
+ * 曝光 = 基准 × 测光补偿，像相机的自动曝光 / 人眼的明暗适应：
+ *   先估计"这里的地面大概有多亮"= 当地反照率（从底图读，见 sampleGroundAlbedo）× 照到地面的光（太阳 + 地球光 + 底光），
+ *   再和基准场景（反照率 0.12 的平地、太阳高 45°）比，按比例的一部分补回来：补偿 = (基准亮度 / 估计亮度)^K。
+ * K 越大补得越多：白天 K = 0.3（只补一点：太阳低时仍然更暗、影子更长，暗的月海仍比亮的撞击坑暗，像阿波罗的固定曝光照片）；
+ * 夜里 K = 0.9（眼睛适应黑暗：地球光比阳光弱得多，不补的话 ACES 曲线的暗部会把画面压成全黑）。
+ * 基准：反照率 0.15 的平地、太阳高 45°、侧光时，画面上是中灰（sRGB 约 125，和阿波罗照片里阳光下的月壤差不多）。
  */
 const BASE_EXPOSURE = 1.55;
 const SUN_INTENSITY = 3.4;
-/** 夜里（太阳在地平线下）眼睛/相机适应黑暗后的曝光倍数：满地球照着的平地是暗灰（sRGB 约 65），一看就是夜晚。 */
-const NIGHT_ADAPT = 12;
-/** 白天但自己站在阴影里（太阳被地形挡住）时的曝光倍数：阴影里能看清，远处被照亮的地方会更亮一些。 */
-const SHADE_ADAPT = 3;
+const METER_K_DAY = 0.3;
+const METER_K_NIGHT = 0.9;
+/** 测光补偿的上下限（倍数）：再暗的地方也不会无限提亮（远侧的夜里没有地球光，就是很黑）。 */
+const METER_MIN = 0.6;
+const METER_MAX = 60;
+/** 夜里整体再暗一些（乘这个数），一看就知道是夜晚。 */
+const NIGHT_KEY = 0.7;
+/**
+ * 反射补光：被照亮的地面会把一部分光反射到背光的坡面和影子里（月壤反照率约 0.1，周围一半是亮地面，约补 5%）。
+ * 夜里加大到和地球光照平地一样强（100%）：这是为了看得清，不是物理值——人眼适应黑暗后能分辨背光的山坡，
+ * 而真实的反射补光只有约 5%，背光坡会几乎全黑、只剩剪影。这样背光坡大约是迎光坡的三分之一亮，地形起伏仍然看得出来。
+ */
+const FILL_DAY = 0.05;
+const FILL_NIGHT = 1.0;
+/** 面朝主光源（白天太阳、夜里地球）看时，画面里多是背光面，测光会把曝光再提高一点：最多 1 + 这个数 倍。 */
+const BACKLIGHT_GAIN_DAY = 0.5;
+const BACKLIGHT_GAIN_NIGHT = 0.9;
+/** 基准场景的地面亮度：反照率 0.12、太阳高 45° 的平地。 */
+const METER_REFERENCE = (0.12 * SUN_INTENSITY * Math.SQRT1_2) / Math.PI;
 /** 曝光追着目标值走的时间常数（秒）：日落、走进阴影时是慢慢适应的，不是一下跳。 */
 const EXPOSURE_EASE_S = 0.45;
 /** 满地球时地球光的强度（和 SUN_INTENSITY 同一单位）。真实的地球光约是阳光的万分之一，这里取约 3%，配合 NIGHT_ADAPT 使夜里亮度合理；白天它只让影子里有一点点蓝。 */
@@ -109,6 +127,8 @@ export async function buildFirstPersonScene(center: LatLon, renderer: THREE.WebG
   const { chunks, groundHeightM, footOffsetM, surfaceYAt } = buildTerrainPatch(center, field, detail, PATCH_RADIUS_M);
 
   const scene = new THREE.Scene();
+  // 站立点周围的平均反照率：给测光用（暗的月海、亮的撞击坑曝光不同）
+  const groundAlbedo = sampleGroundAlbedo(colorTexture, center.latDeg, center.lonDeg);
   scene.background = new THREE.Color(0x000000);
   // 地面上的石头：同一个地点每次撒得一样（种子由经纬度决定）
   const rockSeed = (Math.round((center.latDeg + 90) * 1000) * 2654435761) ^ (Math.round((center.lonDeg + 180) * 1000) * 40503);
@@ -128,7 +148,7 @@ export async function buildFirstPersonScene(center: LatLon, renderer: THREE.WebG
   const shadowSize = Math.min(4096, renderer.capabilities.maxTextureSize);
   sunLight.shadow.mapSize.set(shadowSize, shadowSize);
   Object.assign(sunLight.shadow.camera, { near: 1000, far: SUN_LIGHT_DISTANCE_M * 2 });
-  const ambient = new THREE.AmbientLight(0x9fb4d0, 0.02); // 星光和散射的极弱底光：远侧的夜里也只够看出轮廓
+  const ambient = new THREE.AmbientLight(0x9fb4d0, 0.004); // 星光和散射的极弱底光：远侧的夜里（没有地球光）只够看出一点轮廓
   // 地球光：太阳照不到地面时（落下了、被地形挡住了），地球反射的光是唯一的光源，带方向，所以坡面朝向地球的一侧亮、别处暗，地形起伏看得清
   const earthLight = new THREE.DirectionalLight(0xc3d5ff, 0);
   scene.add(sunLight, sunLight.target, ambient, earthLight);
@@ -205,7 +225,7 @@ export async function buildFirstPersonScene(center: LatLon, renderer: THREE.WebG
   };
 
   let exposure = BASE_EXPOSURE;
-  const updateLighting = (_yawDeg: number, dtS: number): boolean => {
+  const updateLighting = (yawDeg: number, dtS: number): boolean => {
     const sky = lastSky;
     if (!sky) return false;
     // 白天还是夜里：看太阳是否在（理想的）地平线上
@@ -213,8 +233,21 @@ export async function buildFirstPersonScene(center: LatLon, renderer: THREE.WebG
     // 自己脚下有没有被太阳照到：太阳圆盘高过这个方向的地形地平线才算
     const horizonDeg = terrainHorizonDeg(sky.sunAzimuthDeg);
     const sunLitHere = THREE.MathUtils.smoothstep(sky.sunElevationDeg, horizonDeg - 0.3, horizonDeg + 1.5);
-    const adapt = THREE.MathUtils.lerp(NIGHT_ADAPT, THREE.MathUtils.lerp(SHADE_ADAPT, 1, sunLitHere), day);
-    const target = BASE_EXPOSURE * adapt;
+    // 测光：估计地面有多亮。自己站在阴影里时，画面里通常还有被照亮的地方，所以阳光项不全扣掉
+    const sunIrradiance = SUN_INTENSITY * day * THREE.MathUtils.lerp(0.3, 1, sunLitHere) * Math.max(Math.sin(Math.max(sky.sunElevationDeg, 0) * D2R_LIGHT), 0.08);
+    const earthIrradiance = earthLight.intensity * Math.max(Math.sin(Math.max(sky.earthElevationDeg, 0) * D2R_LIGHT), 0.15);
+    // 反射补光：跟着照到平地上的光走（太阳 + 地球光），夜里比例更大
+    const flatIrradiance = SUN_INTENSITY * day * Math.max(Math.sin(sky.sunElevationDeg * D2R_LIGHT), 0) + earthIrradiance;
+    ambient.intensity = 0.004 + THREE.MathUtils.lerp(FILL_NIGHT, FILL_DAY, day) * flatIrradiance;
+    const estimate = (groundAlbedo * (sunIrradiance + earthIrradiance + ambient.intensity)) / Math.PI;
+    const k = THREE.MathUtils.lerp(METER_K_NIGHT, METER_K_DAY, day);
+    const metered = THREE.MathUtils.clamp(Math.pow(METER_REFERENCE / Math.max(estimate, 1e-9), k), METER_MIN, METER_MAX);
+    // 面朝主光源看：画面里多是背光的坡面，曝光再提一点；光源越低，背光面越多，提得越多
+    const lightAzimuthDeg = day > 0.5 ? sky.sunAzimuthDeg : sky.earthAzimuthDeg;
+    const lightElevationDeg = day > 0.5 ? sky.sunElevationDeg : sky.earthElevationDeg;
+    const facingLight = Math.max(Math.cos((yawDeg - lightAzimuthDeg) * D2R_LIGHT), 0) * (1 - 0.6 * Math.sin(Math.max(lightElevationDeg, 0) * D2R_LIGHT));
+    const backlight = 1 + THREE.MathUtils.lerp(BACKLIGHT_GAIN_NIGHT, BACKLIGHT_GAIN_DAY, day) * facingLight;
+    const target = BASE_EXPOSURE * metered * backlight * THREE.MathUtils.lerp(NIGHT_KEY, 1, day);
     const before = exposure;
     exposure += (target - exposure) * (1 - Math.exp(-Math.min(dtS, 1) / EXPOSURE_EASE_S));
     if (Math.abs(target - exposure) < 0.005) exposure = target;

@@ -26,6 +26,38 @@ const LUNAR_DIRECT_LIGHT = /* glsl */ `
   reflectedLight.directDiffuse += irradiance * BRDF_Lambert( material.diffuseColor ) * lqPhase;
 `;
 
+/** 底图的线性亮度 → 真实反照率（和着色器里的换算一样）。 */
+export const mapToAlbedo = (linear: number) => ALBEDO_SCALE * Math.pow(Math.max(linear, 1e-4), ALBEDO_GAMMA);
+
+const srgbToLinear = (v: number) => (v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4));
+
+/**
+ * 站立点周围约 40 km 的平均反照率（从底图里读一小块算），给"相机测光"用：同样的光照下，暗的月海和亮的新鲜撞击坑曝光不一样。
+ * 读不到像素（比如没有 2D 画布）时返回全月平均 0.12。
+ */
+export function sampleGroundAlbedo(colorTexture: THREE.Texture, latDeg: number, lonDeg: number): number {
+  try {
+    const image = colorTexture.image as CanvasImageSource & { width: number; height: number };
+    const { width, height } = image;
+    const cropPx = 16;
+    // 解码时上下翻转过（decode-texture.ts 的 flipY），所以第 0 行是南边
+    const x = ((((lonDeg + 180) / 360) * width) % width + width) % width;
+    const y = height - ((90 - latDeg) / 180) * height;
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = cropPx;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    if (!ctx) return 0.12;
+    ctx.drawImage(image, Math.max(0, Math.min(width - cropPx, x - cropPx / 2)), Math.max(0, Math.min(height - cropPx, y - cropPx / 2)), cropPx, cropPx, 0, 0, cropPx, cropPx);
+    const data = ctx.getImageData(0, 0, cropPx, cropPx).data;
+    let sum = 0;
+    for (let i = 0; i < data.length; i += 4) sum += 0.2126 * srgbToLinear(data[i] / 255) + 0.7152 * srgbToLinear(data[i + 1] / 255) + 0.0722 * srgbToLinear(data[i + 2] / 255);
+    const albedo = mapToAlbedo(sum / (data.length / 4));
+    return Number.isFinite(albedo) && albedo > 0 ? albedo : 0.12;
+  } catch {
+    return 0.12;
+  }
+}
+
 export function createGroundMaterial(colorTexture: THREE.Texture) {
   const grain = new THREE.DataTexture(createGrainPixels(GRAIN_SIZE), GRAIN_SIZE, GRAIN_SIZE, THREE.RedFormat);
   grain.wrapS = grain.wrapT = THREE.RepeatWrapping;
