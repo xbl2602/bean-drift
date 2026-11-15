@@ -31,7 +31,7 @@ export function ModeSwitch({ mode, onChange, tutorialOpen, aiOpen, settingsOpen,
     <div className="absolute left-21 top-4 z-30 sm:left-24 sm:top-6 lg:left-1/2 lg:-translate-x-1/2">
       <div className="flex items-center gap-0.5 rounded-full border border-white/10 bg-[#0b1018]/85 p-1 shadow-2xl shadow-black/50 lunar-glass backdrop-blur-xl sm:gap-1 sm:p-1.5">
         {/* 网站标志和名字：标志一直显示，名字在宽屏（lg 以上）才显示，手机上放不下 */}
-        <Link href="/" aria-label="Lunar Quest — return to landing page" title="Return to landing page" className="flex shrink-0 items-center gap-2.5 rounded-full pl-1 pr-1 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-lime-200 sm:pl-2 sm:pr-2.5 lg:pr-3">
+        <Link href="/" aria-label="Lunar Quest — return to landing page" title="Return to landing page" className="hidden shrink-0 items-center gap-2.5 rounded-full pl-1 pr-1 transition sm:flex hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-lime-200 sm:pl-2 sm:pr-2.5 lg:pr-3">
           <LunarQuestMark className="h-5 w-5 sm:h-6 sm:w-6" />
           <span className="hidden whitespace-nowrap text-[13px] font-light uppercase tracking-[0.32em] text-white/90 lg:inline">Lunar Quest</span>
         </Link>

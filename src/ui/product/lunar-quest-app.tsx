@@ -3,7 +3,7 @@ import "./frosted-glass.css";
 // Lunar Quest 产品页的总装：顶部三个模式（Landing Sites / Explore（默认）/ Mission Simulator），全屏地图（默认 3D，可切 2D）、
 // Explore 模式左边的工具栏、底部时间轴、点击任意点进入第一人称。
 // 这里只管"状态和谁连谁"；地图、第一人称、各个面板都在各自的文件里。
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { useHoverAnalysis, usePointAnalysis, useSiteAnalyses } from "./analysis/use-point-analysis";
 import { FirstPersonView } from "./first-person/first-person-view";
 import { useT } from "./i18n/use-t";
@@ -40,7 +40,19 @@ const PIN_CURSOR = `url("data:image/svg+xml,${encodeURIComponent('<svg xmlns="ht
 /** Landing Sites 模式：点在某个着陆点这么多度以内，就算点中离它最近的那个。 */
 const LANDING_PICK_RADIUS_DEG = 8;
 
+const subscribeNothing = () => () => {};
+
+/**
+ * 产品页只在浏览器里画（全是 canvas），而"现在"的时间服务器和浏览器算出来不一样：
+ * 服务器端渲染一份带时间的界面，浏览器接手时发现文字对不上，React 就报 #418 并整个重画。
+ * 所以服务器只给一块黑底，挂载到浏览器之后再画真正的界面。
+ */
 export function LunarQuestApp() {
+  const inBrowser = useSyncExternalStore(subscribeNothing, () => true, () => false);
+  return inBrowser ? <LunarQuestExplorer /> : <div className="fixed inset-0 bg-black" />;
+}
+
+function LunarQuestExplorer() {
   const t = useT();
   useSmoothWheelScroll(); // 所有面板的鼠标滚轮滚动：每帧连续滑动，不再一格一跳
   const { locale } = useSettings();
@@ -337,7 +349,7 @@ export function LunarQuestApp() {
       )}
 
       {!standingAt && !comparing && (
-        <div className="pointer-events-none absolute bottom-24 left-4 z-10 rounded-full border border-white/10 bg-black/55 px-4 py-2 font-mono text-xs text-white/80 lunar-glass backdrop-blur-md sm:left-6">
+        <div className="pointer-events-none absolute bottom-36 left-4 z-10 sm:bottom-24 rounded-full border border-white/10 bg-black/55 px-4 py-2 font-mono text-xs text-white/80 lunar-glass backdrop-blur-md sm:left-6">
           {!exploring ? (
             <>
               {hover && <>{formatLatLon(hover)} </>}<span className={`font-sans ${hover ? "ml-2 text-lime-300/90" : ""}`}>{t(appMode === "landing-sites" ? "hint.landing-sites" : "hint.find-data")}</span>
