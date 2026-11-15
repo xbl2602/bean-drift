@@ -46,6 +46,9 @@ export function createFullscreenQuad(gl: WebGL2RenderingContext): WebGLBuffer {
  * Creates a texture on the given unit that starts as one grey pixel (so drawing can begin at once)
  * and is replaced by the image at `url` when it has downloaded. Meant for world maps wrapped on a
  * globe: longitude repeats, latitude does not.
+ *
+ * The picture is decoded with `createImageBitmap`, which happens off the main thread; decoding a
+ * several-megapixel map on the main thread used to stall every animation for a noticeable moment.
  */
 export function loadGlobeTexture(
   gl: WebGL2RenderingContext,
@@ -57,24 +60,46 @@ export function loadGlobeTexture(
   gl.bindTexture(gl.TEXTURE_2D, texture);
   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([90, 90, 90, 255]));
 
+  const upload = (source: ImageBitmap | HTMLImageElement) => {
+    // The renderer may have been disposed while the image was downloading.
+    if (gl.isContextLost() || !gl.isTexture(texture)) return;
+    gl.activeTexture(gl.TEXTURE0 + unit);
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true); // image row 0 is north; GPU row 0 is the bottom
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+    gl.generateMipmap(gl.TEXTURE_2D);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  };
+
   const loaded = new Promise<void>((resolve, reject) => {
+    const fail = () => reject(new Error(`Could not load the image map ${url}`));
+    // Preferred path: fetch + createImageBitmap decodes the picture off the main thread.
+    if (typeof createImageBitmap === "function") {
+      fetch(url)
+        .then((response) => {
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          return response.blob();
+        })
+        .then((blob) => createImageBitmap(blob))
+        .then((bitmap) => {
+          upload(bitmap);
+          bitmap.close();
+          resolve();
+        })
+        .catch(fail);
+      return;
+    }
+    // Older browsers: an <img> decodes on the main thread, but at least it loads.
     const image = new Image();
     image.onload = () => {
-      // The renderer may have been disposed while the image was downloading.
-      if (gl.isContextLost() || !gl.isTexture(texture)) return resolve();
-      gl.activeTexture(gl.TEXTURE0 + unit);
-      gl.bindTexture(gl.TEXTURE_2D, texture);
-      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true); // image row 0 is north; GPU row 0 is the bottom
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
-      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
-      gl.generateMipmap(gl.TEXTURE_2D);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      upload(image);
       resolve();
     };
-    image.onerror = () => reject(new Error(`Could not load the image map ${url}`));
+    image.onerror = fail;
     image.src = url;
   });
   return { texture, loaded };

@@ -30,10 +30,11 @@ const SATELLITE_SCREEN = { x: 0.74, y: 0.68 };
 const EARTH_SCREEN = { x: 0.86, y: 0.22 };
 const EARTH_DISTANCE = 420;
 const EARTH_ANGULAR_RADIUS = 0.07;
-// Drawn at 1.5x to 2x the screen size and scaled down: smooth edges even on ordinary screens.
-const MIN_PIXEL_RATIO = 1.5;
-const MAX_PIXEL_RATIO = 2;
-const FLOOR_PIXEL_RATIO = 1.1;
+// Drawn at screen resolution and no more; the old 1.5x supersampling cost the GPU far more than
+// it bought in sharpness (2026-11-15).
+const MIN_PIXEL_RATIO = 1;
+const MAX_PIXEL_RATIO = 1;
+const FLOOR_PIXEL_RATIO = 1;
 const LINK_FADE_PER_S = 5;
 /**
  * The part of the picture (fractions of the canvas, y from the top) where radio links are allowed: the area around
@@ -377,6 +378,11 @@ export function createLunarOrbitRenderer(canvas: HTMLCanvasElement): CanvasRende
     scene.resize(width, height);
   });
 
+  /** The tools grid's viewport position as of the last scroll; reading it forces a layout, so cache it. */
+  let gridTopScrollY = -1;
+  let gridTop = 0;
+  let lastOpacity = -1;
+
   return {
     ready,
     resize() {
@@ -387,11 +393,20 @@ export function createLunarOrbitRenderer(canvas: HTMLCanvasElement): CanvasRende
     },
     render(timeS) {
       // The whole backdrop fades once the cards below take over the screen, so text never fights it.
+      // Re-measured only on scroll: a per-frame getBoundingClientRect stalled the main thread.
       const wrapper = canvas.parentElement;
       const grid = canvas.closest("section")?.querySelector(".lq-tools-grid");
       if (wrapper && grid) {
-        const gridTop = grid.getBoundingClientRect().top;
-        wrapper.style.opacity = (0.82 + 0.18 * smooth(window.innerHeight * 0.1, window.innerHeight * 0.75, gridTop)).toFixed(3);
+        const scrollY = window.scrollY;
+        if (scrollY !== gridTopScrollY) {
+          gridTop = grid.getBoundingClientRect().top;
+          gridTopScrollY = scrollY;
+        }
+        const opacity = 0.82 + 0.18 * smooth(window.innerHeight * 0.1, window.innerHeight * 0.75, gridTop);
+        if (Math.abs(opacity - lastOpacity) > 0.004) {
+          lastOpacity = opacity;
+          wrapper.style.opacity = opacity.toFixed(3);
+        }
       }
       if (!built) return;
       built.update(timeS);
@@ -414,6 +429,11 @@ export function prefetchLunarOrbitAssets(): void {
   void import("three/examples/jsm/geometries/RoundedBoxGeometry.js");
   for (const [key, url] of Object.entries(TEXTURES)) {
     if (key === "ao") void fetch(url);
-    else new Image().src = url;
+    else {
+      // The scene is decoration: these downloads must never outrank what the visitor is looking at.
+      const image = new Image();
+      (image as HTMLImageElement & { fetchPriority?: "low" | "high" | "auto" }).fetchPriority = "low";
+      image.src = url;
+    }
   }
 }

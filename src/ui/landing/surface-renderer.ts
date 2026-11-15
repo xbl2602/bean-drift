@@ -3,6 +3,7 @@
 // the same convention as the rest of the project.
 
 import { buildFullscreenProgram, type CanvasRenderer, createFullscreenQuad, loadGlobeTexture } from "./gl-utils";
+import { markLandingFirstScreenReady } from "./landing-readiness";
 import { EARTH_TEXTURE_URL } from "./space-renderer";
 import { FXAA_FRAGMENT_SHADER, SURFACE_MARCH_FRAGMENT_SHADER, SURFACE_SHADE_FRAGMENT_SHADER } from "./surface-shaders";
 import { loadSurfaceTerrain, type SurfaceTerrain } from "./surface-terrain";
@@ -33,8 +34,8 @@ export type SurfaceScene = {
 };
 
 const TERRAIN_URL = "/landing/lola-south-pole-640.bin";
-/** The ground is costly to draw, so the hero uses at most 1.5 device pixels per CSS pixel. */
-const MAX_PIXEL_RATIO = 1.5;
+/** Draw at screen resolution and no more (2026-11-15: GPU headroom beats slight softness on zoomed screens). */
+const MAX_PIXEL_RATIO = 1;
 const DEG = Math.PI / 180;
 
 /** Compass direction -> world vector (x east, y up, z south). */
@@ -212,7 +213,10 @@ export function createSurfaceRenderer(canvas: HTMLCanvasElement, camera: Surface
   };
 
   return {
-    ready: Promise.all([terrainReady, earth.loaded]).then(() => undefined),
+    ready: Promise.all([terrainReady, earth.loaded]).then(() => {
+      // The first screen is complete: tell speculative preloaders they may start now.
+      markLandingFirstScreenReady();
+    }),
 
     resize() {
       pixelRatio = Math.min(window.devicePixelRatio || 1, MAX_PIXEL_RATIO);

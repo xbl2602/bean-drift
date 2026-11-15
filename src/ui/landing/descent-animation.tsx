@@ -8,7 +8,7 @@ import { useEffect, useRef, useState } from "react";
 import { AsciiCosmos, type CosmosPhase } from "./ascii-cosmos";
 import "./descent-animation.css";
 
-const MAX_DPR = 2;
+const MAX_DPR = 1; // screen resolution is enough for pixel-art style output (2026-11-15)
 const STATUS: Record<CosmosPhase, string> = {
   idle: "HOLD ANYWHERE · RELEASE TO LAUNCH A SOLAR SYSTEM",
   holding: "BLACK HOLE FORMING · RELEASE TO EXPLODE",

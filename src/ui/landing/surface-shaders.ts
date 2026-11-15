@@ -5,7 +5,7 @@
 // the lighting for the current Sun position (SHADE pass), which is what makes the shadows sweep.
 
 import { GLSL_EARTH, GLSL_GLOBE, GLSL_NOISE, GLSL_STARS, GLSL_SUN } from "./shader-chunks";
-import { FINE_TILE_M, MID_TILE_M } from "./surface-terrain";
+import { FINE_TILE_M, MID_TILE_M } from "./surface-terrain-generate";
 
 const GLSL_TERRAIN_AND_CAMERA = `
 uniform vec2 uResolution;      // drawing size in device pixels

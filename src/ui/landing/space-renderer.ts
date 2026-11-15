@@ -27,7 +27,8 @@ export type SpaceScene = {
 };
 
 const MAX_BODIES = 4;
-const MAX_PIXEL_RATIO = 2;
+/** Draw at screen resolution and no more (2026-11-15: GPU headroom beats supersampling). */
+const MAX_PIXEL_RATIO = 1;
 const KIND_INDEX: Record<BodyKind, number> = { moon: 0, earth: 1, sun: 2 };
 
 export const EARTH_TEXTURE_URL = "/landing/earth-blue-marble-2k.jpg";

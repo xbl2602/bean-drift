@@ -25,15 +25,28 @@ const TWO_PI = Math.PI * 2;
 const GROUP_MARGIN_PX = 16;
 /** Never shrink a chapter below this fraction: smaller would be unreadable (shorter screens use the stacked layout instead). */
 const MIN_GROUP_FIT = 0.55;
+/** A visibility change smaller than this is treated as "unchanged", so unchanged cards are not rewritten every frame. */
+const VISIBILITY_STEP = 0.0015;
+
+/** Per-card-group bookkeeping, so the frame loop only touches the DOM when something changed. */
+type GroupCache = { visibility: number; items: HTMLElement[] };
+const groupCaches = new WeakMap<HTMLElement, GroupCache>();
 
 /** Cards in a group appear one after another as the group's visibility goes 0 -> 1. */
 function revealCardGroup(group: HTMLElement | null, visibility: number): void {
   if (!group) return;
+  let cache = groupCaches.get(group);
+  if (!cache) {
+    cache = { visibility: -1, items: Array.from(group.querySelectorAll<HTMLElement>("[data-reveal]")) };
+    groupCaches.set(group, cache);
+  }
+  if (Math.abs(cache.visibility - visibility) < VISIBILITY_STEP) return; // same as last frame: touch nothing
+  cache.visibility = visibility;
   group.style.visibility = visibility > 0.001 ? "visible" : "hidden";
   group.style.pointerEvents = visibility > 0.6 ? "auto" : "none";
   // CSS animations that should replay each time a chapter comes into view hang off this class.
   group.classList.toggle("is-live", visibility > 0.7);
-  const items = group.querySelectorAll<HTMLElement>("[data-reveal]");
+  const items = cache.items;
   const span = 1 + CARD_STAGGER * (items.length - 1);
   items.forEach((item, i) => {
     const local = clamp01(visibility * span - i * CARD_STAGGER);
@@ -50,14 +63,27 @@ export function ScrollStory() {
   const railRefs = useRef<(HTMLLIElement | null)[]>([]);
   const shownProgressRef = useRef<number | null>(null);
   const lastTimeRef = useRef(0);
+  /** The section's rect as of the last scroll change; refreshed in the frame loop (cheaply). */
+  const sectionRectRef = useRef<DOMRect | null>(null);
+  /** The scroll position the section geometry was last read at; layout is only re-read on scroll. */
+  const sectionTopAtScrollRef = useRef(-1);
 
   const buildScene = useCallback((timeS: number, widthPx: number, heightPx: number): SpaceScene => {
     const section = sectionRef.current;
     let targetProgress = 0;
     if (section) {
-      const rect = section.getBoundingClientRect();
-      const scrollableDistancePx = rect.height - heightPx;
-      targetProgress = scrollableDistancePx > 0 ? clamp01(-rect.top / scrollableDistancePx) : 0;
+      // Reading getBoundingClientRect forces a layout; only pay that when the scroll position
+      // has actually changed since the last frame (the idle animation must not keep reflowing).
+      const scrollY = window.scrollY;
+      if (scrollY !== sectionTopAtScrollRef.current) {
+        sectionTopAtScrollRef.current = scrollY;
+        sectionRectRef.current = section.getBoundingClientRect();
+      }
+      const rect = sectionRectRef.current;
+      if (rect) {
+        const scrollableDistancePx = rect.height - heightPx;
+        targetProgress = scrollableDistancePx > 0 ? clamp01(-rect.top / scrollableDistancePx) : 0;
+      }
     }
     // Ease towards the scrollbar so mouse-wheel steps become a glide instead of a jump. The step is
     // based on elapsed time, so it feels the same on 60 Hz and 144 Hz screens. When time is frozen
@@ -101,7 +127,7 @@ export function ScrollStory() {
     };
   }, []);
 
-  useAnimatedCanvas(canvasRef, createStoryRenderer, buildScene, 0, true);
+  useAnimatedCanvas(canvasRef, createStoryRenderer, buildScene, 45, true);
 
   // The chapters are centred in the space below the fixed bar. If a screen is too short for a whole chapter, shrink that
   // chapter (never below MIN_GROUP_FIT) instead of letting its top slide under the bar and its bottom off the screen.
@@ -120,7 +146,10 @@ export function ScrollStory() {
       });
     };
     fit();
-    const observer = new ResizeObserver(fit);
+    const observer = new ResizeObserver(() => {
+      sectionTopAtScrollRef.current = -1; // geometry changed: re-read it before the next progress step
+      fit();
+    });
     observer.observe(stage);
     groupRefs.current.forEach((group) => group && observer.observe(group));
     return () => observer.disconnect();

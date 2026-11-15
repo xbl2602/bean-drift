@@ -32,6 +32,10 @@ export function LookAroundPanorama({ src, alt, width, height, focusY = 0.62 }: {
     let frameRequest = 0;
     let lastMs = performance.now();
     let zoom = 1;
+    /** The frame geometry as of the last scroll or resize; reading it forces a layout, so it is cached. */
+    let frameBox = { top: 0, width: 0, height: 0 };
+    let frameBoxScrollY = -1;
+    let frameBoxStale = true;
 
     const onMove = (event: PointerEvent) => {
       if (reducedMotion || event.pointerType === "touch") return;
@@ -49,8 +53,16 @@ export function LookAroundPanorama({ src, alt, width, height, focusY = 0.62 }: {
       frameRequest = isVisible ? requestAnimationFrame(draw) : 0;
       const stepS = Math.min((nowMs - lastMs) / 1000, 0.1);
       lastMs = nowMs;
-      const rect = frame.getBoundingClientRect();
-      const progress = reducedMotion ? 0.5 : clamp01((window.innerHeight * 0.8 - rect.top) / (window.innerHeight * 0.58));
+      // Re-measure the frame only when the page scrolled or the frame was resized: reading the
+      // geometry forces a layout, and doing it every frame stalled the whole page on weak devices.
+      const scrollY = window.scrollY;
+      if (frameBoxStale || scrollY !== frameBoxScrollY) {
+        const rect = frame.getBoundingClientRect();
+        frameBox = { top: rect.top, width: frame.clientWidth, height: frame.clientHeight };
+        frameBoxScrollY = scrollY;
+        frameBoxStale = false;
+      }
+      const progress = reducedMotion ? 0.5 : clamp01((window.innerHeight * 0.8 - frameBox.top) / (window.innerHeight * 0.58));
       const targetX = clamp01(0.27 + 0.18 * progress + (pointer.isOver ? (pointer.x - 0.5) * 0.68 : 0));
       const targetY = clamp01(focusY + 0.16 * progress + (pointer.isOver ? (pointer.y - 0.5) * 0.56 : 0));
       const follow = reducedMotion ? 1 : 1 - Math.exp(-stepS * FOLLOW_PER_S);
@@ -58,8 +70,8 @@ export function LookAroundPanorama({ src, alt, width, height, focusY = 0.62 }: {
       view.x += (targetX - view.x) * follow;
       view.y += (targetY - view.y) * follow;
 
-      const frameWidth = frame.clientWidth;
-      const frameHeight = frame.clientHeight;
+      const frameWidth = frameBox.width;
+      const frameHeight = frameBox.height;
       const aspect = width / height;
       const baseHeight = frameHeight * (1 + EXTRA_HEIGHT) * zoom;
       const pictureWidth = Math.max(baseHeight * aspect, frameWidth * MIN_WIDTH_FACTOR * zoom);
@@ -79,12 +91,17 @@ export function LookAroundPanorama({ src, alt, width, height, focusY = 0.62 }: {
       }
     });
     observer.observe(frame);
+    const resizeObserver = new ResizeObserver(() => {
+      frameBoxStale = true;
+    });
+    resizeObserver.observe(frame);
     card.addEventListener("pointermove", onMove);
     card.addEventListener("pointerleave", onLeave);
     card.addEventListener("pointercancel", onLeave);
 
     return () => {
       observer.disconnect();
+      resizeObserver.disconnect();
       card.removeEventListener("pointermove", onMove);
       card.removeEventListener("pointerleave", onLeave);
       card.removeEventListener("pointercancel", onLeave);
