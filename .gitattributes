@@ -3,3 +3,4 @@
 public/data/v1/*.u8 binary
 public/data/v1/*.u16 binary
 public/data/v1/*.i16 binary
+public/data/polar-v1/*.br binary

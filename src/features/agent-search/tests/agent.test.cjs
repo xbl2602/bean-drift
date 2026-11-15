@@ -78,7 +78,8 @@ test('real point tool returns unchanged data with real terrain data and its prov
       // (docs/SHARED_INTERFACES.md section 2). If the data files cannot be read, the group degrades to
       // all-null fields with provenance 'unavailable' instead of failing the request.
       assert.equal(typeof data.terrain.heightM, 'number');
-      assert.equal(data.terrain.horizonProfile.length, 32);
+      // 32 方位 = 全月 0.25° 格子；90 方位 = 南极 160 m 数据（这个点在 80°S 以南）
+      assert.ok([32, 90].includes(data.terrain.horizonProfile.length));
       assert.equal(data.provenance.terrain.status, 'ok');
       return answer;
     },

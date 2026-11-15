@@ -1,5 +1,13 @@
 import type { NextConfig } from "next";
 
+// 南极（80°S 到极点）160 m 高精度地形：压缩的高度图和坡度图，第一次用到时解压进内存（src/core/data/polar-terrain.ts）。
+// 所有读点位数据的入口都要带上，否则本地能跑，部署到 Vercel 后极区的点会读不到文件，降级成"地形数据不可用"。
+const polarTerrainDataFiles = [
+  "./public/data/polar-v1/manifest.json",
+  "./public/data/polar-v1/height-polar-160m.i16.br",
+  "./public/data/polar-v1/slope-polar-160m.u8.br",
+];
+
 // API / MCP 读的预计算地图文件（pipeline 产出，见 pipeline/README.md）。它们是运行时用 fs 读的，Next 没法自己发现，
 // 所以要明确告诉它把这些文件打进对应函数的运行包。
 const mapDataFiles = [
@@ -8,6 +16,7 @@ const mapDataFiles = [
   "./public/data/v1/height-4ppd.i16",
   "./public/data/v1/slope-4ppd.u16",
   "./public/data/v1/aspect-4ppd.u16",
+  ...polarTerrainDataFiles,
 ];
 
 // "按条件找位置"（find_sites）扫整张地图：读 manifest、高度、坡度和一年统计（约 19 MB），不读地平线。

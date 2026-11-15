@@ -49,6 +49,19 @@ LRO/LOLA 全月 DEM `LDEM_64`（Smith et al. 2010, Space Sci. Rev. 150, 209–24
 
 删除 `public/data/v1/` 即可（API 会降级成"地形数据不可用"，不会报错）；`data/raw/` 里的原始文件可随时删。没有安装任何全局东西，没有写 `public/data/v1/` 以外的位置。
 
+## 南极高精度（80°S 到极点，160 m）
+
+给单点查询用的（`/api/point`、`/api/timeline` 等）；整月地图和 `find_sites` 不用它。决定和取舍见 [docs/decisions/2026-11-15_xbl2602_polar-highres-data-and-routing.md](../docs/decisions/2026-11-15_xbl2602_polar-highres-data-and-routing.md)。
+
+1. 下载 NASA 南极高度图 `LDEM_80S_40M.IMG`（462,080,000 字节，不进 git）：https://imbrium.mit.edu/DATA/LOLA_GDR/POLAR/IMG/LDEM_80S_40M.IMG ，存成 `data/raw/lola-south/ldem_80s_40m.img`。MIT 服务器对单连接限速，用 8 路并行字节段（Range）下载，约 5 分钟。文件夹用 `LOLA_POLAR_RAW_DIR` 指定。
+2. `node --no-warnings pipeline/build-polar-terrain.mjs`（约 6 秒）：40 m 像素 4×4 平均成 160 m 格子，算高度、坡度、坡向，写到 `data/raw/polar-work/`（`LOLA_POLAR_WORK_DIR` 可改，已被 git 忽略，约 87 MB）。
+3. `node --no-warnings pipeline/build-polar-package.mjs`（约 3 分钟，Brotli 最高压缩级别）：打包成网站读的文件 `public/data/polar-v1/`：`height-polar-160m.i16.br`（9.6 MB）、`slope-polar-160m.u8.br`（7.8 MB）、`manifest.json`。**共约 17 MB**。写文件前会把自己的输出解码一遍，和输入逐位比对，不一致就不写。
+4. `node --no-warnings pipeline/validate-polar.mjs`（约 1 分钟，需要原始 40 m 文件）：A. 随机格子的高度和 40 m 原始数据 4×4 平均逐个比对（应全部一致）；B. 13 个点的地平线，网站用的算法（160 m）对比直接用 40 m 数据、更细的步长现算。
+
+没有地平线文件、没有坡向文件：地平线在查询时由高度现算（90 个方位约 0.6~1.5 毫秒，另加第一次使用时解压约 0.3 秒）；坡向由点两侧的高度差现算。存 90 方位的地平线要约 1 GB。
+
+重新生成 `public/data/polar-v1/` 后，要重录极区基线：`node src/core/data/tests/record-point-output-baseline.cjs`（并检查 `git diff` 里全月那份基线一个数都没变）。
+
 ## 星历对照数据（不属于整月预计算）
 
 `fetch-horizons-lunar-surface.py`：向 NASA JPL Horizons 抓 8 个月面观测点 × 14 个时刻（2005–2090 年）的太阳和地球方位角/高度角，存成 `src/core/ephemeris/tests/horizons-lunar-surface.json`。自动测试 `ephemeris-vs-horizons.test.cjs` 拿它和我们的星历比，偏差超过 0.02° 就报错（实测最大 0.013°）。
