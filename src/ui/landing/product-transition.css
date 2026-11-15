@@ -1,0 +1,35 @@
+/* Full-screen pixel drift animation shown while going to the product page. */
+.lq-drift {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  background: #05040f;
+  cursor: pointer;
+  animation: lq-drift-in 0.18s ease-out;
+}
+.lq-drift-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+.lq-drift-label {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: clamp(0.6rem, 2vh, 1.4rem);
+  margin: 0;
+  text-align: center;
+  color: #ffe08a;
+  font: 700 clamp(0.7rem, 1.6vw, 0.95rem) ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  text-shadow: 2px 2px 0 #1b1440;
+}
+@keyframes lq-drift-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}

@@ -14,19 +14,22 @@ export function createGroundMaterial(colorTexture: THREE.Texture) {
   grain.anisotropy = 8;
   grain.needsUpdate = true;
 
+  // 颗粒感只在"人附近"3 km 内显示：走动时跟着人走（图案本身固定在地上，不会跟着滑）
+  const walker = { value: new THREE.Vector2(0, 0) };
   const material = new THREE.MeshStandardMaterial({ map: colorTexture, color: 0xc8c8c8, roughness: 1, metalness: 0 });
   material.onBeforeCompile = (shader) => {
     shader.uniforms.uGrain = { value: grain };
+    shader.uniforms.uWalker = walker;
     shader.vertexShader = shader.vertexShader
       .replace("#include <common>", "#include <common>\nvarying vec3 vLqLocal;")
       .replace("#include <begin_vertex>", "#include <begin_vertex>\nvLqLocal = position;");
     shader.fragmentShader = shader.fragmentShader
-      .replace("#include <common>", "#include <common>\nvarying vec3 vLqLocal;\nuniform sampler2D uGrain;")
+      .replace("#include <common>", "#include <common>\nvarying vec3 vLqLocal;\nuniform sampler2D uGrain;\nuniform vec2 uWalker;")
       .replace(
         "#include <map_fragment>",
         `#include <map_fragment>
 // 三种尺度的颗粒（0.9 m、7 m、110 m 一个周期）叠在一起；3 km 以外逐渐淡出，远处只剩真实底图
-float lqNear = exp(-length(vLqLocal.xz) / 3000.0);
+float lqNear = exp(-length(vLqLocal.xz - uWalker) / 3000.0);
 float lqGrain = texture2D(uGrain, vLqLocal.xz / 0.9).r * 0.3 + texture2D(uGrain, vLqLocal.xz / 7.0).r * 0.4 + texture2D(uGrain, vLqLocal.xz / 110.0).r * 0.3;
 diffuseColor.rgb *= mix(1.0, 0.7 + 0.6 * lqGrain, lqNear);`,
       )
@@ -48,5 +51,7 @@ diffuseColor.rgb *= mix(1.0, 0.7 + 0.6 * lqGrain, lqNear);`,
       );
   };
 
-  return { material, dispose: () => grain.dispose() };
+  /** 人站的位置（本地坐标 x, z）。 */
+  const setWalker = (x: number, z: number) => walker.value.set(x, z);
+  return { material, setWalker, dispose: () => grain.dispose() };
 }

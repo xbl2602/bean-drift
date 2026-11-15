@@ -7,6 +7,8 @@
 //   - 画面没变就不画（拖动、缩放、拖时间轴、贴图换了、瓦片到了才画）；
 //   - 阴影贴图只覆盖看得见的那一块，只在太阳方向变了或视野走出覆盖范围时才重画（globe-shadow-fit.ts）；
 //   - 贴图先粗后细：进场只等 4K 底图 + 2K 法线和高度，其余后台补（imagery/moon-texture-set.ts）；放大后高清瓦片按需拼上去。
+// 右边开着面板时，把月球画到面板旁边空出来的区域正中间（frameBesidePanel，setViewOffset 只改投影）；
+// 自动飞行走 camera-flight.ts 的二阶导连续曲线，起点接着最后画出来的那一帧。
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
@@ -19,20 +21,26 @@ import type { LayerSettings } from "../map-layers";
 import type { FocusRequest, MapViewProps } from "../map-view-props";
 import { bodyToLatLon, bodyToThree, latLonToBody, sunDirectionBody, threeToBody, type LatLon } from "../moon-frames";
 import { AnnotationLayer, type MapAnnotations } from "../overlay/annotations";
+import { SmoothValue, prefersReducedMotion } from "../motion/smooth-value";
+import { rightPanelCoverPx, type RightPanelSize } from "../panels/panel-shell";
 import { usePointerGestures } from "../use-pointer-gestures";
 import { globeDetailView } from "./globe-detail-view";
 import { GLOBE_RELIEF_MAX_KM, GLOBE_RELIEF_MIN_KM, applyTextureSwap, createGlobeMaterials } from "./globe-material";
 import { createGlobePatches, type GlobePatches } from "./globe-patches";
 import { createGlobeSky } from "./globe-sky";
 import { GlobeShadowFit } from "./globe-shadow-fit";
+import { CameraMotionTracker, placeCameraOnFlight, startCameraFlight, type CameraFlight } from "./camera-flight";
 
 const MOON_RADIUS_KM = 1737.4;
 const CAMERA_FOV_DEG = 35;
 const SUN_DISTANCE_KM = 8000;
 const MIN_DISTANCE_KM = MOON_RADIUS_KM * 1.08;
 const MAX_DISTANCE_KM = MOON_RADIUS_KM * 9;
-const FLY_DURATION_MS = 800;
 const MAX_PIXEL_RATIO = 2;
+/** 面板开关时，月球往左挪 / 缩小的动画时长。 */
+const REFRAME_MS = 700;
+/** 缩小时月球和面板之间留的空隙。 */
+const FIT_MARGIN_PX = 24;
 
 interface DrawnState {
   timeMs: number;
@@ -53,7 +61,11 @@ interface GlobeRuntime {
   analysisUniforms: AnalysisUniforms | null;
   atlases: MoonAtlases | null;
   overlay: AnnotationLayer;
-  flight: { from: THREE.Vector3; to: THREE.Vector3; startMs: number } | null;
+  flight: CameraFlight | null;
+  motion: CameraMotionTracker;
+  /** 月球画面中心往左挪多少像素、缩放多少（1 = 不缩），都是二阶导连续的动画。 */
+  framing: { shiftPx: SmoothValue; scale: SmoothValue; key: string };
+  remPx: number;
   /** 有东西变了、下一帧必须画（贴图换了、瓦片到了、改了窗口大小……）。 */
   dirty: boolean;
   /** 阴影贴图要重画（地形贴图换了）。太阳方向变了、视野走出覆盖范围由 shadowFit 自己判断。 */
@@ -62,11 +74,11 @@ interface GlobeRuntime {
   fineRequestedFor: LayerSettings["base"] | null;
 }
 
-export function Globe3dView({ timeMs, layers, annotations, focus, cursor, onPick, onHover, onLoadingChange, onError }: MapViewProps) {
+export function Globe3dView({ timeMs, layers, annotations, focus, rightPanel, cursor, onPick, onHover, onLoadingChange, onError }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const runtimeRef = useRef<GlobeRuntime | null>(null);
-  const settingsRef = useRef({ timeMs, layers, annotations });
-  settingsRef.current = { timeMs, layers, annotations };
+  const settingsRef = useRef({ timeMs, layers, annotations, rightPanel });
+  settingsRef.current = { timeMs, layers, annotations, rightPanel };
 
   useEffect(() => {
     const container = containerRef.current;
@@ -114,7 +126,9 @@ export function Globe3dView({ timeMs, layers, annotations, focus, cursor, onPick
       controls.rotateSpeed = THREE.MathUtils.clamp(altitude / 4000, 0.05, 0.6);
     });
     controls.addEventListener("start", () => {
-      if (runtimeRef.current) runtimeRef.current.flight = null; // 用户一动手就停止自动飞行
+      // 用户一动手就停止自动飞行，交还给 OrbitControls（恢复阻尼）
+      if (runtimeRef.current) runtimeRef.current.flight = null;
+      controls.enableDamping = true;
     });
     placeCameraForTime(camera, controls, settingsRef.current.timeMs, container);
 
@@ -125,7 +139,27 @@ export function Globe3dView({ timeMs, layers, annotations, focus, cursor, onPick
       rt.dirty = true;
       if (key === "relief") rt.shadowDirty = true; // 地形变了，阴影也要重画
     });
-    const rt: GlobeRuntime = { camera, controls, sun, ambient, shadowFit, textures, materials: null, patches: null, analysisUniforms: null, atlases: null, overlay: new AnnotationLayer(container), flight: null, dirty: true, shadowDirty: true, drawn: null, fineRequestedFor: null };
+    const rt: GlobeRuntime = {
+      camera,
+      controls,
+      sun,
+      ambient,
+      shadowFit,
+      textures,
+      materials: null,
+      patches: null,
+      analysisUniforms: null,
+      atlases: null,
+      overlay: new AnnotationLayer(container),
+      flight: null,
+      motion: new CameraMotionTracker(),
+      framing: { shiftPx: new SmoothValue(0), scale: new SmoothValue(1), key: "" },
+      remPx: parseFloat(getComputedStyle(document.documentElement).fontSize) || 16,
+      dirty: true,
+      shadowDirty: true,
+      drawn: null,
+      fineRequestedFor: null,
+    };
     runtimeRef.current = rt;
 
     onLoadingChange(true);
@@ -156,7 +190,7 @@ export function Globe3dView({ timeMs, layers, annotations, focus, cursor, onPick
         textures.request(["slope", "polar"], "coarse");
       })
       .catch(() => {
-        if (!disposed) onError("The Moon maps could not be loaded. Check your connection and reload the page.");
+        if (!disposed) onError("The Moon or high-resolution sky images could not be loaded. Check your connection and reload the page.");
       });
 
     const resize = () => {
@@ -178,7 +212,8 @@ export function Globe3dView({ timeMs, layers, annotations, focus, cursor, onPick
       const settingsChanged = !rt.drawn || rt.drawn.timeMs !== settings.timeMs || rt.drawn.layers !== settings.layers || rt.drawn.annotations !== settings.annotations;
       const flying = advanceFlight(rt);
       const cameraMoved = controls.update();
-      if (!rt.dirty && !settingsChanged && !flying && !cameraMoved) return; // 什么都没变：不画
+      const reframed = frameBesidePanel(rt, container, settings.rightPanel, performance.now());
+      if (!rt.dirty && !settingsChanged && !flying && !cameraMoved && !reframed) return; // 什么都没变：不画
       rt.dirty = false;
       rt.drawn = { timeMs: settings.timeMs, layers: settings.layers, annotations: settings.annotations };
 
@@ -233,7 +268,7 @@ export function Globe3dView({ timeMs, layers, annotations, focus, cursor, onPick
 
   useEffect(() => {
     const rt = runtimeRef.current;
-    if (focus && rt) rt.flight = { from: rt.camera.position.clone(), to: cameraPositionFor(focus, rt.camera.fov), startMs: performance.now() };
+    if (focus && rt) rt.flight = startCameraFlight(cameraPositionFor(focus, rt.camera.fov), performance.now(), rt.flight, rt.motion);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 只在收到新的定位请求时执行
   }, [focus?.seq]);
 
@@ -300,18 +335,74 @@ function cameraPositionFor(focus: FocusRequest, fovDeg = CAMERA_FOV_DEG): THREE.
   return bodyToThree(latLonToBody(focus.point)).multiplyScalar(distanceKm);
 }
 
-/** 自动飞行：方向沿球面插值、距离线性插值，缓入缓出。返回这一帧是否还在飞行中（要画）。 */
+/**
+ * 每帧决定相机位置：在自动飞行就沿飞行路线走（camera-flight.ts，二阶导连续），否则交给 OrbitControls。
+ * 飞行期间先关掉阻尼跑一次 controls.update()，把用户拖动留下的惯性清零，否则降落后会被残余惯性推一下。
+ * 返回这一帧是否还在飞行中（要画）。
+ */
 function advanceFlight(rt: GlobeRuntime): boolean {
-  if (!rt.flight) return false;
-  const raw = Math.min((performance.now() - rt.flight.startMs) / FLY_DURATION_MS, 1);
-  const t = raw * raw * (3 - 2 * raw);
-  const { from, to } = rt.flight;
-  const direction = new THREE.Vector3().copy(from).normalize();
-  const rotation = new THREE.Quaternion().setFromUnitVectors(direction, to.clone().normalize());
-  direction.applyQuaternion(new THREE.Quaternion().slerp(rotation, t));
-  rt.camera.position.copy(direction.multiplyScalar(THREE.MathUtils.lerp(from.length(), to.length(), t)));
-  if (raw >= 1) rt.flight = null;
+  if (!rt.flight) {
+    rt.controls.update();
+    return false;
+  }
+  rt.controls.enableDamping = false;
+  rt.controls.update();
+  const arrived = placeCameraOnFlight(rt.camera, rt.flight, performance.now());
+  rt.motion.record(rt.camera.position, performance.now());
+  if (arrived) {
+    rt.flight = null;
+    rt.controls.enableDamping = true;
+  }
   return true;
+}
+
+/**
+ * 右边开着面板时，把月球画到面板左边空出来的那块区域正中间；那块区域放不下整个月球，就同时缩小一点。
+ * 用 setViewOffset 只改投影（相当于把画面平移、缩放），相机本身不动：拖动、点选、自动飞行都照常。
+ * 平移量和缩放量各走一条二阶导连续的动画（motion/smooth-value.ts），开关面板时不会突然跳。
+ * 缩放只在面板开关、窗口大小变化的那一刻决定；之后用户滚轮放大缩小照常生效，不会被"自动缩回去"。
+ * 返回动画是否还在进行中（要继续画）。
+ */
+function frameBesidePanel(rt: GlobeRuntime, container: HTMLElement, panel: RightPanelSize | null | undefined, nowMs: number): boolean {
+  const width = Math.max(container.clientWidth, 1);
+  const height = Math.max(container.clientHeight, 1);
+  const coverPx = rightPanelCoverPx(panel, window.innerWidth, rt.remPx);
+  const { framing } = rt;
+  const key = `${coverPx}|${width}|${height}`;
+  if (framing.key !== key) {
+    framing.key = key;
+    const targetShift = coverPx / 2;
+    const targetScale = coverPx > 0 ? scaleToFitBeside(rt.camera, width - coverPx, height) : 1;
+    if (prefersReducedMotion()) {
+      framing.shiftPx.jump(targetShift);
+      framing.scale.jump(targetScale);
+    } else {
+      framing.shiftPx.retarget(targetShift, nowMs, REFRAME_MS);
+      framing.scale.retarget(targetScale, nowMs, REFRAME_MS);
+    }
+  }
+  const { shiftPx, scale } = framing;
+  const shift = shiftPx.at(nowMs).value;
+  const s = scale.at(nowMs).value;
+  if (Math.abs(shift) < 0.01 && Math.abs(s - 1) < 1e-5) {
+    if (rt.camera.view?.enabled) rt.camera.clearViewOffset();
+    return false;
+  }
+  // 整幅画面按 s 缩放成 (sW, sH)，它的中心（月球所在）落在窗口的 (W/2 - shift, H/2)
+  rt.camera.setViewOffset(width * s, height * s, (width * s) / 2 - (width / 2 - shift), (height * s - height) / 2, width, height);
+  return true;
+}
+
+/**
+ * 整个月球放进 freeWidth × height 的区域要缩多少。月球在画面上的直径 = 2·tan(视角半径)/tan(半视场)·H/2。
+ * 用户已经放大到月面细节（月球比屏幕大很多）时不缩，只往左挪，免得把他放大的画面又缩回去。
+ */
+function scaleToFitBeside(camera: THREE.PerspectiveCamera, freeWidthPx: number, heightPx: number): number {
+  const angularRadius = Math.asin(Math.min(1, MOON_RADIUS_KM / camera.position.length()));
+  const moonPx = (Math.tan(angularRadius) / Math.tan(THREE.MathUtils.degToRad(camera.fov / 2))) * heightPx;
+  const fit = Math.min(1, (Math.min(freeWidthPx, heightPx) - FIT_MARGIN_PX) / moonPx);
+  const zoomedIn = THREE.MathUtils.smoothstep(moonPx / heightPx, 1.6, 2.4);
+  return THREE.MathUtils.clamp(THREE.MathUtils.lerp(fit, 1, zoomedIn), 0.35, 1);
 }
 
 /** 开场镜头：对着昼夜分界线附近（太阳直射点往西 55°）。 */

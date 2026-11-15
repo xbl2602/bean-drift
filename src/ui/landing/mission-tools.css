@@ -118,8 +118,8 @@
 }
 @keyframes lq-twinkle { from { opacity: 0.55; } to { opacity: 1; } }
 
-/* The console backdrop. It sits in the space reserved under the headline, then stays pinned (sticky)
-   behind the page while the cards scroll over it. The cards are opaque enough to keep their text clear. */
+/* The console backdrop. It sits in the space reserved under the headline, then stays pinned (sticky) to
+   the bottom of the screen behind the page while the cards scroll up over it. The cards are opaque enough to keep their text clear. */
 .lq .lq-tools { overflow-y: clip; }
 .lq-tools-overview {
   --lq-stage-h: clamp(18rem, 56svh, 36rem);
@@ -132,19 +132,18 @@
   left: 50%;
   width: 100vw;
   margin-left: -50vw;
-  top: calc(100% - var(--lq-stage-h));
+  top: 0;
   height: 420vh;
   z-index: -1;
   overflow: clip;
   pointer-events: none;
 }
-.lq-analysis-pin { position: sticky; top: 4.5rem; height: var(--lq-stage-h); }
+/* The backdrop fills the whole screen and stays put (sticky) while the headline and cards scroll over it. */
+.lq-analysis-pin { position: sticky; top: 0; height: 100svh; }
 .lq-comms-stage {
   position: relative;
-  width: min(100vw, 80rem);
+  width: 100%;
   height: 100%;
-  margin-inline: auto;
-  mask-image: linear-gradient(180deg, transparent, #000 9%, #000 90%, transparent);
 }
 .lq-comms-stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 @media (max-width: 560px) {
@@ -158,8 +157,8 @@
   content: "";
   position: absolute;
   z-index: -1;
-  inset: -2rem 8% -2rem -3rem;
-  background: radial-gradient(ellipse at 28% 50%, #03060ef0 0%, #03060ec2 45%, transparent 78%);
+  inset: -5rem -14% -5rem -8rem;
+  background: radial-gradient(ellipse 62% 66% at 30% 50%, #03060ed0 0%, #03060e8a 45%, transparent 100%);
   pointer-events: none;
 }
 @media (max-width: 560px) {
@@ -240,4 +239,22 @@
 
 @media (prefers-reduced-motion: reduce) {
   .lq .lq-tools::after, .lq-hud-tag::before, .lq-thinking-dots i { animation: none; }
+}
+
+/* The assistant is a small box on the left, so the satellite stays visible beside it. */
+@media (min-width: 561px) {
+  .lq .lq-tool-assistant {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.7rem;
+    width: clamp(17rem, 44%, 22rem);
+    justify-self: start;
+    padding: 1rem 1.1rem 1.15rem;
+  }
+  .lq .lq-tool-assistant .lq-tool-copy { padding-top: 0.9rem; }
+  .lq .lq-tool-assistant h3 { font-size: 1.25rem; }
+  .lq .lq-tool-assistant .lq-chat-prompts { flex-direction: column; align-items: stretch; margin: 0.5rem 0; }
+  .lq .lq-tool-assistant .lq-chat { min-height: 6.5rem; padding: 0.7rem; }
+  .lq .lq-tool-assistant .lq-tool-copy > p:last-child { display: none; }
 }

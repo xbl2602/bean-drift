@@ -35,8 +35,8 @@ export function computeHeroSky(timeS: number): SurfaceScene {
 
   // Earth: stays put, drifting around a small loop.
   const wobble = (timeS / EARTH_WOBBLE_S) * Math.PI * 2;
-  const earthAzimuthDeg = HERO_CAMERA.headingDeg + 15 + 3.5 * Math.cos(wobble);
-  const earthElevationDeg = 9.5 + 1.4 * Math.sin(wobble);
+  const earthAzimuthDeg = HERO_CAMERA.headingDeg + 24 + 3.5 * Math.cos(wobble);
+  const earthElevationDeg = 11.5 + 1.2 * Math.sin(wobble);
 
   return {
     timeS,

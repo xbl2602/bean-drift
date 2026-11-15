@@ -23,7 +23,7 @@ export function getPointConditions(position: LunarPosition, timeMs: number, opti
   const lonDeg = canonicalLonDeg(position.lonDeg);
   const sky = skyAtLatLon(timeMs, position.latDeg, lonDeg);
   const round = (value: number, digits: number) => Number(value.toFixed(digits));
-  const terrainGroups = buildTerrainGroups(position.latDeg, lonDeg, timeMs, sky, options.minEarthElevationDeg);
+  const terrainGroups = buildTerrainGroups(position.latDeg, lonDeg, timeMs, sky, options);
 
   return {
     position: { latDeg: position.latDeg, lonDeg },

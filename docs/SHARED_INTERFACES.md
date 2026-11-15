@@ -77,7 +77,7 @@
 
 ### 2.5 一年统计（`yearStats`）✅
 
-统计期固定为 **2030-01-01T00:00:00Z 起的 8760 小时（整年），逐小时取样**（TODO Q1 的决定，见上面的 decisions 文件）。**不随查询时刻变**。FEATURE_SPEC 术语：**断电** = 太阳被地形挡住的连续时段，**断信号** = 地球被地形挡住的连续时段。口径：圆盘上缘高于地形地平线算可见；被统计期首尾截断的时段按截断后的长度计入。`yearStats.sun` 和 `yearStats.earth` **结构相同**：
+统计期默认是 **2030-01-01T00:00:00Z 起的 8760 小时（整年），逐小时取样**（TODO Q1 的决定，见上面的 decisions 文件）。**不随查询时刻 `time` 变**；想换起点，传 `statsStart`（见 2.5.3）。FEATURE_SPEC 术语：**断电** = 太阳被地形挡住的连续时段，**断信号** = 地球被地形挡住的连续时段。口径：圆盘上缘高于地形地平线算可见；被统计期首尾截断的时段按截断后的长度计入。`yearStats.sun` 和 `yearStats.earth` **结构相同**：
 
 | 字段 | 含义 | 单位 | 状态 |
 |---|---|---|---|
@@ -88,6 +88,16 @@
 | `yearStats.<sun/earth>.meanVisibleWindowH` | 统计期内所有连续可见时段的平均时长（L7"平均单次信号时间"，地球一栏）。从未可见 = 0 | 小时 | ✅ |
 | `yearStats.<sun/earth>.visibleWindows` | 连续可见的窗口列表 `[{ startUtc, endUtc, durationH }]`（太阳：各月昼窗口）。一个点最多约几十条 | UTC、小时 | ✅ |
 | `yearStats.bothVisibleFraction` | 统计期内太阳和地球**同时**可见的时间占比（和 `sun`、`earth` 并列，不在它们里面）。选址要两者都满足，这个比单看任一个更有说服力。整月地图里同名的一层 `bothFraction` 与它同口径 | 比例 0~1 | ✅ |
+
+### 2.5.3 选填输入：统计期起点（`statsStart`）✅（2026-11-15）
+
+默认的一年统计固定从 2030-01-01 起，但任务要的往往是"发射/着陆那一刻之后的一年"。**输入**（不是输出）：`GET /api/point`、`POST /api/compare`、`get_point_conditions`、`compare_points` 接受可选的 `statsStart`（UTC，ISO 8601，带 Z，例如 `2027-03-01T00:00:00Z`）。
+
+- **不传 = 和以前完全一致**（2030-01-01 起），整月地图、`find_sites` 也仍然是这一年。**整月地图和 `find_sites` 不接受 `statsStart`**：它们是 pipeline 预先算好的静态文件，换年份要重跑 pipeline。
+- 传了之后：统计期是 `statsStart` 起的 8760 小时（`yearStats.periodStartUtc` / `periodEndUtc` 就是它），规则不变。除 `yearStats` 和 `provenance.yearStats` 外，返回里其他字段不受影响；`provenance.yearStats.note` 会写明"起点是调用方选的"。
+- 范围：`statsStart` 在 2000-01-01 到 2099-01-01 之间（起点加 8760 小时必须还在星历适用的 2000~2100 年内），否则返回 400。
+- 星历精度在这个范围内都靠得住：对照 JPL Horizons，2005/2015/2026~2030/2035/2043/2060/2090 年的 8 个月面观测点，太阳和地球方向最大偏差 0.013°（自动测试 `src/core/ephemeris/tests/ephemeris-vs-horizons.test.cjs`）。
+- `GET /api/timeline`、`POST /api/compare-dates` 暂不接受 `statsStart`（`compare-dates` 里每个点的 `yearStats` 仍是 2030 年那一年）。
 
 ### 2.5.2 选填假设：地球最低仰角（`minEarthElevationDeg`）✅
 
@@ -138,8 +148,8 @@ pipeline 把上面的统计对**整个月面每个 0.25° 格子**算好，放�
 | 方法 路径 | 参数 | 返回 |
 |---|---|---|
 | `GET /api/health` | — | `{ "status": "ok", "service": "bean-drift" }` |
-| `GET /api/point` | query：`latDeg`（-90~90）、`lonDeg`（-180~360）、`time`（可选，默认现在）、`minEarthElevationDeg`（可选，见 2.5.2） | `PointConditions` |
-| `POST /api/compare` | JSON：`{ "points": [{ "latDeg", "lonDeg" }, ...1~10 个], "time"?: "...", "minEarthElevationDeg"?: n }` | `{ "timeUtc", "results": PointConditions[] }`，顺序与输入一致 |
+| `GET /api/point` | query：`latDeg`（-90~90）、`lonDeg`（-180~360）、`time`（可选，默认现在）、`minEarthElevationDeg`（可选，见 2.5.2）、`statsStart`（可选，见 2.5.3） | `PointConditions` |
+| `POST /api/compare` | JSON：`{ "points": [{ "latDeg", "lonDeg" }, ...1~10 个], "time"?: "...", "minEarthElevationDeg"?: n, "statsStart"?: "...Z" }` | `{ "timeUtc", "results": PointConditions[] }`，顺序与输入一致 |
 | `GET /api/presets` | — | `{ "presets": Preset[] }`（`Preset` 见 `src/core/types.ts`） |
 | `GET /api/timeline` | query：`latDeg`、`lonDeg`（必填）；`time`（起点，默认现在）、`durationH`（1~744，默认 720）、`stepMin`（曲线间隔，10~1440 分钟，默认约 144 个点）、`minEarthElevationDeg` | `PointTimeline`，见 3.1 |
 | `POST /api/compare-dates` | JSON：`{ "points": [{ "latDeg", "lonDeg" }, ...1~5 个], "times": ["...Z", ...1~8 个], "minEarthElevationDeg"?: n }` | `{ "timesUtc", "points": PointAcrossTimes[], "provenance" }`，见 3.2 |
@@ -220,9 +230,10 @@ POST /api/find-sites   { "maxSlopeDeg": 15, "maxLongestSunOutageH": 300, "latMax
 实现在 `src/features/agent-search/`（负责人 `louis068`），路由接线在 `app/api/agent/route.ts`。它是 `/mcp` 同一套只读工具的自然语言入口：模型想查数据，只能调用下面列出的只读工具（共 6 个），结果原样放进 `sources`。
 
 - **请求**：`Content-Type: application/json`，只允许 `{ "message": "..." }`，去掉首尾空白后 1~2000 字符，请求体不超过 8192 字节，未知字段直接拒绝。**没有对话历史**，每次要带齐地点和日期。
-- **成功（200）**：`{ "answer": string, "sources": [{ "tool", "input", "result" }], "mode": "live", "model": "deepseek-flash" }`。`answer` 是纯文本，前端**不能**当 HTML 渲染。`sources` 是真正执行过的工具结果；`sources` 为空表示这个回答没有经过数据验证，界面不能把它标成"已计算"。
+- **成功（200）**：`{ "answer": string, "sources": [{ "tool", "input", "result" }], "mode": "live", "model": "deepseek-flash" }`。`answer` 是纯文本，前端**不能**当 HTML 渲染。`sources` 是真正执行过的工具结果，外加可能出现的一条地名查找来源 `lunar_gazetteer`（见下面"地名来源"）；`sources` 为空表示这个回答没有经过数据验证，界面不能把它标成"已计算"；**只有 `lunar_gazetteer` 一条也不算"已计算"**，它只是 IAU 地名表的查找结果，没有算过任何光照或通信数据。
 - **错误**：和其他接口一样是 `{ "error": { "code", "message" } }`。400 输入不对、405 不是 POST、413 请求太大、422 问题要的步骤太多、429 **限速**（有两个来源，前端只看状态码 429 就行，见下面"频率限制"）、502 模型或工具返回无效、503 没配置密钥或服务不可用、504 超时或被取消。前端显示错误，让用户**手动**重试，不要自动重发（每次重发都花钱）。
-- **单次上限**：最多 4 次模型调用、8 次工具执行；模型每次输出最多 2400 tokens（2026-11-15 起，PR #22 从 1200 提高，为了多地点比较不被截断；每次调用花 `xbl2602` 的钱，最坏情况输出费用是原来的两倍，系统提示要求最终回答控制在 400 词以内）；总超时 25 秒。
+- **单次上限**：最多 4 次模型调用、8 次工具执行（回答带 `lunar_gazetteer` 来源时是 7 次，因为它占了"最多 8 条来源"里的 1 条）；模型每次输出最多 2400 tokens（2026-11-15 起，PR #22 从 1200 提高，为了多地点比较不被截断；每次调用花 `xbl2602` 的钱，最坏情况输出费用是原来的两倍，系统提示要求最终回答控制在 250 词以内（PR #26 起，原来是 400））；总超时 25 秒。
+- **地名来源 `lunar_gazetteer`**（PR #26，`louis068`）：只有问题里写了**明确标注**的坐标（N/S E/W，或 lat / lon 字样）时才会有；它不是模型能调用的工具，是服务端自己用 IAU 地名表查的。结构沿用 `{ tool, input, result }`：`tool` 恒为 `"lunar_gazetteer"`，`input` 是 `{ coordinates: [{ latDeg, lonDeg }] }`，`result` 是 `{ locations: [{ queryCoord, nearbyFeatures }] }`，`nearbyFeatures` 每项有 `name`、`featureType`、`latDeg`、`lonDeg`、`diameterKm`、`distanceKm`、`withinFeatureRadius`。最多 4 个不重复的有效坐标，每个坐标最多 5 个附近地名；位置是 IAU 目录的中心点，不是撞击坑边缘，距离是月面球面距离；不含地形高度、地平线遮挡，也不是着陆安全判断。决定记录：`docs/decisions/2026-11-15_louis068_agent-nearby-map.md`。
 - **可用工具**（代码里写死的只读白名单，`logic/run-agent.ts` 里的 `ALLOWED`）：`get_point_conditions`、`compare_points`、`list_presets`、`get_point_timeline`、`compare_dates`、`find_sites`，即 `registry.ts` 里的全部 6 个。**agent 专用的两条限制**（REST API 和 MCP 不受影响）：①`compare_points` 一次最多 **6 个点**（API/MCP 仍是 10 个）。原因：全月网格扫描里单个点的结果最大 9.9 KB（南纬 89.9°，一年有 40 个日照窗口），而 agent 单个工具结果上限是 65,536 字节；满 10 个点实测约 68.5 KB，按最大单点估算 8 个点也有约 79 KB，都会超限；6 个最大的点带 `minEarthElevationDeg` 实测 61,754 字节，在上限内。其余新工具都远低于上限（时间曲线最大实测约 26 KB，找位置 20 个结果约 6 KB，跨日期对比 5 点 × 8 时刻按最大单点估算约 20 KB）。②工具结果超过 65,536 字节时，不再让整个回答失败（原来是 502 `tool_error`），而是把 `result_too_large` 作为工具结果回给模型，让它用更少的点或更短的时段重问。决定记录：`docs/decisions/2026-11-14_xbl2602_agent-new-tools-and-compare-cap.md`。
 - **密钥**：`DEEPSEEK_API_KEY`，仅服务端、每次请求时读取。网址和模型名（`deepseek-flash`）写死在代码里，不读环境变量。
 - **频率限制**：每个访问者 IP 每分钟最多 20 次请求（固定窗口），在 Vercel 防火墙里执行，不在代码里。超出时**还没进到我们的代码**就被拦下，返回 `429`，body 形如 `{"error":{"code":"429","message":"Too Many Requests","id":"..."}}`（`code` 是字符串 `"429"`）。DeepSeek 自己限速时是我们的代码返回 429，`code` 为 `rate_limited`。**前端不要按 `code` 区分，统一按状态码 429 提示"请求太频繁，稍后再试"，不要自动重发。** 注意：同一个 IP（例如同一个展位的 Wi-Fi）的所有人共用这 20 次。它限的是速度不是总花费，细节和重建办法见 `docs/decisions/2026-11-14_xbl2602_agent-rate-limit.md`。
