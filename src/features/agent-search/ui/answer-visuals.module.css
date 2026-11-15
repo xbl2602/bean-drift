@@ -1,0 +1,27 @@
+.visuals { display: grid; gap: 16px; margin: 18px 0; min-width: 0; }
+.visuals:empty { display: none; }
+.source, .kicker { font-size: 10px; letter-spacing: .1em; color: #afcfb4; margin: 0 0 8px; }
+.card { border: 1px solid #3c4d54; border-radius: 14px; padding: 15px; background: linear-gradient(140deg, #19282d, #10191f); min-width: 0; }
+.card h4 { margin: 4px 0; font-size: 15px; color: #f0f5f6; }
+.card h5 { font-size: 12px; margin: 16px 0 5px; }
+.note, .figure p { font-size: 11px; line-height: 1.6; color: #aebfc8; overflow-wrap: anywhere; margin: 7px 0; }
+.comparison { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 12px; }
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 11px; color: #b7c7d0; }
+.pair strong { display: block; font-size: 23px; font-weight: 500; color: #f3f6ed; font-variant-numeric: tabular-nums; }
+.metric { margin: 12px 0; font-size: 12px; }
+.metric > div:first-child, .windowRow > div:first-child { display: flex; justify-content: space-between; gap: 8px; }
+.metric strong, .windowRow strong { font-variant-numeric: tabular-nums; color: #e0efdf; }
+.track { height: 5px; border-radius: 6px; overflow: hidden; background: #344047; margin-top: 6px; }
+.track span { display: block; height: 100%; background: #b8d78f; border-radius: inherit; }
+.figure { margin: 16px 0; padding: 10px 0; border-block: 1px solid #33464d; }
+.figure figcaption { font-size: 12px; color: #dce6eb; }
+.figure svg { width: 100%; display: block; }
+.figure text { fill: #b7c7d0; font-size: 10px; }
+.windowRow { font-size: 12px; margin: 15px 0; }
+.windowTrack { position: relative; height: 16px; border-radius: 4px; overflow: hidden; background: #36414a; margin-top: 8px; }
+.windowTrack span { position: absolute; height: 100%; background: #b8d78f; }
+.windowRow:nth-of-type(3) .windowTrack span { background: #a7dfed; }
+.card summary { font-size: 12px; cursor: pointer; color: #d4e8e2; }
+.location { display: block; width: 100%; padding: 12px 0; text-align: left; color: #e1ede9; border: 0; border-bottom: 1px solid #3b4a50; background: transparent; }
+.location span { display: block; color: #afc4cb; font-size: 11px; margin-top: 4px; }
+.location:hover { color: #c3edaa; }

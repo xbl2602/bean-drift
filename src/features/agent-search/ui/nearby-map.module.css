@@ -1,0 +1,17 @@
+.card { padding: 16px; border: 1px solid #42555c; border-radius: 16px; background: linear-gradient(145deg, #1a2b30, #0d161e); min-width: 0; }
+.heading { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px; font-size: 9px; letter-spacing: .1em; color: #cfdfc0; align-items: center; }
+.badge { border: 1px solid #556b57; border-radius: 5px; padding: 3px 6px; }
+.card h4 { margin: 12px 0 5px; font-size: 16px; color: #eef4ee; }
+.caption { color: #b1c3cc; font-size: 11px; line-height: 1.6; margin: 8px 0; }
+.map { width: 100%; height: auto; display: block; margin-top: 14px; }
+.map text { fill: #b5cad1; font: 9px system-ui, sans-serif; }
+.map .number { fill: #0b2026; font-weight: 700; font-size: 11px; }
+.list { list-style: none; padding: 0; margin: 14px 0; }
+.list button { display: flex; gap: 10px; width: 100%; text-align: left; align-items: center; padding: 10px 8px; border: 1px solid transparent; border-bottom-color: #33454d; border-radius: 7px; background: transparent; color: #e1ecec; cursor: pointer; }
+.list button:hover, .list button[aria-pressed="true"] { border-color: #71895b; background: #26362c; }
+.list button:focus-visible { outline: 2px solid #c9e59b; outline-offset: 2px; }
+.index { display: grid; place-items: center; width: 23px; height: 23px; flex-shrink: 0; border-radius: 50%; background: #b6dbe0; color: #11242b; font-size: 11px; font-weight: 700; }
+.list strong { font-size: 13px; display: block; }
+.list small { font-size: 11px; color: #b6c8ce; display: block; }
+.detail { padding: 12px; border-left: 2px solid #cee59c; background: #1d2e29; font-size: 12px; color: #e2edde; }
+.detail p { margin: 7px 0; font-size: 11px; }
