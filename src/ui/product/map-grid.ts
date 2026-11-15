@@ -1,0 +1,18 @@
+/** CSS-pixel zoom thresholds shared by the 2D map and 3D globe. */
+export const MAJOR_GRID_STEP_DEG = 30;
+export const MINOR_GRID_LEVELS = [
+  { stepDeg: 10, minPixelsPerDegree: 6 },
+  { stepDeg: 5, minPixelsPerDegree: 12 },
+  { stepDeg: 1, minPixelsPerDegree: 32 },
+  { stepDeg: 0.25, minPixelsPerDegree: 80 },
+] as const;
+
+/** Fade one finer level in before retiring the preceding minor grid. */
+export function gridDetailWeights(pixelsPerDegree: number): [number, number, number, number] {
+  const zoom = Number.isFinite(pixelsPerDegree) ? Math.max(0, pixelsPerDegree) : 0;
+  const active = MINOR_GRID_LEVELS.map(level => {
+    const t = Math.max(0, Math.min(1, (zoom - level.minPixelsPerDegree) / (level.minPixelsPerDegree * 0.2)));
+    return t * t * (3 - 2 * t);
+  });
+  return [active[0] * (1 - active[1]), active[1] * (1 - active[2]), active[2] * (1 - active[3]), active[3]];
+}

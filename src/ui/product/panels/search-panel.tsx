@@ -16,7 +16,7 @@ interface SearchPanelProps {
   selected: SearchTarget | null;
   onGoTo: (target: SearchTarget) => void;
   onStandHere: (point: LatLon) => void;
-  onSaveSite: (point: LatLon, name: string) => void;
+  onCompareLocation: (point: LatLon, name: string) => void;
   onClose: () => void;
   /** 外层定位。默认浮在地图上方正中；Find Data 模式放在左边一栏里。 */
   placementClassName?: string;
@@ -30,7 +30,7 @@ const SUGGESTION_LIMIT = 8;
 const targetForName = (entry: LunarName): SearchTarget => ({ latDeg: entry.latDeg, lonDeg: entry.lonDeg, label: entry.name, detail: formatLatLon(entry), spanDeg: viewSpanDegFor(entry.diameterKm) });
 const targetForCoordinates = (point: LatLon): SearchTarget => ({ ...point, label: "Searched point", detail: formatLatLon(point), spanDeg: 25 });
 
-export function SearchPanel({ selected, onGoTo, onStandHere, onSaveSite, onClose, placementClassName = DEFAULT_PLACEMENT, hideResult, placeholder = "Search a place (Shackleton Crater) or coordinates (-89.9, 0)" }: SearchPanelProps) {
+export function SearchPanel({ selected, onGoTo, onStandHere, onCompareLocation, onClose, placementClassName = DEFAULT_PLACEMENT, hideResult, placeholder = "Search a place (Shackleton Crater) or coordinates (-89.9, 0)" }: SearchPanelProps) {
   const [query, setQuery] = useState("");
   const [names, setNames] = useState<LunarName[] | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -159,7 +159,7 @@ export function SearchPanel({ selected, onGoTo, onStandHere, onSaveSite, onClose
           </span>
           <span className="flex gap-2">
             <ResultButton primary onClick={() => onStandHere(selected)}>Stand here</ResultButton>
-            <ResultButton onClick={() => onSaveSite(selected, selected.label)}>Add to comparison</ResultButton>
+            <ResultButton onClick={() => onCompareLocation(selected, selected.label)}>Choose sites to compare</ResultButton>
           </span>
         </div>
       )}

@@ -10,8 +10,14 @@ export const ANALYSIS_MODEL = {
    * S = 1361 W/m²（太阳常数），A = 0.12（月面反照率），ε = 0.95，σ = 5.67e-8  ->  约 386 K。
    */
   subsolarTempK: 386,
-  /** 夜间温度：不模拟土壤蓄热，统一取一个典型值。 */
+  /** Legacy equilibrium baseline; current temperatures use the Diviner-fit cycle below. */
   nightTempK: 95,
+  // Hurley et al. (2014), doi:10.1016/j.icarus.2014.08.043, Eq. 2/4.
+  thermalDayAmplitudeK: 262,
+  thermalDuskK: 130,
+  thermalDawnK: 95,
+  thermalLatitudeDropK: 35,
+  thermalRoughnessRad: 4.5 * Math.PI / 180,
   /** 永久阴影里的典型温度。 */
   shadowTempK: 55,
   /** 水冰在真空里长期稳定的大致上限；到 iceWarmTempK 以上记为 0。 */
@@ -86,9 +92,83 @@ export interface SiteMetrics {
 
 export const equilibriumTempK = (cosIncidence: number) => M.subsolarTempK * Math.pow(Math.max(cosIncidence, 0), 0.25);
 
-/** 太阳方向 s 下，地面受光的入射余弦；太阳在光滑球面地平线以下记 0。 */
+/** Steady radiative model with a night baseline blended in radiative power, not a hard max. */
+export function surfaceTemperatureK(cosIncidence: number, nightTempK: number): number {
+  return Math.pow(Math.pow(nightTempK, 4) + (Math.pow(M.subsolarTempK, 4) - Math.pow(nightTempK, 4)) * clamp01(cosIncidence), 0.25);
+}
+
+// Five-point normal quadrature: unresolved facets are averaged in emitted radiance (T^4).
+// This changes estimated temperatures, not just their displayed colours.
+export const THERMAL_FACETS = [
+  [0, 0.5333333333333333],
+  [-1.355626179974266, 0.2220759220056126], [1.355626179974266, 0.2220759220056126],
+  [-2.8569700138728056, 0.0112574113277207], [2.8569700138728056, 0.0112574113277207],
+] as const;
+export const NIGHT_COEFFICIENTS = [444.738, -448.937, 239.668, -63.8844, 8.34064, -0.423502] as const;
+function nightPolynomialK(phi: number): number {
+  return NIGHT_COEFFICIENTS.reduceRight((value, coefficient) => value * phi + coefficient, 0);
+}
+
+/** Continuous, periodic adaptation of the Diviner fit; not a heat-conduction solver. */
+export function diurnalTemperatureK(phaseRad: number, cosLatitude: number): number {
+  const tau = 2 * Math.PI;
+  const phi = ((phaseRad % tau) + tau) % tau;
+  const latitudeDropK = M.thermalLatitudeDropK * (clamp01(cosLatitude) - 1);
+  if (phi >= Math.PI / 2 && phi <= 3 * Math.PI / 2) {
+    const progress = (phi - Math.PI / 2) / Math.PI;
+    // Remove the small rounded-coefficient endpoint residuals so both joins match exactly.
+    const residual = mix(M.thermalDuskK - nightPolynomialK(Math.PI / 2), M.thermalDawnK - nightPolynomialK(3 * Math.PI / 2), progress);
+    return nightPolynomialK(phi) + residual + latitudeDropK;
+  }
+  const signedPhi = phi > Math.PI ? phi - tau : phi;
+  const progress = (signedPhi + Math.PI / 2) / Math.PI;
+  // Match the cold pre-dawn endpoint while keeping the published daytime curve near noon.
+  const baselineK = M.thermalDuskK - (M.thermalDuskK - M.thermalDawnK) * Math.pow(1 - progress, 8);
+  return baselineK + M.thermalDayAmplitudeK * Math.sqrt(Math.max(0, cosLatitude * Math.cos(phi))) + latitudeDropK;
+}
+
+/** Transform the resolved facet normal to Sun-state coordinates, using the shared Sun vector. */
+function thermalCoordinates(point: SurfacePoint, sun: Vec3): { phase: number; cosLatitude: number } {
+  const xy = Math.hypot(sun[0], sun[1]);
+  const east: Vec3 = [-sun[1] / xy, sun[0] / xy, 0];
+  const north: Vec3 = [-sun[2] * sun[0] / xy, -sun[2] * sun[1] / xy, xy];
+  const x = dot(point.normal, sun), y = dot(point.normal, east);
+  const z = dot(point.normal, north);
+  return { phase: Math.atan2(y, x), cosLatitude: Math.sqrt(Math.max(0, 1 - z * z)) };
+}
+
+export function thermalTemperatureK(point: SurfacePoint, sun: Vec3, permanentShadow: number): number {
+  const { phase, cosLatitude } = thermalCoordinates(point, sun);
+  let power = 0;
+  for (const [offset, weight] of THERMAL_FACETS) {
+    power += weight * Math.pow(diurnalTemperatureK(phase + offset * M.thermalRoughnessRad, cosLatitude), 4);
+  }
+  return Math.pow(mix(power, Math.pow(M.shadowTempK, 4), clamp01(permanentShadow)), 0.25);
+}
+
+/** Conservative cycle peak for the thermal/ice score, on the same temperature scale. */
+function thermalPeakK(point: SurfacePoint, sun: Vec3, permanentShadow: number): number {
+  const { cosLatitude } = thermalCoordinates(point, sun);
+  const peakK = M.thermalDuskK + M.thermalDayAmplitudeK * Math.sqrt(cosLatitude) + M.thermalLatitudeDropK * (cosLatitude - 1);
+  return Math.pow(mix(Math.pow(peakK, 4), Math.pow(M.shadowTempK, 4), clamp01(permanentShadow)), 0.25);
+}
+
+/** Fraction of the finite solar disk above a smooth horizon; avoids an artificial binary heat jump. */
+export function solarDiskFraction(upCosine: number): number {
+  const x = Math.max(-1, Math.min(1, upCosine / M.sunRadiusSin));
+  return (Math.acos(-x) + x * Math.sqrt(Math.max(0, 1 - x*x))) / Math.PI;
+}
 function litCosine(point: SurfacePoint, sun: Vec3): number {
-  return dot(point.up, sun) > -M.sunRadiusSin ? Math.max(dot(point.normal, sun), 0) : 0;
+  return solarDiskFraction(dot(point.up, sun)) * Math.max(dot(point.normal, sun), 0);
+}
+/** Integrate the positive part between adjacent month samples instead of counting whole samples. */
+export function litSegmentFraction(a: number, b: number): number {
+  if (a > 0 && b > 0) return 1;
+  if (a <= 0 && b <= 0) return 0;
+  return Math.max(a, b) / (Math.abs(a) + Math.abs(b));
+}
+function lightMargin(point: SurfacePoint, sun: Vec3): number {
+  return Math.min(dot(point.up, sun) + M.sunRadiusSin, dot(point.normal, sun));
 }
 
 export function computeSiteMetrics(
@@ -101,18 +181,15 @@ export function computeSiteMetrics(
   const permanentShadow = point.polar ? polarWeight * (1 - smoothstep(-0.3, 0.3, point.polar.sunMarginDeg)) : 0;
 
   let litCount = 0;
-  let maxCos = 0;
-  for (const sun of monthSuns) {
-    const c = litCosine(point, sun);
-    if (c > 1e-5) litCount++;
-    maxCos = Math.max(maxCos, c);
+  for (let i = 0; i < monthSuns.length; i++) {
+    const sun = monthSuns[i];
+    litCount += litSegmentFraction(lightMargin(point, sun), lightMargin(point, monthSuns[(i + 1) % monthSuns.length]));
   }
   const monthLit = litCount / monthSuns.length;
   const illuminationFraction = point.polar ? mix(monthLit, point.polar.litFraction, polarWeight) : monthLit;
 
-  const nightTempK = mix(M.nightTempK, M.shadowTempK, permanentShadow);
-  const temperatureNowK = Math.max(nightTempK, equilibriumTempK(litCosine(point, sunNow) * (1 - permanentShadow)));
-  const maxTemperatureK = Math.max(nightTempK, equilibriumTempK(maxCos * (1 - permanentShadow)));
+  const temperatureNowK = thermalTemperatureK(point, sunNow, permanentShadow);
+  const maxTemperatureK = thermalPeakK(point, sunNow, permanentShadow);
 
   const cold = 1 - smoothstep(M.iceColdTempK, M.iceWarmTempK, maxTemperatureK);
   const iceIndex = Math.max(permanentShadow, cold);

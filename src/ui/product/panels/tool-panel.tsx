@@ -12,6 +12,7 @@ import { SettingsPanel } from "../settings/settings-panel";
 import { AiPanel } from "./ai-panel";
 import { ComparePanel } from "./compare-panel";
 import { ExportPanel } from "./export-panel";
+import { LandingSiteDetailsPanel } from "./landing-site-details-panel";
 import { LayerPanel } from "./layer-panel";
 import { MeasurePanel } from "./measure-panel";
 import type { RightPanelSize } from "./panel-shell";
@@ -39,9 +40,10 @@ export interface ToolPanelProps {
   onCompareHeightChange: (height: number) => void;
   onFocusComparisonSite: (site: SavedSite) => void;
   onStandHere: (point: LatLon) => void;
-  onSaveSite: (point: LatLon, name?: string) => void;
+  onCompareLocation: (point: LatLon, name?: string) => void;
   onRenameSite: (id: string, name: string) => void;
   onRemoveSite: (id: string) => void;
+  onFindNewSite: () => void;
   onSelectTool: (tool: ToolId) => void;
   onClose: () => void;
 }
@@ -50,7 +52,7 @@ export interface ToolPanelProps {
 export function rightPanelFor(tool: ToolId): RightPanelSize | null {
   if (tool === "ai") return "wide";
   if (tool === "settings") return "standard";
-  if (tool === "site" || tool === "measure" || tool === "export") return "standard";
+  if (tool === "inspect" || tool === "site" || tool === "measure" || tool === "export") return "standard";
   const layer = toolInfo(tool).layer;
   return layer && layer !== "color" ? "standard" : null;
 }
@@ -63,22 +65,20 @@ export function ToolPanel(props: ToolPanelProps) {
   if (tool === "tutorial") return <TutorialOverlay onClose={onClose} />;
   if (tool === "ai") return <AiPanel onGoTo={props.onGoTo} onClose={onClose} />;
   if (tool === "settings") return <SettingsPanel onClose={onClose} />;
-  if (tool === "search") return <SearchPanel selected={props.searchTarget} onGoTo={props.onGoTo} onStandHere={props.onStandHere} onSaveSite={props.onSaveSite} onClose={onClose} />;
+  if (tool === "search") return <SearchPanel selected={props.searchTarget} onGoTo={props.onGoTo} onStandHere={props.onStandHere} onCompareLocation={props.onCompareLocation} onClose={onClose} />;
+  if (tool === "inspect") return <LandingSiteDetailsPanel point={props.draftSite} analysis={props.draftAnalysis} timeMs={props.timeMs} onStandHere={props.onStandHere} onChooseComparisonSites={() => onSelectTool("site")} onClose={onClose} />;
   if (tool === "site") {
     return (
       <SitesPanel
         draft={props.draftSite}
-        draftAnalysis={props.draftAnalysis}
         onDraftName={props.onDraftName}
         onSaveDraft={props.onSaveDraft}
         selectedId={props.selectedSiteId}
         sites={props.sites}
-        analyses={props.analyses}
         onRename={props.onRenameSite}
         onRemove={props.onRemoveSite}
-        onStandHere={props.onStandHere}
-        onCompare={() => { if (props.draftSite) props.onSaveDraft(); onSelectTool("compare"); }}
-        timeMs={props.timeMs}
+        onSelectSite={props.onFocusComparisonSite}
+        onCompare={() => onSelectTool("compare")}
         onClose={onClose}
       />
     );
@@ -87,7 +87,7 @@ export function ToolPanel(props: ToolPanelProps) {
     return <MeasurePanel points={props.measurePoints} onUndo={() => props.onMeasureChange(props.measurePoints.slice(0, -1))} onClear={() => props.onMeasureChange([])} onClose={onClose} />;
   }
   if (tool === "compare") {
-    return <ComparePanel height={props.compareHeight} onHeightChange={props.onCompareHeightChange} onFocusSite={props.onFocusComparisonSite} sites={props.sites} analyses={props.analyses} timeMs={props.timeMs} onAddSites={() => onSelectTool("site")} onRemoveSite={props.onRemoveSite} onExport={() => onSelectTool("export")} onClose={onClose} />;
+    return <ComparePanel height={props.compareHeight} onHeightChange={props.onCompareHeightChange} onFocusSite={props.onFocusComparisonSite} sites={props.sites} analyses={props.analyses} timeMs={props.timeMs} onAddSites={props.onFindNewSite} onRemoveSite={props.onRemoveSite} onExport={() => onSelectTool("export")} onClose={onClose} />;
   }
   if (tool === "export") {
     const input = { sites: props.sites, analyses: props.analyses, timeMs: props.timeMs, weights: props.layers.weights, measurePoints: props.measurePoints };
