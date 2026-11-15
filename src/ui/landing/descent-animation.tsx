@@ -6,6 +6,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { AsciiCosmos, type CosmosPhase } from "./ascii-cosmos";
+import { CosmosDevPanel } from "./cosmos-dev-panel";
+import { type CosmosParams, DEFAULT_PARAMS, loadSavedParams, saveParams } from "./cosmos-params";
 import "./descent-animation.css";
 
 const MAX_DPR = 2;
@@ -21,6 +23,10 @@ export function DescentAnimation() {
   const keyRef = useRef<HTMLButtonElement>(null);
   const cosmosRef = useRef<AsciiCosmos | null>(null);
   const [phase, setPhase] = useState<CosmosPhase>("idle");
+  const [devOpen, setDevOpen] = useState(false);
+  const [params, setParams] = useState<CosmosParams>(DEFAULT_PARAMS);
+  const [engine, setEngine] = useState<AsciiCosmos | null>(null);
+  const [isNear, setIsNear] = useState(false);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -30,6 +36,24 @@ export function DescentAnimation() {
 
     const cosmos = new AsciiCosmos();
     cosmosRef.current = cosmos;
+    setEngine(cosmos);
+    // The developer panel opens with ?dev on the address, or Shift+D; only then are saved slider values used.
+    const openDev = () => {
+      const saved = loadSavedParams();
+      cosmos.setParams(saved);
+      setParams(saved);
+      setDevOpen(true);
+    };
+    if (new URLSearchParams(window.location.search).has("dev")) openDev();
+    const onKey = (event: KeyboardEvent) => {
+      if (!event.shiftKey || event.key.toLowerCase() !== "d" || event.ctrlKey || event.metaKey) return;
+      if (event.target instanceof Element && event.target.closest("input, textarea, select")) return;
+      setDevOpen((open) => {
+        if (!open) openDev();
+        return !open;
+      });
+    };
+    window.addEventListener("keydown", onKey);
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     let frameRequest = 0;
     let isVisible = false;
@@ -43,6 +67,7 @@ export function DescentAnimation() {
       canvas.width = Math.round(width * dpr);
       canvas.height = Math.round(height * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      cosmos.dpr = dpr;
       cosmos.resize(width, height);
       // The scene lives in the band under the headline and button.
       const button = section.querySelector<HTMLElement>(".lq-button");
@@ -105,6 +130,7 @@ export function DescentAnimation() {
 
     const visibility = new IntersectionObserver(([entry]) => {
       isVisible = entry.isIntersecting;
+      setIsNear(entry.isIntersecting);
       if (isVisible && !reducedMotion && frameRequest === 0) {
         lastMs = performance.now();
         frameRequest = requestAnimationFrame(frame);
@@ -131,6 +157,7 @@ export function DescentAnimation() {
       section.removeEventListener("pointerup", onUp);
       section.removeEventListener("pointercancel", onUp);
       window.removeEventListener("blur", onBlur);
+      window.removeEventListener("keydown", onKey);
       if (frameRequest !== 0) cancelAnimationFrame(frameRequest);
       cosmosRef.current = null;
     };
@@ -167,6 +194,18 @@ export function DescentAnimation() {
       <p className="lq-cosmos-status" role="status">
         {STATUS[phase]}
       </p>
+      {devOpen && isNear && (
+        <CosmosDevPanel
+          cosmos={engine}
+          params={params}
+          onChange={(next) => {
+            setParams(next);
+            engine?.setParams(next);
+            saveParams(next);
+          }}
+          onClose={() => setDevOpen(false)}
+        />
+      )}
     </div>
   );
 }

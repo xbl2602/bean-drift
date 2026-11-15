@@ -23,7 +23,7 @@ type Three = typeof ThreeNamespace;
 const ALTITUDE = 5.5; // scene units (about 96 km at this scale)
 const SATELLITE_SCALE = 0.62;
 const GROUND_SPEED_RAD_PER_S = 0.012; // how fast the Moon turns under the satellite (sped up for the picture)
-const SUN_DIRECTION: Vec3 = [0.15, -0.7, 0.55];
+const SUN_DIRECTION: Vec3 = [-0.28, -0.88, 0.38]; // low over the horizon, so the ground throws long shadows
 const CAMERA_OFFSET: Vec3 = [-7.2, 2.4, 4.6];
 const CAMERA_ROLL_DEG = -24;
 const SATELLITE_SCREEN = { x: 0.74, y: 0.62 };
@@ -37,6 +37,8 @@ const TEXTURES = {
   moonColor: "/landing/moon-color-4k.jpg",
   moonRelief: "/landing/moon-relief-4k.jpg",
   earth: "/landing/earth-blue-marble-2k.jpg",
+  detailA: "/landing/lunar-detail-a.png",
+  detailB: "/landing/lunar-detail-b.png",
   height: "/landing/moon-height-2k.png",
   foilColor: "/landing/satellite/foil-color.png",
   foilNormal: "/landing/satellite/foil-normal.png",
@@ -73,9 +75,11 @@ async function buildScene(canvas: HTMLCanvasElement) {
       return texture;
     });
   const terrain = new TerrainHeights();
-  const [moonColor, moonRelief, earthMap, foilColor, foilNormal, panelColor, panelNormal, dishColor, dishNormal, aoData] = await Promise.all([
+  const [moonColor, moonRelief, detailA, detailB, earthMap, foilColor, foilNormal, panelColor, panelNormal, dishColor, dishNormal, aoData] = await Promise.all([
     load(TEXTURES.moonColor, false),
     load(TEXTURES.moonRelief, false),
+    load(TEXTURES.detailA, false, true),
+    load(TEXTURES.detailB, false, true),
     load(TEXTURES.earth, true),
     load(TEXTURES.foilColor, true, true),
     load(TEXTURES.foilNormal, false, true),
@@ -119,7 +123,7 @@ async function buildScene(canvas: HTMLCanvasElement) {
 
   // ---- Moon ----
   const moonGroup = new THREE.Group();
-  const moonMaterial = createMoonMaterial(THREE, { color: moonColor, relief: moonRelief }, MOON_RADIUS);
+  const moonMaterial = createMoonMaterial(THREE, { color: moonColor, relief: moonRelief, detailA, detailB }, MOON_RADIUS);
   const moonMesh = new THREE.Mesh(new THREE.SphereGeometry(MOON_RADIUS, 192, 128), moonMaterial);
   moonGroup.add(moonMesh);
   scene.add(moonGroup);
@@ -331,7 +335,7 @@ async function buildScene(canvas: HTMLCanvasElement) {
       if (Array.isArray(material)) material.forEach((m) => m.dispose());
       else material?.dispose();
     });
-    [moonColor, moonRelief, earthMap, foilColor, foilNormal, panelColor, panelNormal, dishColor, dishNormal, linkTextures.glow, linkTextures.ring].forEach((texture) => texture.dispose());
+    [moonColor, moonRelief, detailA, detailB, earthMap, foilColor, foilNormal, panelColor, panelNormal, dishColor, dishNormal, linkTextures.glow, linkTextures.ring].forEach((texture) => texture.dispose());
     bases.forEach((base) => base.link.dispose());
     earthLink.dispose();
     renderer.dispose();
