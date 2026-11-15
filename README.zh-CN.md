@@ -150,10 +150,10 @@ sequenceDiagram
 
 ```bash
 # 1. 查询月面单点地形、太阳/地球仰角与 2030 全年光照统计
-curl "[https://bean-drift.vercel.app/api/point?lat=-89.9&lon=0&time=2030-01-01T12:00:00Z](https://bean-drift.vercel.app/api/point?lat=-89.9&lon=0&time=2030-01-01T12:00:00Z)"
+curl "https://bean-drift.vercel.app/api/point?lat=-89.9&lon=0&time=2030-01-01T12:00:00Z"
 
 # 2. 调用自然语言 AI 选址助手 (POST /api/agent)
-curl -X POST "[https://bean-drift.vercel.app/api/agent](https://bean-drift.vercel.app/api/agent)" \
+curl -X POST "https://bean-drift.vercel.app/api/agent" \
   -H "Content-Type: application/json" \
   -d '{"message":"18.12N 49.80E 附近有什么地标？"}'
 ```
@@ -168,7 +168,7 @@ Bean Drift 采用**零外部数据库依赖的自包含架构**——所有 NASA
 
 | 🌐 网页云端 (Vercel) | 🐳 Docker 容器化部署 | 💻 Windows & macOS | 🐧 Linux & WSL2 | ⚙️ GitHub Actions CI |
 | :--- | :--- | :--- | :--- | :--- |
-| **免安装浏览器即开即用**<br>支持 WebGL 3D/2D 渲染与服务端 DeepSeek Flash AI。<br><br>👉 [**bean-drift.vercel.app**](https://bean-drift.vercel.app)<br>👉 [**进入 `/product` 工作台**](https://bean-drift.vercel.app/product) | **一键镜像打包与隔离运行**<br>将 3D/2D 前端、NASA 地形数据与 `/mcp` 接口封装为标准容器。<br><br>`docker build -t bean-drift .`<br>`docker run -p 3000:3000 bean-drift` | **个人电脑本地运行**<br>在 Windows PowerShell 或 macOS 下使用 Node.js 20+ 独立运行。<br><br>`git clone ...`<br>`npm install && npm run dev` | **原生 Linux 与服务端**<br>兼容 Ubuntu、Debian 与 WSL2，可作为完整工作台或独立 API/MCP 节点。<br><br>`npm run build && npm start` | **Ubuntu 自动测试门禁**<br>每次提交与 PR 均自动执行 `npm run typecheck` 与 101+ 项测试（`npm test`）。 |
+| **免安装浏览器即开即用**<br>支持 WebGL 3D/2D 渲染与服务端 DeepSeek Flash AI。<br><br>👉 [**bean-drift.vercel.app**](https://bean-drift.vercel.app)<br>👉 [**进入 `/product` 工作台**](https://bean-drift.vercel.app/product) | **一键镜像打包与隔离运行**<br>将 3D/2D 前端、NASA 地形数据与 `/mcp` 接口封装为标准容器。<br><br>`docker build -t bean-drift .`<br>`docker run -p 3000:3000 bean-drift` | **个人电脑本地运行**<br>在 Windows PowerShell 或 macOS 下使用 Node.js 24.x 独立运行。<br><br>`git clone ...`<br>`npm install && npm run dev` | **原生 Linux 与服务端**<br>兼容 Ubuntu、Debian 与 WSL2，可作为完整工作台或独立 API/MCP 节点。<br><br>`npm run build && npm start` | **Ubuntu 自动测试门禁**<br>每次提交与 PR 均自动执行 `npm run typecheck` 与 101+ 项测试（`npm test`）。 |
 
 <details>
 <summary><strong>🐳 点击展开 Docker 容器、Linux 与本地电脑快速启动命令</strong></summary>
@@ -179,11 +179,12 @@ docker build -t bean-drift .
 docker run --rm -p 3000:3000 -e DEEPSEEK_API_KEY=你的密钥 bean-drift
 
 # 方式 B：在 Windows PowerShell、macOS、Linux 或 WSL2 下直接运行
-git clone [https://github.com/xbl2602/bean-drift.git](https://github.com/xbl2602/bean-drift.git)
+git clone https://github.com/xbl2602/bean-drift.git
 cd bean-drift
 npm install
 npm run dev       # 访问 http://localhost:3000
-npm run typecheck && npm test
+npm run typecheck
+npm test
 ```
 
 </details>
@@ -196,6 +197,33 @@ npm run typecheck && npm test
 - `prototypes/`：早期原型（`lunar-scene-demo/` 月面第一人称场景与两版 landing page 视觉原型），运行方法见 [prototypes/README.md](prototypes/README.md)
 - `docs/`：全部文档，新人必读顺序：[AGENTS.md](AGENTS.md) ➔ [docs/TEAM_HANDBOOK.md](docs/TEAM_HANDBOOK.md) ➔ [docs/FEATURE_SPEC.md](docs/FEATURE_SPEC.md) ➔ [docs/GIT_GUIDE.md](docs/GIT_GUIDE.md)
 - 线上地址：https://bean-drift.vercel.app （接口：`/api/health`、`/api/point`、`/api/compare`、`/api/timeline`、`/api/find-sites`、`/api/presets`、`/api/agent`、`/mcp`）
+
+## 项目文档与技术说明
+
+[打开 Google Docs 项目文档](https://docs.google.com/document/d/1oGul3ofiNASOeoQNFWHs3nDmCb4unRww-JEW6Azwnso/edit?usp=drive_link) · [部署指南](docs/DEPLOYMENT.md) · [API 与 MCP 接口](docs/SHARED_INTERFACES.md) · [数据流水线](pipeline/README.md)
+
+### 其他功能
+- **太阳能量估算**：`/api/energy` 与 `get_solar_energy_estimate` 提供入射太阳能量和黑夜电池需求估算。入射能量不等于发电量，未包含面板效率、灰尘与温度损失。
+- **南极地形**：覆盖区域可使用打包的 160 m 南极地形；全月概览仍为 0.25°。实际分辨率以结果的来源说明为准。
+
+### 数据边界
+- 星历使用解析近似，不是 SPICE，也不是任务级着陆预测。
+- 预计算全月年度统计覆盖 **2030 年**；改变查询日期不会改变这套数据的统计年份。
+- 格子平均坡度不能证明着陆安全；附近地标图是示意图，不是现场照片。
+- AI 每次工具调用最多比较 **6 个点**；聊天记录虽可见，每个问题仍独立处理。
+
+### 配置与验证
+使用与 `package.json` 一致的 **Node.js 24.x**。地图、REST API 和 MCP 不需要 AI 密钥。AI Tools 的 `DEEPSEEK_API_KEY` 由负责人放在服务端 `.env.local` 或 Vercel 环境变量中；禁止提交密钥或使用 `NEXT_PUBLIC_` 前缀。未配置时 agent 接口返回 503。
+
+```bash
+npm run typecheck
+npm test
+npm run build
+```
+
+部署与 Docker 配置见[部署指南](docs/DEPLOYMENT.md)。Google 文档可能需要向文档拥有者申请访问；仓库权限不等于文档权限。
+
+---
 
 ## 👥 团队与版权
 
