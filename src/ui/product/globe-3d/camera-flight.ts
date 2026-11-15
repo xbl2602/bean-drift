@@ -23,6 +23,9 @@ interface PoseSample { tS: number; phi: number; theta: number; logRadius: number
 
 const SAFE_PHI = 1e-4;
 const MAX_SAMPLE_GAP_S = 0.1;
+const MIN_FLIGHT_S = 1;
+/** 一次自动飞行最长这么久。别的界面要"等镜头飞完再干重活"时用它算等多久（见 panels/site-photo.tsx）。 */
+export const MAX_FLIGHT_S = 1.9;
 
 /** 记录最近三帧的相机位置，用来估算惯性滑动时的速度和加速度。 */
 export class CameraMotionTracker {
@@ -69,7 +72,7 @@ export function startCameraFlight(target: THREE.Vector3, nowMs: number, current:
     theta: { from: state.theta, to: thetaTo },
     logRadius: { from: state.logRadius, to: goal.logRadius },
     startS,
-    durationS: THREE.MathUtils.clamp(0.9 + 0.35 * angularDistance + 0.25 * zoomDistance, 1, 1.9),
+    durationS: THREE.MathUtils.clamp(0.9 + 0.35 * angularDistance + 0.25 * zoomDistance, MIN_FLIGHT_S, MAX_FLIGHT_S),
   };
 }
 

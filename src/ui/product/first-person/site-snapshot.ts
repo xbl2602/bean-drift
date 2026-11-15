@@ -46,6 +46,11 @@ async function renderSnapshot(point: LatLon, timeMs: number): Promise<string> {
   }
 }
 
+/** 这个点这个时刻的照片是否已经画好或正在画（再要一次不会重新开工）。 */
+export function hasSiteSnapshotJob(point: LatLon, timeMs: number): boolean {
+  return cache.has(snapshotKey(point, timeMs));
+}
+
 /** 某个点在某个时刻的第一人称照片（blob URL）。同一点同一时刻只画一次。 */
 export function siteSnapshotUrl(point: LatLon, timeMs: number): Promise<string> {
   const key = snapshotKey(point, timeMs);
@@ -65,10 +70,12 @@ export function siteSnapshotUrl(point: LatLon, timeMs: number): Promise<string> 
 
 export type SnapshotState = { status: "loading" } | { status: "ready"; url: string } | { status: "error" };
 
-export function useSiteSnapshot(point: LatLon, timeMs: number): SnapshotState {
+/** enabled 为 false 时先不开工，一直是 loading；画一张照片要在主线程上连续算约半秒，调用方可以挑个不碍事的时机再放行。 */
+export function useSiteSnapshot(point: LatLon, timeMs: number, enabled = true): SnapshotState {
   const key = snapshotKey(point, timeMs);
   const [state, setState] = useState<{ key: string; value: SnapshotState }>({ key, value: { status: "loading" } });
   useEffect(() => {
+    if (!enabled) return;
     let cancelled = false;
     siteSnapshotUrl(point, timeMs).then(
       (url) => !cancelled && setState({ key, value: { status: "ready", url } }),
@@ -78,6 +85,6 @@ export function useSiteSnapshot(point: LatLon, timeMs: number): SnapshotState {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- key 已包含 point 和 timeMs
-  }, [key]);
+  }, [key, enabled]);
   return state.key === key ? state.value : { status: "loading" };
 }
