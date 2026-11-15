@@ -61,7 +61,7 @@ export function ToolPanel(props: ToolPanelProps) {
   const t = useT();
 
   if (tool === "tutorial") return <TutorialOverlay onClose={onClose} />;
-  if (tool === "ai") return <AiPanel onClose={onClose} />;
+  if (tool === "ai") return <AiPanel onGoTo={props.onGoTo} onClose={onClose} />;
   if (tool === "settings") return <SettingsPanel onClose={onClose} />;
   if (tool === "search") return <SearchPanel selected={props.searchTarget} onGoTo={props.onGoTo} onStandHere={props.onStandHere} onSaveSite={props.onSaveSite} onClose={onClose} />;
   if (tool === "site") {
