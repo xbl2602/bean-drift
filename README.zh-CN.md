@@ -1,6 +1,7 @@
 <div align="center">
 
-![Bean Drift Banner](https://capsule-render.vercel.app/api?type=venom&color=0:0b0f17,55:1a2b30,100:a3e635&height=210&section=header&text=BEAN%20DRIFT&fontSize=62&fontColor=eef4ee&desc=%E6%9C%88%E7%90%83%E7%9D%80%E9%99%86%E7%82%B9%E5%AF%BC%E8%88%AA%E4%BB%AA%20%C2%B7%203D%2F2D%2F%E7%AC%AC%E4%B8%80%E4%BA%BA%E7%A7%B0%20%C2%B7%20%E5%8F%AF%E8%A7%86%E5%8C%96%20AI%20%C2%B7%20MCP&descSize=17&descAlignY=73)
+<h1>BEAN DRIFT</h1>
+<p><strong>月球着陆点导航仪 · 3D/2D/第一人称 · 可视化 AI · MCP</strong></p>
 
 <a href="https://bean-drift.vercel.app/product">
   <img src="docs/assets/bean-drift-mascot.svg" alt="Bean Drift 三幕动画：宇航员、着陆器、卫星与月球车，流星间歇划过" width="740" />

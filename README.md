@@ -1,6 +1,7 @@
 <div align="center">
 
-![Bean Drift Banner](https://capsule-render.vercel.app/api?type=venom&color=0:0b0f17,55:1a2b30,100:a3e635&height=210&section=header&text=BEAN%20DRIFT&fontSize=62&fontColor=eef4ee&desc=Lunar%20Landing%20Site%20Navigator%20%C2%B7%203D%2F2D%20%C2%B7%20Visual%20AI%20%C2%B7%20MCP&descSize=17&descAlignY=73)
+<h1>BEAN DRIFT</h1>
+<p><strong>Lunar Landing Site Navigator · 3D/2D · Visual AI · MCP</strong></p>
 
 <a href="https://bean-drift.vercel.app/product">
   <img src="docs/assets/bean-drift-mascot.svg" alt="Bean Drift: astronaut, lander, satellite and rover in a three-scene animation with passing meteors" width="740" />
