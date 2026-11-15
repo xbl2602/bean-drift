@@ -152,10 +152,10 @@ sequenceDiagram
 
 ```bash
 # 1. Query terrain, Sun/Earth elevation, and 2030 annual visibility at a lunar coordinate
-curl "[https://bean-drift.vercel.app/api/point?lat=-89.9&lon=0&time=2030-01-01T12:00:00Z](https://bean-drift.vercel.app/api/point?lat=-89.9&lon=0&time=2030-01-01T12:00:00Z)"
+curl "https://bean-drift.vercel.app/api/point?lat=-89.9&lon=0&time=2030-01-01T12:00:00Z"
 
 # 2. Ask the autonomous lunar AI assistant via POST /api/agent
-curl -X POST "[https://bean-drift.vercel.app/api/agent](https://bean-drift.vercel.app/api/agent)" \
+curl -X POST "https://bean-drift.vercel.app/api/agent" \
   -H "Content-Type: application/json" \
   -d '{"message":"At 18.12N 49.80E what craters surround me?"}'
 ```
@@ -167,7 +167,7 @@ curl -X POST "[https://bean-drift.vercel.app/api/agent](https://bean-drift.verce
 ## 📂 Repository Structure
 
 - `app/` & `src/`: Next.js application (**Bean Drift**)
-  - `src/core/`: Analytical ephemeris, horizon masking, annual stats, and read-only tools (`get_point_conditions`, `compare_points`, `get_point_timeline`, `compare_dates`, `find_sites`, `list_presets`)
+  - `src/core/`: Analytical ephemeris, horizon masking, annual stats, and read-only tools (`get_point_conditions`, `compare_points`, `get_point_timeline`, `compare_dates`, `find_sites`, `list_presets`, `get_solar_energy_estimate`)
   - `src/features/agent-search/`: Autonomous AI assistant, IAU gazetteer matcher, SVG visual cards, and nearby radar map
   - `src/ui/product/`: 3D Globe, 2D Map, First-Person surface renderer, timeline scrubber, and mission panels
 - `public/data/v1/` & `public/product/moon/`: Precomputed NASA LRO LOLA terrain, horizon envelopes, 2030 illumination stats, and IAU lunar nomenclature
@@ -182,7 +182,7 @@ Bean Drift is a **self-contained lunar navigation product** with all NASA LRO LO
 
 | 🌐 Cloud Website | 🐳 Docker Container | 💻 Windows & macOS | 🐧 Linux & WSL2 | ⚙️ GitHub Actions CI |
 | :--- | :--- | :--- | :--- | :--- |
-| **Zero Install Browser**<br>Live on Vercel Edge with WebGL 3D/2D & DeepSeek Flash AI.<br><br>👉 [**bean-drift.vercel.app**](https://bean-drift.vercel.app)<br>👉 [**Launch `/product`**](https://bean-drift.vercel.app/product) | **One-Command Container**<br>Package the entire 3D/2D app, NASA datasets & `/mcp` server into an isolated image.<br><br>`docker build -t bean-drift .`<br>`docker run -p 3000:3000 bean-drift` | **Local Desktop PC**<br>Run natively on Windows PowerShell or macOS with Node.js 20+.<br><br>`git clone ...`<br>`npm install && npm run dev` | **Native & Headless Server**<br>Runs on Ubuntu, Debian & WSL2 as a full workspace or standalone REST/MCP node.<br><br>`npm run build && npm start` | **Automated Linux Gates**<br>Every push & PR runs `npm run typecheck` and 101+ tests (`npm test`) on Ubuntu runners. |
+| **Zero Install Browser**<br>Live on Vercel with WebGL 3D/2D & DeepSeek Flash AI.<br><br>👉 [**bean-drift.vercel.app**](https://bean-drift.vercel.app)<br>👉 [**Launch `/product`**](https://bean-drift.vercel.app/product) | **One-Command Container**<br>Package the entire 3D/2D app, NASA datasets & `/mcp` server into an isolated image.<br><br>`docker build -t bean-drift .`<br>`docker run -p 3000:3000 bean-drift` | **Local Desktop PC**<br>Run natively on Windows PowerShell or macOS with Node.js 24.x.<br><br>`git clone ...`<br>`npm install && npm run dev` | **Native & Headless Server**<br>Runs on Ubuntu, Debian & WSL2 as a full workspace or standalone REST/MCP node.<br><br>`npm run build && npm start` | **Automated Linux Gates**<br>Every push & PR runs `npm run typecheck` and 101+ tests (`npm test`) on Ubuntu runners. |
 
 <details>
 <summary><strong>🐳 Click to expand Docker, Linux & Local Setup Commands</strong></summary>
@@ -190,25 +190,53 @@ Bean Drift is a **self-contained lunar navigation product** with all NASA LRO LO
 ```bash
 # Option A: Run with Docker (passing optional DeepSeek API key for live AI Tools)
 docker build -t bean-drift .
-docker run --rm -p 3000:3000 -e DEEPSEEK_API_KEY=your_key_here bean-drift
+docker run --rm -p 3000:3000 --env-file .env.local bean-drift
 
 # Option B: Run natively on Windows PowerShell, macOS, Linux, or WSL2
-git clone [https://github.com/xbl2602/bean-drift.git](https://github.com/xbl2602/bean-drift.git)
+git clone https://github.com/xbl2602/bean-drift.git
 cd bean-drift
 npm install
 npm run dev       # Starts http://localhost:3000
-npm run typecheck && npm test
+npm run typecheck
+npm test
 ```
 
 </details>
 
-- **REST & MCP Endpoints**: `/api/health`, `/api/presets`, `/api/point`, `/api/compare`, `/api/timeline`, `/api/compare-dates`, `/api/find-sites`, `/api/agent`, `/mcp`
+- **REST & MCP Endpoints**: `/api/health`, `/api/presets`, `/api/point`, `/api/compare`, `/api/timeline`, `/api/compare-dates`, `/api/find-sites`, `/api/energy`, `/api/agent`, `/mcp`
 
 ### Onboarding Reading Order
 1. [AGENTS.md](AGENTS.md) — Repository rules & directory ownership
 2. [docs/TEAM_HANDBOOK.md](docs/TEAM_HANDBOOK.md) — Roles & workflow
 3. [docs/FEATURE_SPEC.md](docs/FEATURE_SPEC.md) — Feature specifications
 4. [docs/GIT_GUIDE.md](docs/GIT_GUIDE.md) — Git & PR checklist
+
+---
+
+## Project document and technical notes
+
+[Open our project document on Google Docs](https://docs.google.com/document/d/1oGul3ofiNASOeoQNFWHs3nDmCb4unRww-JEW6Azwnso/edit?usp=drive_link) · [Deployment guide](docs/DEPLOYMENT.md) · [API and MCP reference](docs/SHARED_INTERFACES.md) · [Data pipeline](pipeline/README.md)
+
+### More capabilities
+- **Solar-energy estimates**: `/api/energy` and `get_solar_energy_estimate` estimate incident solar energy and battery needs for darkness. Incident energy is not panel electricity output; efficiency, dust and temperature losses are not included.
+- **South-pole terrain**: the bundled polar dataset provides 160 m terrain where supported; the global overview remains 0.25°. Read each result’s provenance for its actual resolution.
+
+### Data limitations
+- Ephemerides are analytical approximations, not SPICE or mission-grade landing predictions.
+- Precomputed whole-Moon annual statistics cover **2030**; changing the query date does not change that dataset’s year.
+- Cell-average slope does not establish landing safety. Nearby-landmark maps are schematics, not surface photographs.
+- AI comparisons accept up to **6 points per call**. Responses use supplied tools; each question is independent even when chat history remains visible.
+
+### Setup and verification
+Use **Node.js 24.x**, matching `package.json`. The map, REST API and MCP can run without an AI key. For AI Tools, the project owner configures `DEEPSEEK_API_KEY` server-side in `.env.local` or Vercel environment variables. Never commit it or prefix it with `NEXT_PUBLIC_`. Missing configuration returns 503 for the agent endpoint.
+
+```bash
+npm run typecheck
+npm test
+npm run build
+```
+
+For deployment configuration and Docker instructions, follow the [deployment guide](docs/DEPLOYMENT.md). The Google document may require access from its owner; repository access does not grant document access.
 
 ---
 
