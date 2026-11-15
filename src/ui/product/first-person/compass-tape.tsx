@@ -33,7 +33,7 @@ export function CompassTape({ headingDeg, sunAzimuthDeg, earthAzimuthDeg }: Comp
 
   return (
     <div className="pointer-events-none absolute left-1/2 top-4 z-10 w-[min(26rem,calc(100vw-22rem))] min-w-40 -translate-x-1/2 sm:top-6" aria-label={`Heading ${Math.round(headingDeg)} degrees`}>
-      <div className="relative h-11 overflow-hidden rounded-full border border-white/10 bg-black/50 backdrop-blur-md">
+      <div className="relative h-11 overflow-hidden rounded-full border border-white/10 bg-black/50 lunar-glass backdrop-blur-md">
         {ticks.map(({ azimuthDeg, offsetPct }) => (
           <span key={azimuthDeg} className="absolute bottom-1 -translate-x-1/2 text-center" style={{ left: `${offsetPct}%` }}>
             <span className={`block text-[11px] leading-none ${CARDINALS[azimuthDeg] ? "font-semibold text-white" : "text-white/40"}`}>{CARDINALS[azimuthDeg] ?? azimuthDeg}</span>

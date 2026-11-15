@@ -1,7 +1,7 @@
 "use client";
 // Measure Distance：打开时点击地图依次加点，面板里显示每一段和总长（球面大圆距离）。
 import { formatLatLon, greatCircleDistanceKm, type LatLon } from "../moon-frames";
-import { Caveat, PanelButton, PanelShell } from "./panel-shell";
+import { Caveat, PanelShell } from "./panel-shell";
 
 interface MeasurePanelProps {
   points: LatLon[];
@@ -25,7 +25,31 @@ export function MeasurePanel({ points, onUndo, onClear, onClose }: MeasurePanelP
         <p className="text-[11px] uppercase tracking-wide text-white/50">Total distance</p>
       </div>
 
-      <ol className="mt-3 space-y-1 text-xs">
+      <div className="mt-4 grid grid-cols-2 gap-2" role="group" aria-label="Edit measurement points">
+        <button
+          type="button"
+          onClick={onUndo}
+          disabled={points.length === 0}
+          className="flex min-h-12 items-center justify-center gap-2 rounded-xl border border-yellow-200/50 bg-yellow-200 px-2 py-3 text-xs font-semibold text-slate-950 shadow-sm transition hover:bg-yellow-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-200 disabled:cursor-not-allowed disabled:border-slate-300/25 disabled:bg-slate-200/10 disabled:text-slate-300/80 disabled:shadow-none"
+        >
+          <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 4-5 5 5 5M4 9h9a6 6 0 0 1 0 12h-2" /></svg>
+          Undo last point
+        </button>
+        <button
+          type="button"
+          onClick={onClear}
+          disabled={points.length === 0}
+          className="flex min-h-12 items-center justify-center gap-2 rounded-xl border border-rose-300/50 bg-rose-300/15 px-2 py-3 text-xs font-semibold text-rose-100 transition hover:border-rose-200 hover:bg-rose-300/25 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-200 disabled:cursor-not-allowed disabled:border-slate-300/25 disabled:bg-slate-200/10 disabled:text-slate-300/80"
+        >
+          <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6m4-6v6" /></svg>
+          Clear all points
+        </button>
+      </div>
+      <p className="mt-2 text-xs text-white/60" role="status">
+        {points.length === 0 ? "Add a point on the map to enable these actions." : `${points.length} ${points.length === 1 ? "point" : "points"} selected · undo removes only the latest point.`}
+      </p>
+
+      <ol className="mt-3 max-h-44 space-y-1 overflow-y-auto text-xs">
         {points.map((point, i) => (
           <li key={`${i}-${point.latDeg}-${point.lonDeg}`} className="flex items-baseline justify-between gap-2 rounded-lg bg-white/[0.04] px-2.5 py-1.5">
             <span className="font-mono text-white/75">
@@ -36,10 +60,7 @@ export function MeasurePanel({ points, onUndo, onClear, onClose }: MeasurePanelP
         ))}
       </ol>
 
-      <div className="mt-3 flex gap-2">
-        <PanelButton onClick={onUndo} disabled={points.length === 0}>Undo last point</PanelButton>
-        <PanelButton onClick={onClear} disabled={points.length === 0}>Clear</PanelButton>
-      </div>
+
       <Caveat>Shortest path over a smooth sphere of radius 1737.4 km (great-circle distance). Hills and craters along the way are not added, so real surface travel is longer.</Caveat>
     </PanelShell>
   );

@@ -1,65 +1,113 @@
 "use client";
-// 教程：几步卡片，第一次打开产品页时自动出现一次（记在浏览器本地，读写失败就当没看过）。
-import { useEffect, useState } from "react";
-
-const STEPS = [
-  { title: "Welcome to Lunar Quest", body: "Explore the whole Moon in 4K, built from NASA Lunar Reconnaissance Orbiter data, and find a good place to land." },
-  { title: "2D map and 3D globe", body: "The 2D map is the default: drag to pan (it wraps all the way round) and scroll or pinch to zoom. Switch to 3D at the top right, then drag to spin the Moon and scroll to fly closer." },
-  { title: "Time, Sun and shadows", body: "Use the timeline at the bottom: drag it or press play. The Sun moves to its real position for that time, so the day–night line and the shadows cast by mountains and crater rims move with it. Shadows always point away from the Sun." },
-  { title: "Stand anywhere", body: "Click any spot on the 2D or 3D map to land there in first person. Drag to look around a full 360°, scroll to rise, and watch the shadows change as you move the timeline. “Back to map” returns." },
-  { title: "Find and pick sites", body: "Open the Lunar Quest button at the top left. Search Location finds named craters or coordinates. Select Landing Site saves a marker wherever you click. Measure Distance adds up a path between clicks." },
-  { title: "Analyse and compare", body: "Terrain & Elevation, Solar Illumination, Temperature, Water Ice Potential, Surface Slope and Site Suitability each colour the map and show a legend. Compare Locations puts your saved sites side by side, and Export Results downloads them. Layers marked “model” are estimates, not measurements." },
-];
-
-const SEEN_KEY = "lunar-quest:tutorial-seen";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { ToolIcon } from "./tool-menu";
+import { TOUR_SEEN_KEY, TOUR_STEPS } from "./tour-steps";
 
 export function useFirstVisitTutorial(open: () => void) {
   useEffect(() => {
-    try {
-      if (localStorage.getItem(SEEN_KEY)) return;
-      localStorage.setItem(SEEN_KEY, "1");
-    } catch {
-      // 隐私模式等情况下存储不可用：不影响使用，照常显示教程
-    }
+    try { if (localStorage.getItem(TOUR_SEEN_KEY)) return; } catch { /* Storage is optional. */ }
     open();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- 只在首次挂载时判断
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 }
-
+interface Box { left: number; top: number; width: number; height: number }
 export function TutorialOverlay({ onClose }: { onClose: () => void }) {
   const [step, setStep] = useState(0);
-  const last = step === STEPS.length - 1;
-
+  const [box, setBox] = useState<Box | null>(null);
+  const [position, setPosition] = useState({ left: 16, top: 160, maxHeight: 600 });
+  const cardRef = useRef<HTMLDivElement>(null);
+  const nextRef = useRef<HTMLButtonElement>(null);
+  const closeRef = useRef(onClose); closeRef.current = onClose;
+  const current = TOUR_STEPS[step];
+  const last = step === TOUR_STEPS.length - 1;
+  const finish = () => {
+    try { localStorage.setItem(TOUR_SEEN_KEY, "1"); } catch { /* Still close when storage is unavailable. */ }
+    closeRef.current();
+  };
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+    const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    nextRef.current?.focus();
+    return () => { if (previous?.isConnected) previous.focus(); };
+  }, []);
+  useEffect(() => {
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") { event.preventDefault(); finish(); }
+      if (event.key === "ArrowRight" && !last) { event.preventDefault(); setStep((n) => n + 1); }
+      if (event.key === "ArrowLeft" && step > 0) { event.preventDefault(); setStep((n) => n - 1); }
+      if (event.key === "Tab") {
+        const buttons = [...(cardRef.current?.querySelectorAll<HTMLButtonElement>("button:not(:disabled)") ?? [])];
+        const first = buttons[0], end = buttons[buttons.length - 1];
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); end?.focus(); }
+        else if (!event.shiftKey && document.activeElement === end) { event.preventDefault(); first?.focus(); }
+      }
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, last]);
+  useLayoutEffect(() => {
+    const selector = current.target === "analysis" ? '[data-tour="science"], [data-tour="evaluate"]' : current.target ? `[data-tour="${current.target}"]` : null;
+    const targets = selector ? [...document.querySelectorAll<HTMLElement>(selector)] : [];
+    const originalTransforms = targets.map((target) => target.style.transform);
+    targets.forEach((target) => {
+      target.scrollIntoView({ block: "nearest", inline: "nearest" });
+      if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches && current.target !== "timeline") target.style.transform = "scale(1.12)";
+    });
+    const update = () => {
+      const bounds = targets.map((target) => target.getBoundingClientRect());
+      const leftEdge = Math.min(...bounds.map((b) => b.left)), topEdge = Math.min(...bounds.map((b) => b.top));
+      const ring = bounds.length ? { left: leftEdge - 7, top: topEdge - 7, width: Math.max(...bounds.map((b) => b.right)) - leftEdge + 14, height: Math.max(...bounds.map((b) => b.bottom)) - topEdge + 14 } : null;
+      setBox(ring);
+      const width = cardRef.current?.offsetWidth ?? Math.min(360, window.innerWidth - 32);
+      const height = cardRef.current?.offsetHeight ?? 370;
+      const viewportW = window.innerWidth, viewportH = window.innerHeight;
+      let left = (viewportW - width) / 2, top = (viewportH - height) / 2;
+      let maxHeight = viewportH - 32;
+      if (ring) {
+        if (viewportW >= 640 && ring.left + ring.width + width + 40 < viewportW) {
+          left = ring.left + ring.width + 22; top = ring.top - 30;
+        } else if (ring.top + ring.height + height + 32 < viewportH) {
+          left = ring.left + ring.width - width; top = ring.top + ring.height + 18;
+        } else if (ring.top - height - 18 >= 16) {
+          left = ring.left + ring.width - width; top = ring.top - height - 18;
+        } else {
+          const roomBelow = viewportH - ring.top - ring.height - 34;
+          if (roomBelow >= 240) { top = ring.top + ring.height + 18; maxHeight = roomBelow; }
+          else { top = viewportH - height - 18; }
+        }
+      }
+      setPosition({ left: Math.max(16, Math.min(left, viewportW - width - 16)), top: Math.max(16, Math.min(top, viewportH - Math.min(height, maxHeight) - 16)), maxHeight });
+    };
+    update();
+    const observer = new ResizeObserver(update);
+    targets.forEach((target) => observer.observe(target));
+    if (cardRef.current) observer.observe(cardRef.current);
+    window.addEventListener("resize", update);
+    window.addEventListener("scroll", update, true);
+    return () => {
+      targets.forEach((target, i) => { target.style.transform = originalTransforms[i]; });
+      observer.disconnect(); window.removeEventListener("resize", update); window.removeEventListener("scroll", update, true);
+    };
+  }, [current]);
 
   return (
-    <div className="absolute inset-0 z-30 grid place-items-center bg-black/55 p-4 backdrop-blur-sm" onClick={onClose}>
-      <div role="dialog" aria-modal="true" aria-labelledby="tutorial-title" onClick={(e) => e.stopPropagation()} className="w-full max-w-md rounded-3xl border border-white/10 bg-[#0b0f17]/95 p-6 text-white shadow-2xl shadow-black/70">
-        <p className="text-xs uppercase tracking-[0.2em] text-lime-300/80">
-          Tutorial · {step + 1} / {STEPS.length}
-        </p>
-        <h2 id="tutorial-title" className="mt-2 text-2xl font-semibold">{STEPS[step].title}</h2>
-        <p className="mt-3 leading-relaxed text-white/75">{STEPS[step].body}</p>
-        <div className="mt-6 flex items-center justify-between">
-          <div className="flex gap-1.5">
-            {STEPS.map((s, i) => (
-              <span key={s.title} className={`h-1.5 rounded-full transition-all ${i === step ? "w-6 bg-lime-300" : "w-1.5 bg-white/25"}`} />
-            ))}
-          </div>
-          <div className="flex gap-2">
-            {step > 0 && (
-              <button type="button" onClick={() => setStep(step - 1)} className="rounded-full px-4 py-2 text-sm text-white/70 hover:bg-white/10">
-                Back
-              </button>
-            )}
-            <button type="button" onClick={() => (last ? onClose() : setStep(step + 1))} className="rounded-full bg-lime-300 px-5 py-2 text-sm font-medium text-black hover:bg-lime-200">
-              {last ? "Start exploring" : "Next"}
-            </button>
-          </div>
+    <div className="fixed inset-0 z-50" role="presentation" onClick={finish}>
+      <div className="absolute inset-0 bg-black/20" />
+      {box ? <div aria-hidden="true" className="pointer-events-none fixed rounded-2xl border-2 border-lime-200 shadow-[0_0_0_9999px_rgba(0,0,0,0.67),0_0_30px_rgba(190,242,100,0.3)] motion-safe:transition-[left,top,width,height] motion-safe:duration-300" style={box} /> : <div className="absolute inset-0 bg-black/65" />}
+      <div ref={cardRef} onClick={(event) => event.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="tutorial-title" aria-describedby="tutorial-description" className="fixed max-h-[calc(100dvh-2rem)] w-[min(23rem,calc(100vw-2rem))] overflow-y-auto rounded-3xl border border-lime-200/25 lunar-glass bg-[#0b121d] p-5 text-white shadow-2xl shadow-black/70 sm:p-6" style={position}>
+        <div className="flex items-center justify-between gap-3">
+          <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-lime-200">Your lunar guide · {step + 1}/{TOUR_STEPS.length}</p>
+          {!last && <button type="button" onClick={finish} className="rounded-lg px-2 py-1 text-xs text-white/60 hover:bg-white/10 hover:text-white">Skip tour</button>}
+        </div>
+        <div className="mt-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-lime-300/30 bg-lime-300/10 text-lime-200"><ToolIcon path={current.icon} className="h-9 w-9" /></div>
+        <div aria-live="polite">
+          <h2 id="tutorial-title" className="mt-4 text-xl font-semibold tracking-tight">{current.title}</h2>
+          <p id="tutorial-description" className="mt-3 text-sm leading-relaxed text-slate-200">{current.body}</p>
+        </div>
+        <div aria-hidden="true" className="mt-5 flex gap-1">{TOUR_STEPS.map((s, i) => <span key={s.title} className={`h-1 flex-1 rounded-full ${i <= step ? "bg-lime-300" : "bg-white/10"}`} />)}</div>
+        <div className="mt-4 flex items-center justify-between gap-3">
+          <button type="button" onClick={() => setStep((n) => n - 1)} disabled={step === 0} className="rounded-xl px-3 py-2.5 text-sm text-white/70 hover:bg-white/10 disabled:invisible">Back</button>
+          <button ref={nextRef} type="button" onClick={() => last ? finish() : setStep((n) => n + 1)} className="rounded-xl bg-lime-300 px-5 py-2.5 text-sm font-semibold text-black hover:bg-lime-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lime-200">{last ? "Enjoy Lunar Quest" : "Next →"}</button>
         </div>
       </div>
     </div>

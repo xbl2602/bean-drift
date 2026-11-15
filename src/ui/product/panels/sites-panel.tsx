@@ -6,7 +6,8 @@ import type { SiteAnalyses } from "../analysis/use-point-analysis";
 import { formatLatLon, type LatLon } from "../moon-frames";
 import type { SavedSite } from "../overlay/annotations";
 import { MAX_SITES } from "../sites/use-saved-sites";
-import { Caveat, PanelButton, PanelShell } from "./panel-shell";
+import { SiteDataCard as SiteCard } from "./site-data-card";
+import { PanelButton, PanelShell } from "./panel-shell";
 
 export interface DraftSite extends LatLon {
   name: string;
@@ -74,7 +75,7 @@ export function SitesPanel(props: SitesPanelProps) {
       )}
 
       <div className="mt-4 flex items-baseline justify-between">
-        <h3 className="font-mono text-[10px] font-medium uppercase tracking-[0.22em] text-slate-400">Saved sites</h3>
+        <div><h3 className="font-mono text-[10px] font-medium uppercase tracking-[0.22em] text-slate-400">Saved sites</h3><p className="mt-1 text-[10px] text-slate-500">Stored in this browser</p></div>
         <span className="font-mono text-[11px] text-white/45">{sites.length}/{MAX_SITES}</span>
       </div>
       {sites.length === 0 ? (
@@ -96,64 +97,10 @@ export function SitesPanel(props: SitesPanelProps) {
       )}
 
       <div className="mt-3">
-        <PanelButton primary={!draft} onClick={props.onCompare} disabled={sites.length < 2}>
-          {sites.length < 2 ? "Compare (save 2 or more)" : `Compare ${sites.length} sites`}
-        </PanelButton>
+        <button type="button" onClick={props.onCompare} disabled={sites.length < 2} className="w-full rounded-xl bg-lime-300 px-3 py-3 text-sm font-semibold text-black transition hover:bg-lime-200 disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-slate-400">
+          {sites.length < 2 ? "Save 2 sites to compare" : `Compare ${sites.length} landing sites`}
+        </button>
       </div>
-      <Caveat>Saved sites stay in this browser only. Elevation and slope are NASA LOLA data; sunlit time, temperature, ice potential and score are model estimates.</Caveat>
     </PanelShell>
-  );
-}
-
-interface SiteCardProps {
-  tag: string;
-  name: string;
-  onName: (name: string) => void;
-  point: LatLon;
-  analysis: PointAnalysis | "error" | undefined;
-  actions: React.ReactNode;
-}
-
-function SiteCard({ tag, name, onName, point, analysis, actions }: SiteCardProps) {
-  return (
-    <section className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
-      <p className="font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-lime-300/85">{tag}</p>
-      <label className="mt-2 block text-[11px] text-white/50">
-        Name
-        <input
-          value={name}
-          maxLength={40}
-          onChange={(e) => onName(e.target.value)}
-          className="mt-0.5 block w-full rounded-lg border border-white/15 bg-white/5 px-2.5 py-1.5 text-sm font-medium text-white focus:border-lime-300/60 focus:outline-none"
-        />
-      </label>
-      <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-[13px]">
-        <Row label="Latitude" value={`${Math.abs(point.latDeg).toFixed(4)}° ${point.latDeg >= 0 ? "N" : "S"}`} />
-        <Row label="Longitude" value={`${Math.abs(point.lonDeg).toFixed(4)}° ${point.lonDeg >= 0 ? "E" : "W"}`} />
-        {analysis === "error" && <Row label="Details" value="unavailable (data could not be loaded)" />}
-        {analysis === undefined && <Row label="Details" value="loading…" />}
-        {analysis && analysis !== "error" && (
-          <>
-            <Row label="Elevation" value={`${analysis.heightM >= 0 ? "+" : ""}${analysis.heightM.toFixed(0)} m`} />
-            <Row label="Slope" value={`${analysis.slopeDeg.toFixed(1)}°`} />
-            <Row label="Sunlit time" value={`${(analysis.illuminationFraction * 100).toFixed(0)}%`} />
-            <Row label="Temperature now" value={`${analysis.temperatureNowK.toFixed(0)} K (${(analysis.temperatureNowK - 273.15).toFixed(0)}°C)`} />
-            <Row label="Ice potential" value={analysis.iceIndex.toFixed(2)} />
-            <Row label="Earth in view" value={`${(analysis.earthVisibleFraction * 100).toFixed(0)}%`} />
-            <Row label="Suitability" value={analysis.suitability.toFixed(2)} />
-          </>
-        )}
-      </dl>
-      <div className="mt-3 flex flex-wrap gap-2">{actions}</div>
-    </section>
-  );
-}
-
-function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <>
-      <dt className="text-white/50">{label}</dt>
-      <dd className="font-mono text-white/90">{value}</dd>
-    </>
   );
 }
