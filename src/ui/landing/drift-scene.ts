@@ -28,6 +28,10 @@ const LOOK_AHEAD_PX = 110; // how much road is laid in front of the car
 const ENTER_S = 2.3;
 const HOLD_END_S = 4.0;
 const EXIT_S = 1.5;
+/** Animation time at which the car has stopped in the middle (the product page can be opened behind the cover from here on). */
+export const CAR_PARKED_AT_S = ENTER_S;
+/** Animation time at which the parked car starts to leave. The cover holds the car here until the product page is ready. */
+export const CAR_LEAVES_AT_S = HOLD_END_S;
 const GLASSES_UP = [2.7, 3.7] as const;
 const WINK = [3.0, 3.4] as const;
 

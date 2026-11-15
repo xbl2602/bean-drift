@@ -33,3 +33,21 @@
   from { opacity: 0; }
   to { opacity: 1; }
 }
+/* The cover fades away once the car has gone and the product page has drawn its first map. */
+.lq-drift-lifting {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.35s ease-out;
+}
+/* The car has left but the page is not ready yet: the label pulses so it is clear we are still working. */
+.lq-drift-label-waiting {
+  animation: lq-drift-pulse 1.1s ease-in-out infinite;
+}
+@keyframes lq-drift-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lq-drift-lifting { transition: none; }
+  .lq-drift-label-waiting { animation: none; }
+}

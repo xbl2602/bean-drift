@@ -23,6 +23,7 @@ import type { DraftSite } from "./panels/sites-panel";
 import { MAX_SITES, nextSiteName, useSavedSites } from "./sites/use-saved-sites";
 import { TimelineBar } from "./timeline/timeline-bar";
 import { ViewControls, type MapMode } from "./view-controls";
+import { useAnnounceMapReady } from "./use-announce-map-ready";
 import { DEFAULT_APP_MODE, rememberAppMode, rememberedAppMode, type AppMode } from "./modes/app-modes";
 import { FindDataMode } from "./modes/find-data-mode";
 import type { HistoricLandingSite } from "./modes/historic-landing-sites";
@@ -84,6 +85,7 @@ export function LunarQuestApp() {
   const hoverAnalysis = useHoverAnalysis(layerPanelOpen && !standingAt ? hover : null, timeMs, layers.weights);
 
   useFirstVisitTutorial(() => setActiveTool("tutorial"));
+  useAnnounceMapReady(loading, error); // 首页过场动画等这个信号才揭幕
   useEffect(() => {
     if (!notice) return;
     const timer = setTimeout(() => setNotice(null), 3500);
