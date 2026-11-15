@@ -26,15 +26,15 @@ import { ViewControls, type MapMode } from "./view-controls";
 import { useAnnounceMapReady } from "./use-announce-map-ready";
 import { DEFAULT_APP_MODE, rememberAppMode, rememberedAppMode, type AppMode } from "./modes/app-modes";
 import { FindDataMode } from "./modes/find-data-mode";
-import { filterLandingSites, LANDING_KIND_COLORS, type HistoricLandingSite, type LandingFilter } from "./modes/historic-landing-sites";
-import { LandingSitesMode, useHistoricLandingSites } from "./modes/landing-sites-mode";
+import { LandingSitesMode, usePresetSites } from "./modes/landing-sites-mode";
 import { ModeSwitch } from "./modes/mode-switch";
+import { filterLandingSites, LANDING_KIND_COLORS, nearestSite, type LandingFilter, type SiteEntry } from "./modes/preset-sites";
 
 /** 搜索结果的纬度超过这个值就切到 3D 显示。 */
 const POLAR_SEARCH_LAT_DEG = 75;
 /** "选点"光标：一个小图钉，尖端（16, 30）就是点击的位置。浏览器不支持时退回十字。 */
 const PIN_CURSOR = `url("data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><path d="M16 30 8 17.500a9.500 9.500 0 1 1 16 0Z" fill="#bef264" stroke="#0d1400" stroke-width="2"/><circle cx="16" cy="12" r="3.500" fill="#0d1400"/></svg>')}") 16 30, crosshair`;
-/** Landing Sites 模式：点在某个着陆点这么多度以内就算点中它。 */
+/** Landing Sites 模式：点在某个着陆点这么多度以内，就算点中离它最近的那个。 */
 const LANDING_PICK_RADIUS_DEG = 8;
 
 export function LunarQuestApp() {
@@ -72,8 +72,12 @@ export function LunarQuestApp() {
   const [draftSite, setDraftSite] = useState<DraftSite | null>(null);
   const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
   const { sites, addSite, removeSite, renameSite } = useSavedSites();
-  const landingState = useHistoricLandingSites(landingVisited || appMode === "landing-sites");
-  const landingSites = useMemo(() => filterLandingSites(landingState.status === "ready" ? landingState.sites : [], landingFilter), [landingState, landingFilter]);
+  const landingState = usePresetSites(landingVisited || appMode === "landing-sites");
+  // 地图上只画筛选后的着陆任务；南极地名挤在极点附近，全画出来会叠成一团，所以只在选中它时才画那一个
+  const landingSites = useMemo(
+    () => filterLandingSites(landingState.status === "ready" ? landingState.sites : [], landingFilter).filter((site) => site.kind === "landing-site" || site.id === landingSiteId),
+    [landingState, landingFilter, landingSiteId],
+  );
   const exploring = appMode === "explore";
   // AI 工具和设置在三个模式里都能开，面板都在右边
   const rightToolOpen = activeTool === "ai" || activeTool === "settings";
@@ -175,7 +179,7 @@ export function LunarQuestApp() {
     if (activeTool === "settings") closeTool();
     else selectTool("settings");
   };
-  const selectLandingSite = (site: HistoricLandingSite) => {
+  const selectLandingSite = (site: SiteEntry) => {
     if (rightToolOpen) setActiveTool(null); // 讲解面板和 AI / 设置面板都在右边，点了着陆点就看讲解
     setLandingSiteId(site.id);
     // 不强制切 3D：用户在 2D 平面图里点着陆点，就留在 2D，平面图自己会居中到这个点（3D 球则飞过去）
@@ -193,7 +197,7 @@ export function LunarQuestApp() {
   };
   const handlePick = (point: LatLon) => {
     if (appMode === "landing-sites") {
-      const near = landingSites.find((site) => Math.abs(site.latDeg - point.latDeg) < LANDING_PICK_RADIUS_DEG && Math.abs(normalizeLonDeg(site.lonDeg - point.lonDeg)) < LANDING_PICK_RADIUS_DEG);
+      const near = nearestSite(landingSites, point, LANDING_PICK_RADIUS_DEG);
       if (near) selectLandingSite(near);
       return;
     }
@@ -250,7 +254,7 @@ export function LunarQuestApp() {
   const annotations = useMemo<MapAnnotations>(() => {
     // 每个模式只画自己的标记：着陆点模式画任务着陆点，查数据模式画查询的位置
     if (appMode === "landing-sites") {
-      return { sites: landingSites.map((site) => ({ id: site.id, name: site.mission, latDeg: site.latDeg, lonDeg: site.lonDeg, createdAt: site.landedUtc, markerColor: LANDING_KIND_COLORS[site.kind] })), measurePoints: [], searchPin: null, selectedSiteId: landingSiteId };
+      return { sites: landingSites.map((site) => ({ id: site.id, name: site.label, latDeg: site.latDeg, lonDeg: site.lonDeg, createdAt: site.landedUtc ?? "", markerColor: site.crew ? LANDING_KIND_COLORS[site.crew] : undefined })), measurePoints: [], searchPin: null, selectedSiteId: landingSiteId };
     }
     if (appMode === "find-data") return { sites: [], measurePoints: [], searchPin: findTarget };
     return { sites, measurePoints, searchPin: searchTarget, draftSite: draftSite ? { latDeg: draftSite.latDeg, lonDeg: draftSite.lonDeg, label: draftSite.name || "New marker" } : null, selectedSiteId };
