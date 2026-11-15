@@ -1,6 +1,7 @@
 <div align="center">
 
-![Bean Drift Banner](https://capsule-render.vercel.app/api?type=venom&color=0:0b0f17,55:1a2b30,100:a3e635&height=210&section=header&text=BEAN%20DRIFT&fontSize=62&fontColor=eef4ee&desc=%E6%9C%88%E7%90%83%E7%9D%80%E9%99%86%E7%82%B9%E5%AF%BC%E8%88%AA%E4%BB%AA%20%C2%B7%203D%2F2D%2F%E7%AC%AC%E4%B8%80%E4%BA%BA%E7%A7%B0%20%C2%B7%20%E5%8F%AF%E8%A7%86%E5%8C%96%20AI%20%C2%B7%20MCP&descSize=17&descAlignY=73)
+<h1>BEAN DRIFT</h1>
+<p><strong>月球着陆点导航仪 · 3D/2D/第一人称 · 可视化 AI · MCP</strong></p>
 
 <a href="https://bean-drift.vercel.app/product">
   <img src="docs/assets/bean-drift-mascot.svg" alt="Bean Drift 三幕动画：宇航员、着陆器、卫星与月球车，流星间歇划过" width="740" />
@@ -8,7 +9,12 @@
 
 <p><em>认识向导 → 选择着陆点 → 探索周围地形。点击进入月球导航。</em></p>
 
-[![Typing SVG](https://readme-typing-svg.demolab.com?font=JetBrains+Mono&weight=600&size=15&duration=2800&pause=900&color=A3E635&background=0B151D00&center=true&vCenter=true&width=760&lines=%3E+Ask+AI%3A+%2218.12%C2%B0N+49.80%C2%B0E+%E9%99%84%E8%BF%91%E6%9C%89%E4%BB%80%E4%B9%88%E9%99%A8%E7%9F%B3%E5%9D%91%E5%92%8C%E5%9C%B0%E6%A0%87%EF%BC%9F%22;%3E+%E5%AE%9E%E6%97%B6%E7%94%9F%E6%88%90+300+km+IAU+%E9%9B%B7%E8%BE%BE%E7%A4%BA%E6%84%8F%E5%9B%BE+%2B+360%C2%B0+%E5%A4%A9%E9%99%85%E7%BA%BF%E5%9B%BE;%3E+%E7%82%B9%E5%87%BB+%231+Dorsum+Oppel+%E2%9E%94+3D%2F2D+%E6%9C%88%E7%90%83%E8%A7%86%E8%A7%92%E7%AB%8B%E5%8D%B3%E6%97%8B%E8%BD%AC%E5%AE%9A%E4%BD%8D;%3E+%E4%B8%80%E9%94%AE%E5%88%87%E6%8D%A2%E6%9C%88%E9%9D%A2%E7%AC%AC%E4%B8%80%E4%BA%BA%E7%A7%B0%E8%A7%86%E8%A7%92%E7%8E%AF%E8%A7%86%E7%9C%9F%E5%AE%9E%E5%9C%B0%E5%BD%A2)](https://bean-drift.vercel.app/product)
+<a href="https://bean-drift.vercel.app/product">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://readme-typing-svg.demolab.com?font=JetBrains+Mono&amp;weight=600&amp;size=15&amp;duration=2800&amp;pause=900&amp;color=A3E635&amp;background=0B151D00&amp;center=true&amp;vCenter=true&amp;width=760&amp;lines=%3E+Ask+AI%3A+%2218.12%C2%B0N+49.80%C2%B0E+%E9%99%84%E8%BF%91%E6%9C%89%E4%BB%80%E4%B9%88%E9%99%A8%E7%9F%B3%E5%9D%91%E5%92%8C%E5%9C%B0%E6%A0%87%EF%BC%9F%22;%3E+%E5%AE%9E%E6%97%B6%E7%94%9F%E6%88%90+300+km+IAU+%E9%9B%B7%E8%BE%BE%E7%A4%BA%E6%84%8F%E5%9B%BE+%2B+360%C2%B0+%E5%A4%A9%E9%99%85%E7%BA%BF%E5%9B%BE;%3E+%E7%82%B9%E5%87%BB+%231+Dorsum+Oppel+%E2%9E%94+3D%2F2D+%E6%9C%88%E7%90%83%E8%A7%86%E8%A7%92%E7%AB%8B%E5%8D%B3%E6%97%8B%E8%BD%AC%E5%AE%9A%E4%BD%8D;%3E+%E4%B8%80%E9%94%AE%E5%88%87%E6%8D%A2%E6%9C%88%E9%9D%A2%E7%AC%AC%E4%B8%80%E4%BA%BA%E7%A7%B0%E8%A7%86%E8%A7%92%E7%8E%AF%E8%A7%86%E7%9C%9F%E5%AE%9E%E5%9C%B0%E5%BD%A2" />
+    <img src="https://readme-typing-svg.demolab.com?font=JetBrains+Mono&amp;weight=600&amp;size=15&amp;duration=2800&amp;pause=900&amp;color=3F6212&amp;background=0B151D00&amp;center=true&amp;vCenter=true&amp;width=760&amp;lines=%3E+Ask+AI%3A+%2218.12%C2%B0N+49.80%C2%B0E+%E9%99%84%E8%BF%91%E6%9C%89%E4%BB%80%E4%B9%88%E9%99%A8%E7%9F%B3%E5%9D%91%E5%92%8C%E5%9C%B0%E6%A0%87%EF%BC%9F%22;%3E+%E5%AE%9E%E6%97%B6%E7%94%9F%E6%88%90+300+km+IAU+%E9%9B%B7%E8%BE%BE%E7%A4%BA%E6%84%8F%E5%9B%BE+%2B+360%C2%B0+%E5%A4%A9%E9%99%85%E7%BA%BF%E5%9B%BE;%3E+%E7%82%B9%E5%87%BB+%231+Dorsum+Oppel+%E2%9E%94+3D%2F2D+%E6%9C%88%E7%90%83%E8%A7%86%E8%A7%92%E7%AB%8B%E5%8D%B3%E6%97%8B%E8%BD%AC%E5%AE%9A%E4%BD%8D;%3E+%E4%B8%80%E9%94%AE%E5%88%87%E6%8D%A2%E6%9C%88%E9%9D%A2%E7%AC%AC%E4%B8%80%E4%BA%BA%E7%A7%B0%E8%A7%86%E8%A7%92%E7%8E%AF%E8%A7%86%E7%9C%9F%E5%AE%9E%E5%9C%B0%E5%BD%A2" alt="Ask AI about lunar landmarks, inspect visual charts, and explore the Moon" width="760" />
+  </picture>
+</a>
 
 [![English](https://img.shields.io/badge/Language-English-38bdf8?style=for-the-badge)](README.md)
 [![中文文档](https://img.shields.io/badge/语言-中文文档-a3e635?style=for-the-badge)](README.zh-CN.md)
@@ -64,7 +70,6 @@
 ## 🏗️ 1. 系统总体架构 (精简视图)
 
 ```mermaid
-%%{init: {'theme': 'dark', 'themeVariables': { 'primaryColor': '#1a2b30', 'primaryTextColor': '#eef4ee', 'primaryBorderColor': '#a3e635', 'lineColor': '#38bdf8'}}}%%
 flowchart LR
   User(("👩‍🚀 用户"))
   subgraph Workspace["交互式月面工作台 (/product)"]
@@ -95,7 +100,6 @@ flowchart LR
 当你在 **AI Tools** 面板点击附近地标编号（如 `1 Dorsum Oppel`）、雷达图圆点或坐标卡片时，主画布会自动定位到对应月面位置：
 
 ```mermaid
-%%{init: {'theme': 'dark', 'themeVariables': { 'primaryColor': '#1a2b30', 'primaryTextColor': '#eef4ee', 'primaryBorderColor': '#38bdf8', 'lineColor': '#a3e635'}}}%%
 flowchart TB
   Click["👆 在 AI 面板点击地标编号 #1 或坐标按钮"]
   Bridge["🎯 视角联动桥接 (onSelectLocation ➔ onGoTo)"]
@@ -118,7 +122,6 @@ flowchart TB
 AI 助手绝不凭空猜测数据，而是通过 **IAU 地名解析 ➔ 多步物理工具链调用 ➔ SVG 图形渲染 + 折叠简报** 完成回答：
 
 ```mermaid
-%%{init: {'theme': 'dark'}}%%
 sequenceDiagram
   autonumber
   actor U as 用户
@@ -200,9 +203,9 @@ npm run typecheck && npm test
 | 成员头像 | GitHub | 角色与职责 |
 | :---: | :--- | :--- |
 | <a href="https://github.com/xbl2602"><img src="https://github.com/xbl2602.png?size=120" width="56" style="border-radius:50%" alt="xbl2602" /></a> | [**@xbl2602**](https://github.com/xbl2602) | **后端主架构 + 项目经理** —— 核心月球物理计算、LOLA 数据管线、REST API 与 `/mcp` 服务 |
-| <a href="https://github.com/louis068"><img src="https://github.com/louis068.png?size=120" width="56" style="border-radius:50%" alt="louis068" /></a> | [**@louis068**](https://github.com/louis068) | **后端与 AI 研发** —— 自主多步 AI 选址助手、IAU 地标雷达图、SVG 可视化卡片与 3D/2D 视角联动 |
+| <a href="https://github.com/louis068"><img src="https://github.com/louis068.png?size=120" width="56" style="border-radius:50%" alt="louis068" /></a> | [**@louis068**](https://github.com/louis068) | **AI 搜索、后端与文档** —— 自然语言搜索与多步月球工具调用；IAU 地标查询、可视化回答卡片及点击定位地图联动；工具输入校验与不可信上下文隔离；双语 README、架构图与动画展示 |
 | <a href="https://github.com/chanjy0806"><img src="https://github.com/chanjy0806.png?size=120" width="56" style="border-radius:50%" alt="chanjy0806" /></a> | [**@chanjy0806**](https://github.com/chanjy0806) | **前端研发 (Landing Page)** —— 月球低轨卫星 3D 场景与交互叙事首页 |
 | <a href="https://github.com/ShanLe1224"><img src="https://github.com/ShanLe1224.png?size=120" width="56" style="border-radius:50%" alt="ShanLe1224" /></a> | [**@ShanLe1224**](https://github.com/ShanLe1224) | **前端研发 (Product Page)** —— 3D 月球仪、2D 地图、月面第一人称视角与任务分析面板 |
-| <a href="https://github.com/leeziqi0531-debug"><img src="https://github.com/leeziqi0531-debug.png?size=120" width="56" style="border-radius:50%" alt="leeziqi0531-debug" /></a> | [**@leeziqi0531-debug**](https://github.com/leeziqi0531-debug) | **Pitch 视频与项目运营** —— 演示视频制作、路演叙事与全流程测试支持 |
+| <a href="https://github.com/leeziqi0531-debug"><img src="https://github.com/leeziqi0531-debug.png?size=120" width="56" style="border-radius:50%" alt="leeziqi0531-debug" /></a> | [**@leeziqi0531-debug**](https://github.com/leeziqi0531-debug) | **Pitch 视频、文档与项目运营** —— 演示视频制作、路演叙事、项目文档整理与全流程测试支持 |
 
 使用了 NASA LOLA、LROC NAC、NASA SVS CGI Moon Kit 与 IAU 公开数据；素材、数据和 AI 使用登记见 [docs/CREDITS.md](docs/CREDITS.md)。

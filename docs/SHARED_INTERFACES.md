@@ -274,3 +274,8 @@ POST /api/find-sites   { "maxSlopeDeg": 15, "maxLongestSunOutageH": 300, "latMax
 - **谁发**：产品页（`src/ui/product/use-announce-map-ready.ts`，在 `lunar-quest-app.tsx` 里调用一次）。第一次"加载完"（遮罩撤掉）**或出错**之后，再等两帧发一次（两帧是为了让第一幅月球画面已经画出去）。**出错也必须发**，否则车会一直停着等，直到用户点一下跳过。
 - **谁收**：过场动画（`src/ui/landing/product-transition.tsx`，挂在根布局 `app/layout.tsx`，所以换路由时它不会被卸载）。时间安排在 `src/ui/landing/handoff-timing.ts`，**没有任何写死的秒数**：车停稳时打开产品页；车要离场时如果事件还没来，车就停在原地等（多久都等，用户可以点一下跳过）；事件来了才开走；车开走后揭幕。
 - **改产品页启动流程的人要知道**：以后如果"第一幅地图画好"的时刻变了（比如换成别的加载方式），只要保证上面这个事件在合适的时刻发出，首页动画不用改。没有这个事件，车会一直停着等，直到用户点一下跳过。
+
+
+### Steep-slope search extension (2026-11-15)
+
+User-authorized shared change: find_sites now accepts optional minSlopeDeg (inclusive, 0–90 degrees), combined with maxSlopeDeg; min greater than max is invalid. rankBy highestSlope orders cell-average slopes descending, with descending grid index for ties. Defaults, geographic filters, separation and limits are unchanged. Applies to REST, MCP and agent through the shared schema. This is coarse-grid screening, not a physical cliff maximum.

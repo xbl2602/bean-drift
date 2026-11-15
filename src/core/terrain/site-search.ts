@@ -23,6 +23,7 @@ export interface SiteSearchMaps {
 }
 
 export interface SiteCriteria {
+  minSlopeDeg?: number;
   maxSlopeDeg?: number;
   minSunVisibleFraction?: number;
   minEarthVisibleFraction?: number;
@@ -35,7 +36,7 @@ export interface SiteCriteria {
   lonMaxDeg?: number;
 }
 
-export type SiteRankBy = "bothVisibleFraction" | "sunVisibleFraction" | "earthVisibleFraction" | "lowestSlope";
+export type SiteRankBy = "bothVisibleFraction" | "sunVisibleFraction" | "earthVisibleFraction" | "lowestSlope" | "highestSlope";
 
 export interface SiteMatch {
   latDeg: number;
@@ -82,6 +83,8 @@ function scoreOf(maps: SiteSearchMaps, index: number, rankBy: SiteRankBy): numbe
       return maps.sunFractionRaw[index];
     case "earthVisibleFraction":
       return maps.earthFractionRaw[index];
+    case "highestSlope":
+      return maps.slopeRaw[index];
     case "lowestSlope":
       return 65535 - maps.slopeRaw[index]; // 坡越小分越高
   }
@@ -120,6 +123,7 @@ export function searchSites(
   const totalCells = maps.width * maps.height;
   if (totalCells >= INDEX_RANGE) throw new RangeError("map is too large for the site search index");
 
+  const minSlopeRaw = rawLimit(criteria.minSlopeDeg, maps.slopeScale, -Infinity);
   const maxSlopeRaw = rawLimit(criteria.maxSlopeDeg, maps.slopeScale, Infinity);
   const minSunRaw = rawLimit(criteria.minSunVisibleFraction, maps.fractionScale, -Infinity);
   const minEarthRaw = rawLimit(criteria.minEarthVisibleFraction, maps.fractionScale, -Infinity);
@@ -141,6 +145,7 @@ export function searchSites(
       if (lon < lonMin || lon > lonMax) continue;
       const index = row * maps.width + col;
       if (
+        maps.slopeRaw[index] >= minSlopeRaw &&
         maps.slopeRaw[index] <= maxSlopeRaw &&
         maps.sunFractionRaw[index] >= minSunRaw &&
         maps.earthFractionRaw[index] >= minEarthRaw &&

@@ -10,6 +10,7 @@ const lonBound = (text: string) => z.number().min(-180).max(180).optional().desc
 
 export const findSitesInputSchema = z
   .object({
+    minSlopeDeg: z.number().min(0).max(90).optional().describe("Inclusive minimum cell-average slope in degrees; not landing-safety slope."),
     maxSlopeDeg: z.number().min(0).max(90).optional().describe("Only cells with a mean slope at or below this many degrees (the slope is a 0.25 degree cell mean, not a landing-safety slope)."),
     minSunVisibleFraction: fraction("Only cells where the Sun is visible at least this share of the year, 0 to 1."),
     minEarthVisibleFraction: fraction("Only cells where the Earth is visible at least this share of the year, 0 to 1."),
@@ -21,7 +22,7 @@ export const findSitesInputSchema = z
     lonMinDeg: lonBound("Western edge of the search area in degrees east, -180 to 180 (default -180). The area may not cross the 180 degree meridian."),
     lonMaxDeg: lonBound("Eastern edge of the search area in degrees east, -180 to 180 (default 180)."),
     rankBy: z
-      .enum(["bothVisibleFraction", "sunVisibleFraction", "earthVisibleFraction", "lowestSlope"])
+      .enum(["bothVisibleFraction", "sunVisibleFraction", "earthVisibleFraction", "lowestSlope", "highestSlope"])
       .default("bothVisibleFraction")
       .describe("How to order the results, best first. Default bothVisibleFraction (Sun and Earth visible at the same time)."),
     limit: z.number().int().min(1).max(20).default(10).describe("How many places to return, 1 to 20. Default 10."),
@@ -32,6 +33,7 @@ export const findSitesInputSchema = z
       .default(50)
       .describe("Returned places are at least this far apart, in km, so you do not get ten neighbouring cells. Default 50."),
   })
+  .refine((input) => (input.minSlopeDeg ?? 0) <= (input.maxSlopeDeg ?? 90), { path: ["minSlopeDeg"], message: "minSlopeDeg must not exceed maxSlopeDeg" })
   .refine((input) => (input.latMinDeg ?? -90) <= (input.latMaxDeg ?? 90), { path: ["latMinDeg"], message: "latMinDeg must not be greater than latMaxDeg" })
   .refine((input) => (input.lonMinDeg ?? -180) <= (input.lonMaxDeg ?? 180), { path: ["lonMinDeg"], message: "lonMinDeg must not be greater than lonMaxDeg" });
 

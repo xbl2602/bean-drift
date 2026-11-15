@@ -1,6 +1,7 @@
 <div align="center">
 
-![Bean Drift Banner](https://capsule-render.vercel.app/api?type=venom&color=0:0b0f17,55:1a2b30,100:a3e635&height=210&section=header&text=BEAN%20DRIFT&fontSize=62&fontColor=eef4ee&desc=Lunar%20Landing%20Site%20Navigator%20%C2%B7%203D%2F2D%20%C2%B7%20Visual%20AI%20%C2%B7%20MCP&descSize=17&descAlignY=73)
+<h1>BEAN DRIFT</h1>
+<p><strong>Lunar Landing Site Navigator · 3D/2D · Visual AI · MCP</strong></p>
 
 <a href="https://bean-drift.vercel.app/product">
   <img src="docs/assets/bean-drift-mascot.svg" alt="Bean Drift: astronaut, lander, satellite and rover in a three-scene animation with passing meteors" width="740" />
@@ -8,7 +9,12 @@
 
 <p><em>Meet your guide → choose a landing site → explore your surroundings.</em></p>
 
-[![Typing SVG](https://readme-typing-svg.demolab.com?font=JetBrains+Mono&weight=600&size=15&duration=2800&pause=900&color=A3E635&background=0B151D00&center=true&vCenter=true&width=760&lines=%3E+Ask+AI%3A+%2218.12%C2%B0N+49.80%C2%B0E+if+I+land+here+what+surrounds+me%3F%22;%3E+Render+300+km+IAU+Crater+Radar+%2B+360%C2%B0+Horizon+Chart+%2B+HUD+Brief;%3E+Click+%231+Dorsum+Oppel+%E2%9E%94+Fly+3D+Globe+%26+2D+Map+Directly+to+Target;%3E+Stand+on+the+Lunar+Surface+in+360%C2%B0+First-Person+View)](https://bean-drift.vercel.app/product)
+<a href="https://bean-drift.vercel.app/product">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://readme-typing-svg.demolab.com?font=JetBrains+Mono&amp;weight=600&amp;size=15&amp;duration=2800&amp;pause=900&amp;color=A3E635&amp;background=0B151D00&amp;center=true&amp;vCenter=true&amp;width=760&amp;lines=%3E+Ask+AI%3A+%2218.12%C2%B0N+49.80%C2%B0E+if+I+land+here+what+surrounds+me%3F%22;%3E+Render+300+km+IAU+Crater+Radar+%2B+360%C2%B0+Horizon+Chart+%2B+HUD+Brief;%3E+Click+%231+Dorsum+Oppel+%E2%9E%94+Fly+3D+Globe+%26+2D+Map+Directly+to+Target;%3E+Stand+on+the+Lunar+Surface+in+360%C2%B0+First-Person+View" />
+    <img src="https://readme-typing-svg.demolab.com?font=JetBrains+Mono&amp;weight=600&amp;size=15&amp;duration=2800&amp;pause=900&amp;color=3F6212&amp;background=0B151D00&amp;center=true&amp;vCenter=true&amp;width=760&amp;lines=%3E+Ask+AI%3A+%2218.12%C2%B0N+49.80%C2%B0E+if+I+land+here+what+surrounds+me%3F%22;%3E+Render+300+km+IAU+Crater+Radar+%2B+360%C2%B0+Horizon+Chart+%2B+HUD+Brief;%3E+Click+%231+Dorsum+Oppel+%E2%9E%94+Fly+3D+Globe+%26+2D+Map+Directly+to+Target;%3E+Stand+on+the+Lunar+Surface+in+360%C2%B0+First-Person+View" alt="Ask AI about lunar landmarks, inspect visual charts, and explore the Moon" width="760" />
+  </picture>
+</a>
 
 [![English](https://img.shields.io/badge/Language-English-a3e635?style=for-the-badge)](README.md)
 [![中文文档](https://img.shields.io/badge/语言-中文文档-38bdf8?style=for-the-badge)](README.zh-CN.md)
@@ -66,7 +72,6 @@
 A clean, four-part runtime architecture keeps credentials strictly on the server while sharing one deterministic lunar calculation core across all interfaces:
 
 ```mermaid
-%%{init: {'theme': 'dark', 'themeVariables': { 'primaryColor': '#1a2b30', 'primaryTextColor': '#eef4ee', 'primaryBorderColor': '#a3e635', 'lineColor': '#38bdf8'}}}%%
 flowchart LR
   User(("👩‍🚀 User"))
   subgraph Workspace["Interactive Web Workspace (/product)"]
@@ -97,7 +102,6 @@ flowchart LR
 When you ask the AI about a coordinate or click a numbered landmark (like `1 Dorsum Oppel`) inside the **AI Tools** schematic radar, the UI synchronizes directly with the Moon viewport:
 
 ```mermaid
-%%{init: {'theme': 'dark', 'themeVariables': { 'primaryColor': '#1a2b30', 'primaryTextColor': '#eef4ee', 'primaryBorderColor': '#38bdf8', 'lineColor': '#a3e635'}}}%%
 flowchart TB
   Click["👆 Click Landmark #1 or Coordinate in AI Panel"]
   Bridge["🎯 Camera Bridge (onSelectLocation ➔ onGoTo)"]
@@ -120,7 +124,6 @@ flowchart TB
 Unlike standard chatbots that guess coordinates or output long essays, Bean Drift's agent runs a strict **multi-step verification and visual rendering pipeline**:
 
 ```mermaid
-%%{init: {'theme': 'dark'}}%%
 sequenceDiagram
   autonumber
   actor U as User
@@ -215,9 +218,9 @@ npm run typecheck && npm test
 | Pilot | GitHub | Mission Role |
 | :---: | :--- | :--- |
 | <a href="https://github.com/xbl2602"><img src="https://github.com/xbl2602.png?size=120" width="56" style="border-radius:50%" alt="xbl2602" /></a> | [**@xbl2602**](https://github.com/xbl2602) | **Lead Backend Architect & Project Manager** — Core ephemeris, LOLA data pipeline, REST & MCP server |
-| <a href="https://github.com/louis068"><img src="https://github.com/louis068.png?size=120" width="56" style="border-radius:50%" alt="louis068" /></a> | [**@louis068**](https://github.com/louis068) | **Backend & AI Engineer** — Autonomous AI agent, IAU Gazetteer radar, SVG visuals & 3D/2D Click-to-Fly bridge |
+| <a href="https://github.com/louis068"><img src="https://github.com/louis068.png?size=120" width="56" style="border-radius:50%" alt="louis068" /></a> | [**@louis068**](https://github.com/louis068) | **AI Search, Backend & Documentation** — Natural-language search and multi-step lunar tools; IAU landmark lookup, visual answer cards and click-to-fly integration; tool-input validation and untrusted-context safeguards; bilingual README, architecture diagrams and animated showcase |
 | <a href="https://github.com/chanjy0806"><img src="https://github.com/chanjy0806.png?size=120" width="56" style="border-radius:50%" alt="chanjy0806" /></a> | [**@chanjy0806**](https://github.com/chanjy0806) | **Frontend Engineer (Landing)** — Interactive low-lunar-orbit satellite scene & onboarding storytelling |
 | <a href="https://github.com/ShanLe1224"><img src="https://github.com/ShanLe1224.png?size=120" width="56" style="border-radius:50%" alt="ShanLe1224" /></a> | [**@ShanLe1224**](https://github.com/ShanLe1224) | **Frontend Engineer (Product)** — 3D Globe, 2D Map, First-Person surface view & mission analysis panels |
-| <a href="https://github.com/leeziqi0531-debug"><img src="https://github.com/leeziqi0531-debug.png?size=120" width="56" style="border-radius:50%" alt="leeziqi0531-debug" /></a> | [**@leeziqi0531-debug**](https://github.com/leeziqi0531-debug) | **Pitch & Mission Operations** — Demo production, mission storytelling & QA verification |
+| <a href="https://github.com/leeziqi0531-debug"><img src="https://github.com/leeziqi0531-debug.png?size=120" width="56" style="border-radius:50%" alt="leeziqi0531-debug" /></a> | [**@leeziqi0531-debug**](https://github.com/leeziqi0531-debug) | **Pitch, Documentation & Mission Operations** — Demo production, mission storytelling, project documentation and QA verification |
 
 Built with public lunar datasets from **NASA LRO LOLA**, **LROC NAC**, **NASA SVS CGI Moon Kit**, and the **IAU/USGS Planetary Gazetteer**. Full attribution in [docs/CREDITS.md](docs/CREDITS.md).
