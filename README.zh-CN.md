@@ -229,10 +229,10 @@ npm run build
 
 | 成员头像 | GitHub | 角色与职责 |
 | :---: | :--- | :--- |
-| <a href="https://github.com/xbl2602"><img src="https://github.com/xbl2602.png?size=120" width="56" style="border-radius:50%" alt="xbl2602" /></a> | [**@xbl2602**](https://github.com/xbl2602) | **后端主架构 + 项目经理** —— 核心月球物理计算、LOLA 数据管线、REST API 与 `/mcp` 服务 |
-| <a href="https://github.com/louis068"><img src="https://github.com/louis068.png?size=120" width="56" style="border-radius:50%" alt="louis068" /></a> | [**@louis068**](https://github.com/louis068) | **后端与 AI 研发** —— 自主多步 AI 选址助手、IAU 地标雷达图、SVG 可视化卡片与 3D/2D 视角联动 |
-| <a href="https://github.com/chanjy0806"><img src="https://github.com/chanjy0806.png?size=120" width="56" style="border-radius:50%" alt="chanjy0806" /></a> | [**@chanjy0806**](https://github.com/chanjy0806) | **前端研发 (Landing Page)** —— 月球低轨卫星 3D 场景与交互叙事首页 |
-| <a href="https://github.com/ShanLe1224"><img src="https://github.com/ShanLe1224.png?size=120" width="56" style="border-radius:50%" alt="ShanLe1224" /></a> | [**@ShanLe1224**](https://github.com/ShanLe1224) | **前端研发 (Product Page)** —— 3D 月球仪、2D 地图、月面第一人称视角与任务分析面板 |
-| <a href="https://github.com/leeziqi0531-debug"><img src="https://github.com/leeziqi0531-debug.png?size=120" width="56" style="border-radius:50%" alt="leeziqi0531-debug" /></a> | [**@leeziqi0531-debug**](https://github.com/leeziqi0531-debug) | **Pitch 视频与项目运营** —— 演示视频制作、路演叙事与全流程测试支持 |
+| <a href="https://github.com/xbl2602"><img src="https://github.com/xbl2602.png?size=120" width="56" style="border-radius:50%" alt="xbl2602" /></a> | [**@xbl2602**](https://github.com/xbl2602) | **架构、数据与整合负责人** —— 月球计算与 NASA 地形流水线；南极地形、太阳能量估算及预设着陆点；REST/MCP 服务与演示；部署、性能修复与跨成员功能整合。 |
+| <a href="https://github.com/louis068"><img src="https://github.com/louis068.png?size=120" width="56" style="border-radius:50%" alt="louis068" /></a> | [**@louis068**](https://github.com/louis068) | **AI 搜索、后端与文档** —— 自然语言搜索、多步工具调用与陡坡搜索；IAU 地标查询、可视化回答与地图定位接入；输入校验和不可信上下文隔离；双语 README、架构图与动画横幅。 |
+| <a href="https://github.com/chanjy0806"><img src="https://github.com/chanjy0806.png?size=120" width="56" style="border-radius:50%" alt="chanjy0806" /></a> | [**@chanjy0806**](https://github.com/chanjy0806) | **首页体验与第一人称视觉** —— 轨道场景首页、滚动叙事、画廊与导航打磨；第一人称陨石坑及岩石细节、月面效果与阿波罗参考调色。 |
+| <a href="https://github.com/ShanLe1224"><img src="https://github.com/ShanLe1224.png?size=120" width="56" style="border-radius:50%" alt="ShanLe1224" /></a> | [**@ShanLe1224**](https://github.com/ShanLe1224) | **产品界面与对比体验** —— 月球工作台、2D/3D 地图控制与任务面板；选点及多点对比流程、时间轴交互、面板布局与自适应地图细节。 |
+| <a href="https://github.com/leeziqi0531-debug"><img src="https://github.com/leeziqi0531-debug.png?size=120" width="56" style="border-radius:50%" alt="leeziqi0531-debug" /></a> | [**@leeziqi0531-debug**](https://github.com/leeziqi0531-debug) | **视频剪辑与项目文档** —— 演示及路演视频剪辑；负责完整项目文档工作，包括 Google Drive 材料与语音记录资料整理。 |
 
 使用了 NASA LOLA、LROC NAC、NASA SVS CGI Moon Kit 与 IAU 公开数据；素材、数据和 AI 使用登记见 [docs/CREDITS.md](docs/CREDITS.md)。
