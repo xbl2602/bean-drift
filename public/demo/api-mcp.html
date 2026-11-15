@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Lunar API &amp; MCP · Live Demo</title>
+<style>
+  :root {
+    --bg: #080b12;
+    --ink: #dbe6f5;
+    --dim: #5d7189;
+    --line: #161f2e;
+    --mint: #3ee6b0;
+    --blue: #6cb2ff;
+    --amber: #ffc966;
+    --red: #ff7a7a;
+    --mono: "Cascadia Code", "JetBrains Mono", Consolas, Menlo, monospace;
+    --sans: "Segoe UI", system-ui, -apple-system, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { background: var(--bg); }
+  body {
+    color: var(--ink); font-family: var(--mono);
+    min-height: 100vh; padding: 0 clamp(18px, 5vw, 64px) 56px;
+    background: radial-gradient(900px 420px at 75% -10%, rgba(62, 230, 176, .07), transparent 65%),
+                radial-gradient(700px 380px at 8% 0%, rgba(108, 178, 255, .06), transparent 60%);
+    max-width: 1080px; margin: 0 auto;
+  }
+  a { color: var(--blue); text-decoration: none; }
+
+  header { display: flex; align-items: end; justify-content: space-between; gap: 24px; flex-wrap: wrap; padding: 46px 0 30px; }
+  .brand-k { color: var(--mint); font-size: 11px; letter-spacing: 3px; text-transform: uppercase; }
+  h1 { font-family: var(--sans); font-size: clamp(26px, 4.4vw, 38px); font-weight: 650; letter-spacing: -.5px; margin-top: 8px; }
+  .sub { color: var(--dim); font-size: 13px; margin-top: 8px; }
+  .sub b { color: var(--ink); font-weight: 600; }
+
+  /* judge verify card */
+  .verify { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; min-width: 330px; flex: 1; max-width: 480px; background: rgba(13, 19, 32, .55); }
+  .verify-t { font-size: 10.5px; letter-spacing: 2px; text-transform: uppercase; color: var(--dim); margin-bottom: 8px; }
+  .curl-row { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+  .curl-row:first-of-type { margin-top: 0; }
+  code.curl { flex: 1; font-size: 10.5px; color: var(--blue); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .copy { flex: none; font-size: 10.5px; padding: 5px 10px; border-radius: 5px; border: 1px solid var(--line); background: transparent; color: var(--dim); cursor: pointer; font-family: var(--mono); }
+  .copy:hover { border-color: var(--mint); color: var(--mint); }
+  .copy.ok { color: var(--mint); border-color: var(--mint); }
+
+  .runrow { display: flex; align-items: center; gap: 14px; margin: 6px 0 26px; flex-wrap: wrap; }
+  .run { font-family: var(--mono); cursor: pointer; border: 1px solid var(--mint); background: var(--mint); color: #04231a; font-weight: 700; font-size: 14px; padding: 12px 26px; border-radius: 999px; transition: background .15s; }
+  .run:hover:enabled { background: #5bf0c5; }
+  .run:disabled { opacity: .5; cursor: default; }
+  .runtip { color: var(--dim); font-size: 12px; }
+
+  .beats { border-top: 1px solid var(--line); }
+  .beat { padding: 22px 0; border-bottom: 1px solid var(--line); }
+  .beat-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .beat-n { color: var(--mint); font-size: 11px; letter-spacing: 2px; }
+  .beat-t { font-family: var(--sans); font-size: 16px; font-weight: 600; color: var(--ink); }
+  .beat-st { margin-left: auto; font-size: 11px; color: var(--dim); }
+  .beat-st.ok { color: var(--mint); }
+  .beat-st.err { color: var(--red); }
+  .beat-st.run { color: var(--amber); }
+  .req { color: var(--dim); font-size: 11.5px; margin-top: 10px; word-break: break-all; }
+  .req b { color: var(--blue); font-weight: 500; }
+  .cards { display: flex; gap: clamp(18px, 4vw, 44px); margin-top: 14px; flex-wrap: wrap; }
+  .card-v { font-size: clamp(20px, 3vw, 26px); font-weight: 700; color: var(--mint); font-variant-numeric: tabular-nums; }
+  .card-k { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--dim); margin-top: 3px; }
+  .beat-msg { color: var(--dim); font-size: 12px; margin-top: 10px; }
+
+  details { margin-top: 34px; }
+  summary { cursor: pointer; color: var(--dim); font-size: 13px; list-style: none; user-select: none; }
+  summary::before { content: "▸ "; color: var(--mint); }
+  details[open] summary::before { content: "▾ "; }
+  summary:hover { color: var(--ink); }
+  .console { margin-top: 18px; display: grid; grid-template-columns: minmax(280px, 5fr) minmax(300px, 6fr); gap: 14px; }
+  @media (max-width: 860px) { .console { grid-template-columns: 1fr; } }
+  .pane { border: 1px solid var(--line); border-radius: 10px; background: rgba(13, 19, 32, .55); overflow: hidden; }
+  .pane-head { display: flex; gap: 6px; padding: 9px 12px; border-bottom: 1px solid var(--line); }
+  .tab { font-family: var(--mono); font-size: 12px; padding: 6px 12px; border-radius: 6px; border: 1px solid transparent; background: transparent; color: var(--dim); cursor: pointer; }
+  .tab.active { color: var(--mint); border-color: var(--line); background: rgba(62, 230, 176, .06); }
+  .pane-body { padding: 12px; display: grid; gap: 10px; }
+  select { font-family: var(--mono); width: 100%; background: #0a1120; color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; font-size: 12.5px; }
+  textarea { font-family: var(--mono); width: 100%; background: #0a1120; color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 10px; font-size: 12px; min-height: 108px; resize: vertical; line-height: 1.55; }
+  textarea:focus, select:focus { outline: none; border-color: var(--blue); }
+  .send { font-family: var(--mono); cursor: pointer; border: 1px solid var(--mint); background: transparent; color: var(--mint); font-size: 12.5px; padding: 8px 16px; border-radius: 999px; font-weight: 600; }
+  .send:hover:enabled { background: rgba(62, 230, 176, .1); }
+  .send:disabled { opacity: .4; cursor: default; }
+  .meta { display: flex; gap: 14px; align-items: center; font-size: 11.5px; color: var(--dim); padding: 9px 12px; border-bottom: 1px solid var(--line); }
+  .st { font-weight: 700; }
+  .st.s2 { color: var(--mint); } .st.s4 { color: var(--amber); } .st.s5 { color: var(--red); }
+  .ms { color: var(--blue); }
+  pre.out { padding: 12px; margin: 0; font-size: 11.5px; line-height: 1.6; overflow: auto; max-height: 460px; white-space: pre; }
+  .j-key { color: #9fd0ff; } .j-str { color: #ffd9a0; } .j-num { color: #3ee6b0; } .j-bool { color: #ff9ecb; } .j-null { color: var(--dim); }
+
+  footer { margin-top: 40px; color: var(--dim); font-size: 11px; line-height: 1.7; }
+  .filenote { display: none; margin-top: 14px; color: var(--amber); font-size: 12px; }
+  body.file-origin .filenote { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <div class="brand-k">Lunar Landing Site Navigator</div>
+    <h1>One data core, any client.</h1>
+    <p class="sub">The <b>website</b>, the <b>REST API</b> and <b>MCP</b> answer from the same engine. Every result below is live.</p>
+  </div>
+  <div class="verify">
+    <div class="verify-t">Verify it from your own terminal</div>
+    <div class="curl-row">
+      <code class="curl" id="curl-rest"></code>
+      <button class="copy" data-copy="curl-rest">copy</button>
+    </div>
+    <div class="curl-row">
+      <code class="curl" id="curl-mcp"></code>
+      <button class="copy" data-copy="curl-mcp">copy</button>
+    </div>
+  </div>
+</header>
+
+<div class="runrow">
+  <button class="run" id="run-all">&#9654;&nbsp; Run the live demo</button>
+  <span class="runtip">3 calls, ~15 s &mdash; or click any row's title to replay it</span>
+</div>
+
+<div class="beats">
+  <div class="beat">
+    <div class="beat-head"><span class="beat-n">01</span><button class="beat-t" data-beat="1" style="all:unset;cursor:pointer">REST &mdash; conditions at Apollo 11</button><span class="beat-st" id="st-1">idle</span></div>
+    <div class="req" id="req-1"></div>
+    <div class="cards" id="cards-1"></div>
+    <div class="beat-msg" id="msg-1"></div>
+  </div>
+  <div class="beat">
+    <div class="beat-head"><span class="beat-n">02</span><button class="beat-t" data-beat="2" style="all:unset;cursor:pointer">MCP &mdash; an AI assistant asks the same thing</button><span class="beat-st" id="st-2">idle</span></div>
+    <div class="req" id="req-2"></div>
+    <div class="cards" id="cards-2"></div>
+    <div class="beat-msg" id="msg-2"></div>
+  </div>
+  <div class="beat">
+    <div class="beat-head"><span class="beat-n">03</span><button class="beat-t" data-beat="3" style="all:unset;cursor:pointer">REST &mdash; find landing sites near the south pole</button><span class="beat-st" id="st-3">idle</span></div>
+    <div class="req" id="req-3"></div>
+    <div class="cards" id="cards-3"></div>
+    <div class="beat-msg" id="msg-3"></div>
+  </div>
+</div>
+
+<details>
+  <summary>Try it yourself &mdash; edit the request, send it for real</summary>
+  <div class="console">
+    <div class="pane">
+      <div class="pane-head">
+        <button class="tab active" data-tab="rest">REST</button>
+        <button class="tab" data-tab="mcp">MCP</button>
+      </div>
+      <div class="pane-body" id="pane-rest">
+        <select id="rest-endpoint">
+          <option value="point">GET /api/point &middot; Apollo 11</option>
+          <option value="southpole">GET /api/point &middot; South Pole, Ridge A</option>
+          <option value="timeline">GET /api/timeline &middot; 30 h at the pole</option>
+          <option value="find-sites">POST /api/find-sites &middot; polar site search</option>
+          <option value="compare">POST /api/compare &middot; pole vs Apollo 11</option>
+          <option value="compare-dates">POST /api/compare-dates &middot; one site, 3 dates</option>
+          <option value="energy">POST /api/energy &middot; one lunar day</option>
+          <option value="presets">GET /api/presets &middot; all 46 sites</option>
+          <option value="health">GET /api/health</option>
+        </select>
+        <textarea id="rest-body" spellcheck="false"></textarea>
+        <div><button class="send" id="rest-send">Send</button></div>
+      </div>
+      <div class="pane-body" id="pane-mcp" style="display:none">
+        <select id="mcp-method">
+          <option value="tools/list">tools/list &middot; every read-only tool</option>
+          <option value="tools/call">tools/call &middot; get_point_conditions</option>
+          <option value="tools/call-sites">tools/call &middot; find_sites</option>
+          <option value="initialize">initialize &middot; handshake</option>
+          <option value="ping">ping</option>
+        </select>
+        <textarea id="mcp-params" spellcheck="false"></textarea>
+        <div><button class="send" id="mcp-send">Send to /mcp</button></div>
+      </div>
+    </div>
+    <div class="pane">
+      <div class="meta"><span class="st" id="res-status">&mdash;</span><span class="ms" id="res-ms"></span></div>
+      <pre class="out" id="res-out">// response</pre>
+    </div>
+  </div>
+</details>
+
+<footer>
+  NASA LOLA + LROC data, ephemeris checked against JPL Horizons &middot; stats cover 2030 &middot; <a href="/product">open the product &rarr;</a>
+</footer>
+<div class="filenote">You opened this page as a local file &mdash; the live calls need the site itself. Run <b>npm run dev</b> and open the /demo/api-mcp.html URL.</div>
+
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+
+const APOLLO = { latDeg: 0.67416, lonDeg: 23.47314 };
+const RIDGE_A = { latDeg: -89.71, lonDeg: 62.5 };
+const T12 = "2030-01-01T12:00:00Z";
+
+const REST_PRESETS = {
+  "point":        { method: "GET",  body: { ...APOLLO, time: T12 } },
+  "southpole":    { method: "GET",  body: { ...RIDGE_A, time: T12 } },
+  "timeline":     { method: "GET",  body: { ...RIDGE_A, time: "2030-01-01T00:00:00Z", durationH: 30, stepMin: 60 } },
+  "find-sites":   { method: "POST", body: { maxSlopeDeg: 10, latMaxDeg: -80, rankBy: "sunVisibleFraction", limit: 3 } },
+  "compare":      { method: "POST", body: { points: [RIDGE_A, APOLLO], time: T12 } },
+  "compare-dates":{ method: "POST", body: { points: [APOLLO], times: ["2030-01-01T12:00:00Z", "2030-04-01T12:00:00Z", "2030-07-01T12:00:00Z"] } },
+  "energy":       { method: "POST", body: { ...APOLLO, time: "2030-01-01T00:00:00Z", durationH: 708 } },
+  "presets":      { method: "GET",  body: {} },
+  "health":       { method: "GET",  body: {} },
+};
+const MCP_PRESETS = {
+  "tools/list":      { params: {} },
+  "tools/call":      { params: { name: "get_point_conditions", arguments: { ...APOLLO, time: T12 } } },
+  "tools/call-sites":{ params: { name: "find_sites", arguments: { maxSlopeDeg: 10, latMaxDeg: -80, rankBy: "sunVisibleFraction", limit: 3 } } },
+  "initialize":      { params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "lunar-demo", version: "1.0.0" } } },
+  "ping":            { params: {} },
+};
+const ENDPOINT_PATHS = {
+  "point": "/api/point", "southpole": "/api/point", "timeline": "/api/timeline",
+  "find-sites": "/api/find-sites", "compare": "/api/compare", "compare-dates": "/api/compare-dates",
+  "energy": "/api/energy", "presets": "/api/presets", "health": "/api/health",
+};
+
+/* judge verify box: live curl one-liners from this deployment */
+const site = location.protocol.startsWith("http") ? location.origin : "https://YOUR-DEPLOYMENT";
+$("curl-rest").textContent = 'curl "' + site + '/api/point?latDeg=0.67416&lonDeg=23.47314&time=' + T12 + '"';
+$("curl-mcp").textContent =
+  'curl -X POST "' + site + '/mcp" -H "Content-Type: application/json" -d \'{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}\'';
+document.querySelectorAll(".copy").forEach((btn) => {
+  btn.addEventListener("click", async () => {
+    const text = $(btn.dataset.copy).textContent;
+    try {
+      if (navigator.clipboard) await navigator.clipboard.writeText(text);
+      else { const ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove(); }
+      btn.textContent = "copied \u2713"; btn.classList.add("ok");
+      setTimeout(() => { btn.textContent = "copy"; btn.classList.remove("ok"); }, 1600);
+    } catch { btn.textContent = "select it"; }
+  });
+});
+if (location.protocol === "file:") document.body.classList.add("file-origin");
+
+/* JSON highlighter */
+function esc(s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+function highlight(jsonText) {
+  return esc(jsonText).replace(
+    /("(\\u[\dA-Fa-f]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false)\b|\bnull\b|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)/g,
+    (m) => {
+      let cls = "j-num";
+      if (/^"/.test(m)) cls = /:$/.test(m) ? "j-key" : "j-str";
+      else if (/true|false/.test(m)) cls = "j-bool";
+      else if (/null/.test(m)) cls = "j-null";
+      return '<span class="' + cls + '">' + m + "</span>";
+    }
+  );
+}
+const pretty = (v) => JSON.stringify(v, null, 2);
+
+/* response pane */
+function setResponse(status, ms, value) {
+  const st = $("res-status");
+  st.textContent = "HTTP " + status;
+  st.className = "st " + (status < 300 ? "s2" : status < 500 ? "s4" : "s5");
+  $("res-ms").textContent = ms == null ? "" : ms + " ms";
+  $("res-out").innerHTML = highlight(typeof value === "string" ? value : pretty(value));
+}
+async function callJSON(url, options) {
+  const t0 = performance.now();
+  const res = await fetch(url, options);
+  const ms = Math.round(performance.now() - t0);
+  const text = await res.text();
+  let body = text;
+  try { body = JSON.parse(text); } catch { /* keep raw */ }
+  return { res, ms, body };
+}
+
+/* REST console */
+let restMethod = "GET";
+function refreshRestPreset() {
+  const preset = REST_PRESETS[$("rest-endpoint").value];
+  restMethod = preset.method;
+  $("rest-body").value = pretty(preset.body);
+}
+function buildRestRequest() {
+  const path = ENDPOINT_PATHS[$("rest-endpoint").value];
+  let bodyObj;
+  try { bodyObj = JSON.parse($("rest-body").value); }
+  catch (e) { throw new Error("Request JSON is not valid: " + e.message); }
+  if (restMethod === "GET") {
+    const qs = new URLSearchParams(Object.entries(bodyObj).map(([k, v]) => [k, String(v)]));
+    return { url: path + "?" + qs.toString(), init: { method: "GET" }, show: "GET " + path + "?" + qs.toString() };
+  }
+  return {
+    url: path,
+    init: { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(bodyObj) },
+    show: "POST " + path + "  (body as shown)",
+  };
+}
+$("rest-send").addEventListener("click", async () => {
+  const btn = $("rest-send");
+  btn.disabled = true;
+  try {
+    const req = buildRestRequest();
+    setResponse("\u2026", null, "// waiting\u2026");
+    const { res, ms, body } = await callJSON(req.url, req.init);
+    setResponse(res.status, ms, body);
+  } catch (err) {
+    setResponse("ERR", null, String(err.message || err));
+  } finally { btn.disabled = false; }
+});
+$("rest-endpoint").addEventListener("change", refreshRestPreset);
+
+/* MCP console */
+function refreshMcpPreset() {
+  $("mcp-params").value = pretty(MCP_PRESETS[$("mcp-method").value].params);
+}
+async function sendMcp(method, params) {
+  setResponse("\u2026", null, "// waiting\u2026");
+  const { res, ms, body } = await callJSON("/mcp", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ jsonrpc: "2.0", id: "demo-" + Date.now(), method, params }),
+  });
+  setResponse(res.status, ms, body);
+  return body;
+}
+$("mcp-send").addEventListener("click", async () => {
+  const btn = $("mcp-send");
+  btn.disabled = true;
+  try {
+    const key = $("mcp-method").value;
+    const method = key === "tools/call-sites" ? "tools/call" : key;
+    let params;
+    try { params = JSON.parse($("mcp-params").value); }
+    catch (e) { throw new Error("Params JSON is not valid: " + e.message); }
+    await sendMcp(method, params);
+  } catch (err) {
+    setResponse("ERR", null, String(err.message || err));
+  } finally { btn.disabled = false; }
+});
+$("mcp-method").addEventListener("change", refreshMcpPreset);
+
+/* tabs */
+document.querySelectorAll(".tab").forEach((tab) => {
+  tab.addEventListener("click", () => {
+    document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
+    tab.classList.add("active");
+    const rest = tab.dataset.tab === "rest";
+    $("pane-rest").style.display = rest ? "" : "none";
+    $("pane-mcp").style.display = rest ? "none" : "";
+  });
+});
+
+/* number cards */
+function firstOf(obj) { for (const v of Object.values(obj || {})) if (v && typeof v === "object") return v; return null; }
+function pointCards(p) {
+  const s = p && p.sun, t = p && p.terrain, y = p && p.yearStats;
+  return [
+    s && s.elevationDeg != null ? { v: s.elevationDeg.toFixed(1) + "\u00B0", k: "sun elevation now" } : null,
+    t && t.heightM != null ? { v: Math.round(t.heightM) + " m", k: "terrain height" } : null,
+    y && y.sun && y.sun.longestOutageH != null ? { v: y.sun.longestOutageH + " h", k: "longest dark / yr" } : null,
+    y && y.sun && y.sun.visibleFraction != null ? { v: Math.round(y.sun.visibleFraction * 100) + "%", k: "year in sunlight" } : null,
+  ].filter(Boolean).slice(0, 4);
+}
+function siteCards(f) {
+  const list = f && f.sites, best = firstOf(list);
+  return [
+    Array.isArray(list) ? { v: String(list.length), k: "sites returned" } : null,
+    best ? { v: best.latDeg + "\u00B0 " + best.lonDeg + "\u00B0", k: "best cell" } : null,
+    best && best.slopeDeg != null ? { v: best.slopeDeg.toFixed(1) + "\u00B0", k: "its slope" } : null,
+    best && best.sunVisibleFraction != null ? { v: Math.round(best.sunVisibleFraction * 100) + "%", k: "its year in sun" } : null,
+  ].filter(Boolean);
+}
+function toolCard(reply) {
+  let n = 0, names = "";
+  try { n = reply.result.tools.length; names = reply.result.tools.map((t) => t.name).join("  ·  "); } catch {}
+  return n ? { count: n, names } : null;
+}
+function setCards(el, cards) {
+  el.innerHTML = "";
+  for (const c of cards) {
+    const box = document.createElement("div");
+    const v = document.createElement("div"); v.className = "card-v"; v.textContent = c.v;
+    const k = document.createElement("div"); k.className = "card-k"; k.textContent = c.k;
+    box.append(v, k);
+    el.appendChild(box);
+  }
+}
+function setSt(n, cls, text) { const el = $("st-" + n); el.className = "beat-st " + cls; el.textContent = text; }
+
+/* beats */
+async function beat1() {
+  setSt(1, "run", "calling\u2026"); $("cards-1").innerHTML = ""; $("msg-1").textContent = ""; $("req-1").innerHTML = "";
+  try {
+    const qs = new URLSearchParams(Object.entries(REST_PRESETS["point"].body).map(([k, v]) => [k, String(v)]));
+    const { res, ms, body } = await callJSON("/api/point?" + qs.toString(), { method: "GET" });
+    $("req-1").innerHTML = "<b>GET /api/point?" + esc(qs.toString().replace(/%3A/g, ":")) + "</b>";
+    if (res.ok) setCards($("cards-1"), pointCards(body));
+    $("msg-1").textContent = res.ok ? "HTTP 200 · " + ms + " ms" : "HTTP " + res.status;
+    setSt(1, res.ok ? "ok" : "err", res.ok ? "live \u2713" : "HTTP " + res.status);
+    return res.ok;
+  } catch (err) { setSt(1, "err", "failed"); $("msg-1").textContent = String(err.message || err); return false; }
+}
+
+async function beat2() {
+  setSt(2, "run", "calling\u2026"); $("cards-2").innerHTML = ""; $("msg-2").textContent = ""; $("req-2").innerHTML = "";
+  try {
+    const listed = await callJSON("/mcp", {
+      method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ jsonrpc: "2.0", id: "b2a", method: "tools/list", params: {} }),
+    });
+    const tools = toolCard(listed.body);
+    const called = await callJSON("/mcp", {
+      method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ jsonrpc: "2.0", id: "b2b", method: "tools/call", params: MCP_PRESETS["tools/call"].params }),
+    });
+    $("req-2").innerHTML = "<b>POST /mcp</b> \u2192 tools/list, then tools/call get_point_conditions";
+    const isError = called.body && called.body.result && called.body.result.isError;
+    if (tools) {
+      const cards = [{ v: String(tools.count), k: "read-only tools" }, ...(isError ? [] : (() => {
+        let inner = null;
+        try { inner = JSON.parse(firstOf(called.body.result.content).text); } catch {
+          if (called.body.result.structuredContent) inner = called.body.result.structuredContent;
+        }
+        return inner ? pointCards(inner) : [];
+      })())];
+      setCards($("cards-2"), cards);
+    }
+    $("msg-2").textContent = isError ? "tool error" : (tools ? "same engine as this page \u00B7 HTTP 200 · " + called.ms + " ms" : "HTTP " + called.res.status);
+    setSt(2, isError || !tools ? "err" : "ok", isError || !tools ? "error" : "live \u2713");
+    return !isError && !!tools;
+  } catch (err) { setSt(2, "err", "failed"); $("msg-2").textContent = String(err.message || err); return false; }
+}
+
+async function beat3() {
+  setSt(3, "run", "calling\u2026"); $("cards-3").innerHTML = ""; $("msg-3").textContent = ""; $("req-3").innerHTML = "";
+  try {
+    const bodyObj = REST_PRESETS["find-sites"].body;
+    const { res, ms, body } = await callJSON("/api/find-sites", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(bodyObj),
+    });
+    $("req-3").innerHTML = "<b>POST /api/find-sites</b> " + esc(JSON.stringify(bodyObj));
+    if (res.ok) setCards($("cards-3"), siteCards(body));
+    $("msg-3").textContent = res.ok ? "whole-Moon maps ranked \u00B7 HTTP 200 · " + ms + " ms" : "HTTP " + res.status;
+    setSt(3, res.ok ? "ok" : "err", res.ok ? "live \u2713" : "HTTP " + res.status);
+    return res.ok;
+  } catch (err) { setSt(3, "err", "failed"); $("msg-3").textContent = String(err.message || err); return false; }
+}
+
+const BEATS = { 1: beat1, 2: beat2, 3: beat3 };
+document.querySelectorAll("[data-beat]").forEach((b) => b.addEventListener("click", () => BEATS[b.dataset.beat]()));
+
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+$("run-all").addEventListener("click", async () => {
+  const btn = $("run-all");
+  btn.disabled = true;
+  [1, 2, 3].forEach((n) => { setSt(n, "", "idle"); $("cards-" + n).innerHTML = ""; $("msg-" + n).textContent = ""; $("req-" + n).innerHTML = ""; });
+  await beat1(); await wait(1300);
+  await beat2(); await wait(1300);
+  await beat3(); await wait(500);
+  btn.disabled = false;
+});
+
+refreshRestPreset();
+refreshMcpPreset();
+if (new URLSearchParams(location.search).has("autoplay")) $("run-all").click();
+</script>
+</body>
+</html>

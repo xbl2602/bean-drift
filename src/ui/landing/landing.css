@@ -549,6 +549,40 @@
   margin-right: auto;
 }
 
+/* ---------- Developer footer: API & MCP demo entry ---------- */
+
+.lq-dev-footer {
+  max-width: 78rem;
+  margin: 0 auto;
+  padding: 1.5rem clamp(1.25rem, 5vw, 4.5rem) 2.8rem;
+  display: flex;
+  align-items: baseline;
+  gap: 1.1rem;
+  flex-wrap: wrap;
+  font-family: var(--lq-mono);
+  font-size: 0.78rem;
+}
+
+.lq-dev-footer .lq-dev-label {
+  color: var(--lq-muted);
+  font-size: 0.66rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+}
+
+.lq-dev-footer a {
+  color: var(--lq-accent);
+  text-decoration: none;
+}
+
+.lq-dev-footer a:hover {
+  text-decoration: underline;
+}
+
+.lq-dev-footer .lq-dev-hint {
+  color: var(--lq-muted);
+}
+
 
 
 /* ---------- Small screens ---------- */
@@ -556,7 +590,8 @@
 @media (max-width: 760px) {
   .lq-topbar-note,
   .lq-scroll-hint,
-  .lq-rail {
+  .lq-rail,
+  .lq-dev-footer .lq-dev-hint {
     display: none;
   }
 

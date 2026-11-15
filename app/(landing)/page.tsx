@@ -43,6 +43,12 @@ export default function LandingPage() {
           </Link>
         </section>
       </main>
+      {/* 给开发者和评委的 API/MCP 演示入口（xbl2602 要求加，2026-11-15；改了 chanjy0806 的目录，PR 请她审） */}
+      <footer className="lq-dev-footer">
+        <span className="lq-dev-label">For developers</span>
+        <a href="/demo/api-mcp.html">REST API &amp; MCP — live demo</a>
+        <span className="lq-dev-hint">every number is computed live by the same engine as this site</span>
+      </footer>
     </div>
   );
 }
