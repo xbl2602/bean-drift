@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "tileDeg": 10,
+  "rows": 18,
+  "cols": 36,
+  "diameterUnitKm": 0.04,
+  "minDiameterKm": 1,
+  "craters": 1296796,
+  "tiles": 648,
+  "layout": "uint32 N; uint16[N] lat; uint16[N] lon (position inside the tile, 0..65535 over tileDeg); uint16[N] diameter (x diameterUnitKm); uint8[N] rim completeness (0..255); sorted biggest first",
+  "tileOrigin": "row 0 = 90N..80N, col 0 = 180W..170W",
+  "source": {
+    "name": "Robbins lunar crater database 2018 (USGS Astrogeology, Moon Crater Database v1 Robbins)",
+    "citation": "Robbins, S. J. (2019), A New Global Database of Lunar Impact Craters >1-2 km: 1. Crater Locations and Sizes, Comparisons With Published Databases, and Global Analysis, JGR Planets 124, 871-892, doi:10.1029/2018JE005592",
+    "url": "https://astrogeology.usgs.gov/search/map/moon_crater_database_v1_robbins"
+  }
+}

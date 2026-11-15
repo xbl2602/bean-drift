@@ -55,6 +55,8 @@ export function buildTerrainPatch(center: LatLon, field: HeightField, detail: Te
 
   const positions = new Float32Array(vertexCount * 3);
   const uvs = new Float32Array(vertexCount * 2);
+  // 顶点颜色：只有明暗（新坑的亮溅射物、老坑的暗坑底），乘在底图颜色上
+  const tones = new Float32Array(vertexCount * 3).fill(1);
   const p = new THREE.Vector3();
   const writeVertex = (index: number, point: LatLon, lonDeg: number, detailM: number) => {
     const heightM = field.heightAtM(point.latDeg, lonDeg) + detailM;
@@ -76,6 +78,11 @@ export function buildTerrainPatch(center: LatLon, field: HeightField, detail: Te
       const lonDeg = center.lonDeg + (((point.lonDeg - center.lonDeg + 540) % 360) - 180);
       const detailM = detail.heightM(Math.sin(bearingRad) * ringM, Math.cos(bearingRad) * ringM, cellM);
       writeVertex(1 + ring * SECTORS + s, point, lonDeg, detailM);
+      const tone = detail.albedoAt(Math.sin(bearingRad) * ringM, Math.cos(bearingRad) * ringM, cellM);
+      const at = (1 + ring * SECTORS + s) * 3;
+      tones[at] = tone;
+      tones[at + 1] = tone;
+      tones[at + 2] = tone * 0.985;
     }
   });
 
@@ -100,6 +107,7 @@ export function buildTerrainPatch(center: LatLon, field: HeightField, detail: Te
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
   geometry.setAttribute("uv", new THREE.BufferAttribute(uvs, 2));
+  geometry.setAttribute("color", new THREE.BufferAttribute(tones, 3));
   geometry.setIndex(new THREE.BufferAttribute(indices, 1));
   geometry.computeVertexNormals();
   return { chunks: splitIntoChunks(geometry, radii.length), groundHeightM, footOffsetM, surfaceYAt: (eastM, northM) => surfaceYOnGrid(positions, radii, eastM, northM) };
@@ -113,6 +121,7 @@ function splitIntoChunks(full: THREE.BufferGeometry, ringCount: number): THREE.B
   const position = full.getAttribute("position") as THREE.BufferAttribute;
   const normal = full.getAttribute("normal");
   const uv = full.getAttribute("uv");
+  const color = full.getAttribute("color");
   const fullIndex = full.getIndex()!.array as Uint32Array;
   const quadRings = ringCount - 1;
   const chunks: THREE.BufferGeometry[] = [];
@@ -134,6 +143,7 @@ function splitIntoChunks(full: THREE.BufferGeometry, ringCount: number): THREE.B
       chunk.setAttribute("position", position);
       chunk.setAttribute("normal", normal);
       chunk.setAttribute("uv", uv);
+      chunk.setAttribute("color", color);
       chunk.setIndex(new THREE.BufferAttribute(new Uint32Array(indexList), 1));
       chunk.boundingSphere = boundingSphereOfIndexed(position, indexList);
       chunks.push(chunk);

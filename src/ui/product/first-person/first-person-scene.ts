@@ -9,7 +9,9 @@ import { fetchTextureBlob } from "../preload/texture-blob-cache";
 import { azElToLocal, type LatLon } from "../moon-frames";
 import { skyConditionsAt } from "../sky-conditions";
 import { createStarfield, updateStarfield } from "../starfield";
+import { loadNearbyCraters, type RealCrater } from "./crater-catalog";
 import { createGroundMaterial } from "./ground-material";
+import { createRockField } from "./rock-field";
 import { loadHeightField } from "./height-tiles";
 import { createEarth, createSun, placeInSky, sizeEarth, SKY_DISTANCE_M } from "./sky-objects";
 import { createTerrainDetail } from "./terrain-detail";
@@ -18,6 +20,8 @@ import type { FeetPosition } from "./walk-motion";
 
 /** 地形块半径 200 km：站高 10 km 时地平线约在 186 km 处，仍在块内。 */
 export const PATCH_RADIUS_M = 200_000;
+/** 用真实撞击坑数据的范围：再远的坑，网格太粗，画不出来。 */
+export const REAL_CRATER_RADIUS_M = 30_000;
 const SUN_LIGHT_DISTANCE_M = 400_000;
 /** 阴影贴图覆盖范围 = 到地平线距离的这么多倍（上下限见下）。范围越小，近处阴影越清晰。 */
 const SHADOW_HORIZON_FACTOR = 3;
@@ -53,7 +57,8 @@ export function configureFirstPersonRenderer(renderer: THREE.WebGLRenderer) {
   renderer.setPixelRatio(1);
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   // 月面没有大气，阳光下的地面比 ACES 默认曝光亮得多；提高曝光，让低太阳角下的地面也看得清
-  renderer.toneMappingExposure = 1.8;
+  // 对照阿波罗 15 号的真实照片：阳光下的月壤是明亮的浅灰色，影子是纯黑，所以曝光要再高一些
+  renderer.toneMappingExposure = 2.4;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 }
@@ -67,14 +72,21 @@ export const OPENING_PITCH_DEG = -4;
 
 export async function buildFirstPersonScene(center: LatLon, renderer: THREE.WebGLRenderer): Promise<FirstPersonScene> {
   // 地面颜色只用 4K 底图：站在地上，一个像素对应的月面有好几百米，更细的底图在这里看不出区别
-  const [field, colorTexture] = await Promise.all([
+  const [field, colorTexture, realCraters] = await Promise.all([
     loadHeightField(center, PATCH_RADIUS_M),
     fetchTextureBlob(MOON_TEXTURES.color4k).then((blob) => decodeTexture(blob, true, renderer.capabilities.getMaxAnisotropy())),
+    // 真实撞击坑拿不到时（网络问题）不拦住整个场景，只是少了真实的坑
+    loadNearbyCraters(center, REAL_CRATER_RADIUS_M).catch((): RealCrater[] => []),
   ]);
-  const { chunks, groundHeightM, footOffsetM, surfaceYAt } = buildTerrainPatch(center, field, createTerrainDetail(center.latDeg, center.lonDeg), PATCH_RADIUS_M);
+  const detail = createTerrainDetail(center.latDeg, center.lonDeg, realCraters, REAL_CRATER_RADIUS_M);
+  const { chunks, groundHeightM, footOffsetM, surfaceYAt } = buildTerrainPatch(center, field, detail, PATCH_RADIUS_M);
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x000000);
+  // 地面上的石头：同一个地点每次撒得一样（种子由经纬度决定）
+  const rockSeed = (Math.round((center.latDeg + 90) * 1000) * 2654435761) ^ (Math.round((center.lonDeg + 180) * 1000) * 40503);
+  const rocks = createRockField(surfaceYAt, rockSeed);
+  scene.add(rocks.group);
   const ground = createGroundMaterial(colorTexture);
   for (const chunk of chunks) {
     const terrain = new THREE.Mesh(chunk, ground.material);
@@ -146,6 +158,7 @@ export async function buildFirstPersonScene(center: LatLon, renderer: THREE.WebG
     else eye.set(0, footOffsetM + eyeHeightM, 0);
     if (feet && (previousX !== eye.x || previousZ !== eye.z)) shadowDirty = true; // 人挪了，阴影贴图中心要跟着挪
     ground.setWalker(eye.x, eye.z);
+    rocks.update(eye.x, -eye.z);
     camera.position.copy(eye);
     camera.lookAt(azElToLocal(yawDeg, pitchDeg).add(eye));
     stars.position.copy(eye);
@@ -167,6 +180,7 @@ export async function buildFirstPersonScene(center: LatLon, renderer: THREE.WebG
     startGroundYM: footOffsetM,
     dispose: () => {
       ground.dispose();
+      rocks.dispose();
       // 阴影贴图挂在灯上，不随网格释放，要单独释放
       sunLight.dispose();
       scene.traverse((obj) => {
