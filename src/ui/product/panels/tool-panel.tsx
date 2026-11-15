@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 // 根据当前选中的工具显示对应的面板。新加工具时在这里接上。
 import type { PointAnalysis } from "../analysis/point-analysis";
 import type { SiteAnalyses } from "../analysis/use-point-analysis";
@@ -50,7 +50,7 @@ export function ToolPanel(props: ToolPanelProps) {
   const info = toolInfo(tool);
 
   if (tool === "tutorial") return <TutorialOverlay onClose={onClose} />;
-  if (tool === "ai") return <AiPanel onClose={onClose} />;
+  if (tool === "ai") return <AiPanel onGoTo={props.onGoTo} onClose={onClose} />;
   if (tool === "search") return <SearchPanel selected={props.searchTarget} onGoTo={props.onGoTo} onStandHere={props.onStandHere} onSaveSite={props.onSaveSite} onClose={onClose} />;
   if (tool === "site") {
     return (
@@ -96,3 +96,4 @@ export function ToolPanel(props: ToolPanelProps) {
   }
   return null;
 }
+
