@@ -4,6 +4,7 @@
 // 把鼠标移向屏幕左右边缘，视角就慢慢转过去。
 // 键盘或屏幕方向键可以在着陆点周围 2 km 内前后左右走动（walk-motion.ts、walk-pad.tsx）。
 // 画面按需重绘：位置（转头/走动/视点高度）和时间轴没变就不重画，阴影也只在需要时重算；
+// 右上角的相机按钮：把此刻看到的画面存成一张带说明的 PNG（photo-capture.ts）。
 // 画面至少按 2K 渲染（长边 2560 像素），默认 4K（长边 3840）；太阳和阴影跟着底部时间轴走。
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
@@ -15,6 +16,7 @@ import { skyConditionsAt } from "../sky-conditions";
 import { usePointerGestures } from "../use-pointer-gestures";
 import { CompassTape } from "./compass-tape";
 import { buildFirstPersonScene, configureFirstPersonRenderer, OPENING_PITCH_DEG, openingYawDeg, type FirstPersonScene } from "./first-person-scene";
+import { composePhoto, downloadBlob, photoFilename } from "./photo-capture";
 import { destination } from "./terrain-patch";
 import { WALK_LIMIT_M, WalkMotion } from "./walk-motion";
 import { useWalkInput, WalkPad } from "./walk-pad";
@@ -73,6 +75,16 @@ export function FirstPersonView({ point, timeMs, onExit, onLoadingChange, onErro
   const [zoomX, setZoomX] = useState(1);
   // 信息栏：默认收起（只露一行位置），点一下展开；它在右上角，不挡住画面
   const [infoOpen, setInfoOpen] = useState(false);
+  // 拍照：点按钮只是"提个请求"，由绘制循环在画完下一帧后读画布（见 tick）
+  const photoRequestRef = useRef(false);
+  const photoCaptionRef = useRef({ text: "", filename: "" });
+  const [photoNote, setPhotoNote] = useState<string | null>(null);
+  const [flash, setFlash] = useState(false);
+  useEffect(() => {
+    if (!photoNote) return;
+    const timer = setTimeout(() => setPhotoNote(null), 4000);
+    return () => clearTimeout(timer);
+  }, [photoNote]);
   const timeRef = useRef(timeMs);
   timeRef.current = timeMs;
   const [headingDeg, setHeadingDeg] = useState(initialYaw);
@@ -167,6 +179,7 @@ export function FirstPersonView({ point, timeMs, onExit, onLoadingChange, onErro
             setWalkInfo((prev) => (Math.abs(prev.eastM - feet.eastM) + Math.abs(prev.northM - feet.northM) + Math.abs(prev.groundShiftM - groundShiftM) < 0.3 ? prev : { eastM: feet.eastM, northM: feet.northM, groundShiftM }));
           }
           const timeMs = timeRef.current;
+          if (photoRequestRef.current) redraw = true; // 拍照要一帧全新的画面
           if (!redraw && v.yawDeg === drawn.yawDeg && v.pitchDeg === drawn.pitchDeg && v.eyeHeightM === drawn.eyeHeightM && timeMs === drawn.timeMs && feet.eastM === drawn.eastM && feet.northM === drawn.northM && feet.groundYM === drawn.groundYM) return; // 什么都没变：不画
           redraw = false;
           drawn = { yawDeg: v.yawDeg, pitchDeg: v.pitchDeg, eyeHeightM: v.eyeHeightM, timeMs, eastM: feet.eastM, northM: feet.northM, groundYM: feet.groundYM };
@@ -175,6 +188,17 @@ export function FirstPersonView({ point, timeMs, onExit, onLoadingChange, onErro
           if (built.updateLighting(v.yawDeg, dtS)) redraw = true; // 曝光还在渐变：下一帧接着画
           if (built.takeShadowDirty()) renderer.shadowMap.needsUpdate = true;
           renderer.render(built.scene, built.camera);
+          if (photoRequestRef.current) {
+            photoRequestRef.current = false;
+            const { text, filename } = photoCaptionRef.current;
+            composePhoto(renderer.domElement, text).then(
+              (blob) => {
+                downloadBlob(blob, filename);
+                setPhotoNote(`Photo saved: ${filename}`);
+              },
+              () => setPhotoNote("The picture could not be saved. Try again."),
+            );
+          }
         };
         tick();
       })
@@ -239,14 +263,38 @@ export function FirstPersonView({ point, timeMs, onExit, onLoadingChange, onErro
 
   const sunUp = conditions.sun.elevationDeg > 0;
   const earthUp = conditions.earth.elevationDeg > 0;
+  photoCaptionRef.current = {
+    text: `${formatLatLon(here)}  ·  ${new Date(timeMs).toISOString().slice(0, 16).replace("T", " ")} UTC  ·  Sun ${conditions.sun.elevationDeg.toFixed(1)}° above the horizon  ·  Lunar Quest`,
+    filename: photoFilename(here.latDeg, here.lonDeg, timeMs),
+  };
+  const takePhoto = () => {
+    photoRequestRef.current = true;
+    setFlash(true);
+    setTimeout(() => setFlash(false), 180);
+  };
   return (
     <>
+      {flash && <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-30 bg-white/70" />}
+      {photoNote && (
+        <p role="status" className="absolute bottom-28 left-1/2 z-30 max-w-[calc(100vw-2rem)] -translate-x-1/2 truncate rounded-full border border-white/15 bg-black/75 px-4 py-2 text-xs text-white lunar-glass backdrop-blur-md">
+          {photoNote}
+        </p>
+      )}
       <div ref={containerRef} tabIndex={0} role="region" aria-label="360 degree lunar surface view. Drag to look around, scroll to zoom; W, A, S, D or the arrow keys walk and turn; Escape returns to the map." className="absolute inset-0 cursor-grab touch-none select-none active:cursor-grabbing focus-visible:outline focus-visible:outline-2 focus-visible:outline-lime-300" />
       <CompassTape headingDeg={headingDeg} sunAzimuthDeg={sunUp ? conditions.sun.azimuthDeg : null} earthAzimuthDeg={earthUp ? conditions.earth.azimuthDeg : null} />
 
       {/* 右上角：返回、鼠标跟随开关，和可以收起/展开的信息栏（默认收起，不挡画面） */}
       <div className="pointer-events-none absolute right-4 top-[6.4rem] z-20 flex w-[min(21rem,calc(100vw-2rem))] flex-col items-end gap-2 sm:right-6 min-[1120px]:top-6">
         <div className="pointer-events-auto flex flex-wrap justify-end gap-2">
+          <button
+            type="button"
+            aria-label="Take a photo of this view"
+            title="Take a photo: saves what you see now as a PNG picture, with the place and time written on it."
+            onClick={takePhoto}
+            className="grid h-[2.6rem] w-[2.6rem] place-items-center rounded-full border border-white/15 bg-black/60 text-white lunar-glass backdrop-blur-md transition hover:bg-white/15 active:bg-lime-300 active:text-black"
+          >
+            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 8h3l1.6-2.4h6.8L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z" /><circle cx="12" cy="13" r="3.6" /></svg>
+          </button>
           <button
             type="button"
             aria-pressed={hoverLook}
@@ -317,7 +365,7 @@ export function FirstPersonView({ point, timeMs, onExit, onLoadingChange, onErro
         </div>
       </div>
 
-      <div className="absolute bottom-28 right-4 z-20 flex flex-col items-center gap-1.5 sm:right-6">
+      <div className="absolute bottom-28 right-4 z-20 flex flex-col items-center gap-1.5 sm:right-6 min-[1200px]:bottom-7">
         <WalkPad onPress={setPad} />
         <span className="hidden text-[10px] text-white/50 sm:block">W A S D · Shift to run</span>
       </div>

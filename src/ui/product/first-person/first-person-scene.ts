@@ -4,7 +4,7 @@
 import * as THREE from "three";
 import { decodeTexture } from "../imagery/decode-texture";
 import { MOON_RADIUS_M } from "../moon-assets";
-import { MOON_TEXTURES } from "../moon-texture-urls";
+import { MOON_TEXTURES, SKY_TEXTURES } from "../moon-texture-urls";
 import { fetchTextureBlob } from "../preload/texture-blob-cache";
 import { azElToLocal, type LatLon } from "../moon-frames";
 import { skyConditionsAt } from "../sky-conditions";
@@ -13,7 +13,8 @@ import { loadNearbyCraters, type RealCrater } from "./crater-catalog";
 import { createGroundMaterial } from "./ground-material";
 import { createRockField } from "./rock-field";
 import { loadHeightField } from "./height-tiles";
-import { createEarth, createSun, placeInSky, sizeEarth, SKY_DISTANCE_M } from "./sky-objects";
+import { createEarth, fallbackEarthTexture, orientEarth, sizeEarth } from "./earth-sky";
+import { createSun, placeInSky, SKY_DISTANCE_M } from "./sky-objects";
 import { createTerrainDetail } from "./terrain-detail";
 import { buildTerrainPatch } from "./terrain-patch";
 import type { FeetPosition } from "./walk-motion";
@@ -91,9 +92,11 @@ const R2D_LIGHT = 180 / Math.PI;
 
 export async function buildFirstPersonScene(center: LatLon, renderer: THREE.WebGLRenderer): Promise<FirstPersonScene> {
   // 地面颜色只用 4K 底图：站在地上，一个像素对应的月面有好几百米，更细的底图在这里看不出区别
-  const [field, colorTexture, realCraters] = await Promise.all([
+  const [field, colorTexture, earthTexture, realCraters] = await Promise.all([
     loadHeightField(center, PATCH_RADIUS_M),
     fetchTextureBlob(MOON_TEXTURES.color4k).then((blob) => decodeTexture(blob, true, renderer.capabilities.getMaxAnisotropy())),
+    // 天空里的地球贴图下不来时，不拦住整个场景：地球用一个单色的蓝球顶上
+    fetchTextureBlob(SKY_TEXTURES.earth4k).then((blob) => decodeTexture(blob, true, renderer.capabilities.getMaxAnisotropy())).catch(() => fallbackEarthTexture()),
     // 真实撞击坑拿不到时（网络问题）不拦住整个场景，只是少了真实的坑
     loadNearbyCraters(center, REAL_CRATER_RADIUS_M).catch((): RealCrater[] => []),
   ]);
@@ -126,7 +129,7 @@ export async function buildFirstPersonScene(center: LatLon, renderer: THREE.WebG
   scene.add(sunLight, sunLight.target, ambient, earthLight);
 
   const sun = createSun();
-  const earth = createEarth();
+  const earth = createEarth(earthTexture);
   const stars = createStarfield(SKY_DISTANCE_M * 1.2);
   scene.add(sun, earth, stars);
 
@@ -162,7 +165,8 @@ export async function buildFirstPersonScene(center: LatLon, renderer: THREE.WebG
     sunLight.visible = c.sun.elevationDeg > -1;
     placeInSky(sun, c.sun.azimuthDeg, c.sun.elevationDeg, eye);
     placeInSky(earth, c.earth.azimuthDeg, c.earth.elevationDeg, eye);
-    sizeEarth(earth, c.earth.angularRadiusDeg);
+    sizeEarth(earth, c.earth.angularRadiusDeg, SKY_DISTANCE_M);
+    orientEarth(earth, timeMs, center.latDeg, azElToLocal(c.earth.azimuthDeg, c.earth.elevationDeg), azElToLocal(c.sun.azimuthDeg, c.sun.elevationDeg));
     sun.visible = c.sun.elevationDeg > -1;
     earth.visible = c.earth.elevationDeg > -2;
     // 白天曝光下星星应该几乎看不见（阿波罗照片里就是这样）；太阳落下后再亮起来
@@ -244,6 +248,7 @@ export async function buildFirstPersonScene(center: LatLon, renderer: THREE.WebG
     startGroundYM: footOffsetM,
     dispose: () => {
       renderer.domElement.style.filter = "";
+      earthTexture.dispose();
       ground.dispose();
       rocks.dispose();
       // 阴影贴图挂在灯上，不随网格释放，要单独释放
