@@ -71,6 +71,8 @@ export function FirstPersonView({ point, timeMs, onExit, onLoadingChange, onErro
   const hoverLookRef = useRef(hoverLook);
   hoverLookRef.current = hoverLook;
   const [zoomX, setZoomX] = useState(1);
+  // 信息栏：默认收起（只露一行位置），点一下展开；它在右上角，不挡住画面
+  const [infoOpen, setInfoOpen] = useState(false);
   const timeRef = useRef(timeMs);
   timeRef.current = timeMs;
   const [headingDeg, setHeadingDeg] = useState(initialYaw);
@@ -240,58 +242,76 @@ export function FirstPersonView({ point, timeMs, onExit, onLoadingChange, onErro
       <div ref={containerRef} tabIndex={0} role="region" aria-label="360 degree lunar surface view. Drag to look around, scroll to zoom; W, A, S, D or the arrow keys walk and turn; Escape returns to the map." className="absolute inset-0 cursor-grab touch-none select-none active:cursor-grabbing focus-visible:outline focus-visible:outline-2 focus-visible:outline-lime-300" />
       <CompassTape headingDeg={headingDeg} sunAzimuthDeg={sunUp ? conditions.sun.azimuthDeg : null} earthAzimuthDeg={earthUp ? conditions.earth.azimuthDeg : null} />
 
-      <button
-        type="button"
-        aria-pressed={hoverLook}
-        title="Mouse look: the view follows the mouse. Move it up or down to look up or down, towards the left or right edge to turn."
-        onClick={() => setHoverLook((value) => !value)}
-        className={`absolute right-4 top-[4.4rem] z-20 rounded-full border px-5 py-2.5 text-sm font-medium lunar-glass backdrop-blur-md transition sm:right-6 sm:top-[5.4rem] ${hoverLook ? "border-lime-300/70 bg-lime-300/20 text-lime-100" : "border-white/15 bg-black/60 text-white hover:bg-white/15"}`}
-      >
-        {hoverLook ? "Mouse look: ON" : "Mouse look: off"}
-      </button>
-      <button
-        type="button"
-        onClick={onExit}
-        className="absolute right-4 top-4 z-20 rounded-full border border-white/15 bg-black/60 px-5 py-2.5 text-sm font-medium text-white lunar-glass backdrop-blur-md transition hover:bg-white/15 sm:right-6 sm:top-6"
-      >
-        ← Back to map
-      </button>
-
-      <div className="pointer-events-none absolute bottom-24 left-24 z-10">
-        <div className="pointer-events-auto max-h-[calc(100vh-11.5rem)] w-[min(21rem,calc(100vw-7rem))] overflow-y-auto rounded-xl border border-white/10 bg-black/55 p-4 text-sm lunar-glass backdrop-blur-md">
-          <p className="text-xs uppercase tracking-[0.2em] text-lime-300/80">Standing at</p>
-          <p className="mt-1 font-mono text-base text-white">{formatLatLon(here)}</p>
-          {walkedM >= 0.5 && (
-            <p className="mt-1 flex items-center gap-2 text-[11px] text-white/60">
-              <span>{`Walked ${walkedText} from the landing spot${walkedM > WALK_LIMIT_M - 5 ? " (edge of the walkable area)" : ""}`}</span>
-              <button type="button" onClick={backToStart} className="rounded-full border border-white/15 px-2 py-0.5 text-[10px] text-white/80 hover:bg-white/10">Back to start</button>
-            </p>
+      {/* 右上角：返回、鼠标跟随开关，和可以收起/展开的信息栏（默认收起，不挡画面） */}
+      <div className="pointer-events-none absolute right-4 top-[6.4rem] z-20 flex w-[min(21rem,calc(100vw-2rem))] flex-col items-end gap-2 sm:right-6 min-[1120px]:top-6">
+        <div className="pointer-events-auto flex flex-wrap justify-end gap-2">
+          <button
+            type="button"
+            aria-pressed={hoverLook}
+            title="Mouse look: the view follows the mouse. Move it up or down to look up or down, towards the left or right edge to turn."
+            onClick={() => setHoverLook((value) => !value)}
+            className={`rounded-full border px-5 py-2.5 text-sm font-medium lunar-glass backdrop-blur-md transition ${hoverLook ? "border-lime-300/70 bg-lime-300/20 text-lime-100" : "border-white/15 bg-black/60 text-white hover:bg-white/15"}`}
+          >
+            {hoverLook ? "Mouse look: ON" : "Mouse look: off"}
+          </button>
+          <button
+            type="button"
+            onClick={onExit}
+            className="rounded-full border border-white/15 bg-black/60 px-5 py-2.5 text-sm font-medium text-white lunar-glass backdrop-blur-md transition hover:bg-white/15"
+          >
+            ← Back to map
+          </button>
+        </div>
+        <div className="pointer-events-auto w-full overflow-hidden rounded-xl border border-white/10 bg-black/55 text-sm lunar-glass backdrop-blur-md">
+          <button
+            type="button"
+            aria-expanded={infoOpen}
+            aria-controls="first-person-info"
+            title={infoOpen ? "Fold this panel away to see more of the view" : "Show where you stand, the Sun and Earth, and power and contact"}
+            onClick={() => setInfoOpen((open) => !open)}
+            className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition hover:bg-white/5"
+          >
+            <span>
+              <span className="block text-[10px] uppercase tracking-[0.2em] text-lime-300/80">Standing at</span>
+              <span className="font-mono text-sm text-white">{formatLatLon(here)}</span>
+            </span>
+            <span aria-hidden="true" className="shrink-0 text-xs text-white/70">{infoOpen ? "▴ Hide" : "▾ Details"}</span>
+          </button>
+          {infoOpen && (
+            <div id="first-person-info" className="max-h-[calc(100vh-31.5rem)] min-h-[6rem] overflow-y-auto border-t border-white/10 p-4 min-[1120px]:max-h-[calc(100vh-26rem)]">
+              {walkedM >= 0.5 && (
+                <p className="mt-1 flex items-center gap-2 text-[11px] text-white/60">
+                  <span>{`Walked ${walkedText} from the landing spot${walkedM > WALK_LIMIT_M - 5 ? " (edge of the walkable area)" : ""}`}</span>
+                  <button type="button" onClick={backToStart} className="rounded-full border border-white/15 px-2 py-0.5 text-[10px] text-white/80 hover:bg-white/10">Back to start</button>
+                </p>
+              )}
+              <div className="mt-2 flex items-center gap-2 text-xs">
+                <button type="button" aria-pressed={render4k} title="Switch between 4K and 2K rendering" onClick={() => setRender4k((value) => !value)} className="rounded-full border border-lime-300/30 px-3 py-1 text-lime-200 hover:bg-white/10">
+                  {render4k ? "4K render" : "2K render"}
+                </button>
+                <span className="font-mono text-[10px] text-white/55">{renderSize}</span>
+              </div>
+              <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-[13px] text-white/80">
+                <dt className="text-white/50">Ground height</dt>
+                <dd className="font-mono">{groundHeightM === null ? "…" : `${((groundHeightM + walkInfo.groundShiftM) / 1000).toFixed(2)} km`}</dd>
+                <dt className="text-white/50">Sun</dt>
+                <dd className="font-mono">{`el ${conditions.sun.elevationDeg.toFixed(1)}°  az ${conditions.sun.azimuthDeg.toFixed(0)}°`}{sunUp ? "" : "  (night)"}</dd>
+                <dt className="text-white/50">Earth</dt>
+                <dd className="font-mono">{`el ${conditions.earth.elevationDeg.toFixed(1)}°  az ${conditions.earth.azimuthDeg.toFixed(0)}°`}{earthUp ? "" : "  (below horizon)"}</dd>
+                <dt className="text-white/50">Zoom</dt>
+                <dd className="font-mono">{`${zoomX.toFixed(1)}×`}</dd>
+              </dl>
+              <TerrainVisibilityPanel state={pointApi} />
+              <div className="mt-3 flex gap-2">
+                <LookButton label="Face the Sun" disabled={!sunUp} onClick={() => lookToward(conditions.sun.azimuthDeg, conditions.sun.elevationDeg)} />
+                <LookButton label="Face Earth" disabled={!earthUp} onClick={() => lookToward(conditions.earth.azimuthDeg, conditions.earth.elevationDeg)} />
+              </div>
+              <p className="mt-3 text-[11px] leading-snug text-white/45">
+                Drag to look around (full 360°), or switch on Mouse look at the top right and just move the mouse · W/S or ↑/↓ to walk, A/D to step sideways, ←/→ to turn, hold Shift to go faster (up to 2 km from the landing spot) · scroll to zoom in and out · Esc to return · use the timeline to move the Sun and shadows. Large terrain and shadows use NASA LOLA data (about 1.9 km
+                resolution). Craters of 1 km and wider are real ones from the Robbins lunar crater catalogue, at their real positions and sizes. Smaller craters, the scattered rocks and the soil grain are generated to match real lunar statistics, so they look right but are not measured. The Sun and Earth rows above are angles from a smooth sphere and ignore terrain blocking; the &quot;Power &amp; Earth contact&quot; block includes it and is for the landing spot.
+              </p>
+            </div>
           )}
-          <div className="mt-2 flex items-center gap-2 text-xs">
-            <button type="button" aria-pressed={render4k} title="Switch between 4K and 2K rendering" onClick={() => setRender4k((value) => !value)} className="rounded-full border border-lime-300/30 px-3 py-1 text-lime-200 hover:bg-white/10">
-              {render4k ? "4K render" : "2K render"}
-            </button>
-            <span className="font-mono text-[10px] text-white/55">{renderSize}</span>
-          </div>
-          <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-[13px] text-white/80">
-            <dt className="text-white/50">Ground height</dt>
-            <dd className="font-mono">{groundHeightM === null ? "…" : `${((groundHeightM + walkInfo.groundShiftM) / 1000).toFixed(2)} km`}</dd>
-            <dt className="text-white/50">Sun</dt>
-            <dd className="font-mono">{`el ${conditions.sun.elevationDeg.toFixed(1)}°  az ${conditions.sun.azimuthDeg.toFixed(0)}°`}{sunUp ? "" : "  (night)"}</dd>
-            <dt className="text-white/50">Earth</dt>
-            <dd className="font-mono">{`el ${conditions.earth.elevationDeg.toFixed(1)}°  az ${conditions.earth.azimuthDeg.toFixed(0)}°`}{earthUp ? "" : "  (below horizon)"}</dd>
-            <dt className="text-white/50">Zoom</dt>
-            <dd className="font-mono">{`${zoomX.toFixed(1)}×`}</dd>
-          </dl>
-          <TerrainVisibilityPanel state={pointApi} />
-          <div className="mt-3 flex gap-2">
-            <LookButton label="Face the Sun" disabled={!sunUp} onClick={() => lookToward(conditions.sun.azimuthDeg, conditions.sun.elevationDeg)} />
-            <LookButton label="Face Earth" disabled={!earthUp} onClick={() => lookToward(conditions.earth.azimuthDeg, conditions.earth.elevationDeg)} />
-          </div>
-          <p className="mt-3 text-[11px] leading-snug text-white/45">
-            Drag to look around (full 360°), or switch on Mouse look at the top right and just move the mouse · W/S or ↑/↓ to walk, A/D to step sideways, ←/→ to turn, hold Shift to go faster (up to 2 km from the landing spot) · scroll to zoom in and out · Esc to return · use the timeline to move the Sun and shadows. Large terrain and shadows use NASA LOLA data (about 1.9 km
-            resolution). Craters of 1 km and wider are real ones from the Robbins lunar crater catalogue, at their real positions and sizes. Smaller craters, the scattered rocks and the soil grain are generated to match real lunar statistics, so they look right but are not measured. The Sun and Earth rows above are angles from a smooth sphere and ignore terrain blocking; the &quot;Power &amp; Earth contact&quot; block includes it and is for the landing spot.
-          </p>
         </div>
       </div>
 
