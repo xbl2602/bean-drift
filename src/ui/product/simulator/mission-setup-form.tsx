@@ -4,7 +4,7 @@
 import type { ReactNode } from "react";
 import { useLocale, useT } from "../i18n/use-t";
 import { DateTimePicker } from "../timeline/date-time-picker";
-import { TimeWheel } from "../timeline/time-wheel";
+import { ChoiceWheel } from "./choice-wheel";
 import { BATTERY_CHOICES_WH, DURATION_CHOICES_DAYS, EARTH_ELEVATION_CHOICES, MAX_CREW, MISSION_TYPES, NUCLEAR_CHOICES_W, SOLAR_CHOICES_W, defaultConfig, operatingLoadW, survivalLoadW, type MissionConfig, type MissionTypeId } from "./mission-presets";
 import { formatEnergyKWh, formatPower } from "./mission-format";
 
@@ -78,19 +78,30 @@ export function MissionSetupForm({ config, onChange, mapTimeMs }: MissionSetupFo
       <Field label={t("sim.requirements")}>
         <div className="rounded-xl border border-white/10 bg-white/[0.03] p-2.5">
           <p className="mb-2 text-[11px] text-white/50">{t("sim.scrollToChoose")}</p>
-          <div className="grid grid-cols-3 gap-x-2 gap-y-3">
-            <TimeWheel label={t("sim.solar")} rows={3} value={config.solarW} values={wheelValues(SOLAR_CHOICES_W, config.solarW)} onChange={(w) => set({ solarW: Number(w) })} format={(w) => formatPower(locale, Number(w))} />
-            <TimeWheel label={t("sim.battery")} rows={3} value={config.batteryWh} values={wheelValues(BATTERY_CHOICES_WH, config.batteryWh)} onChange={(wh) => set({ batteryWh: Number(wh) })} format={(wh) => formatEnergyKWh(locale, Number(wh) / 1000)} />
-            <TimeWheel label={t("sim.nuclear")} rows={3} value={config.nuclearW} values={wheelValues(NUCLEAR_CHOICES_W, config.nuclearW)} onChange={(w) => set({ nuclearW: Number(w) })} format={(w) => (w === "0" ? t("sim.none") : formatPower(locale, Number(w)))} />
-            <TimeWheel
-              label={t("sim.earthLink")}
-              rows={3}
-              value={config.minEarthElevationDeg ?? ANY_HEIGHT}
-              values={EARTH_ELEVATION_CHOICES.map((deg) => (deg === null ? ANY_HEIGHT : String(deg)))}
-              onChange={(deg) => set({ minEarthElevationDeg: deg === ANY_HEIGHT ? null : Number(deg) })}
-              format={(deg) => (deg === ANY_HEIGHT ? t("sim.terrainOnly") : `${deg}°`)}
-            />
-            {config.crewed && <TimeWheel label={t("sim.crew")} rows={3} value={config.crew} values={CREW_CHOICES.map(String)} onChange={(n) => set({ crew: Number(n) })} format={(n) => n} />}
+          <div className="space-y-1.5">
+            <ChoiceRow label={t("sim.solar")}>
+              <ChoiceWheel label={t("sim.solar")} value={config.solarW} values={wheelValues(SOLAR_CHOICES_W, config.solarW)} onChange={(w) => set({ solarW: Number(w) })} format={(w) => formatPower(locale, Number(w))} />
+            </ChoiceRow>
+            <ChoiceRow label={t("sim.battery")}>
+              <ChoiceWheel label={t("sim.battery")} value={config.batteryWh} values={wheelValues(BATTERY_CHOICES_WH, config.batteryWh)} onChange={(wh) => set({ batteryWh: Number(wh) })} format={(wh) => formatEnergyKWh(locale, Number(wh) / 1000)} />
+            </ChoiceRow>
+            <ChoiceRow label={t("sim.nuclear")}>
+              <ChoiceWheel label={t("sim.nuclear")} value={config.nuclearW} values={wheelValues(NUCLEAR_CHOICES_W, config.nuclearW)} onChange={(w) => set({ nuclearW: Number(w) })} format={(w) => (w === "0" ? t("sim.none") : formatPower(locale, Number(w)))} />
+            </ChoiceRow>
+            <ChoiceRow label={t("sim.earthLink")}>
+              <ChoiceWheel
+                label={t("sim.earthLink")}
+                value={config.minEarthElevationDeg ?? ANY_HEIGHT}
+                values={EARTH_ELEVATION_CHOICES.map((deg) => (deg === null ? ANY_HEIGHT : String(deg)))}
+                onChange={(deg) => set({ minEarthElevationDeg: deg === ANY_HEIGHT ? null : Number(deg) })}
+                format={(deg) => (deg === ANY_HEIGHT ? t("sim.terrainOnly") : `${deg}°`)}
+              />
+            </ChoiceRow>
+            {config.crewed && (
+              <ChoiceRow label={t("sim.crew")}>
+                <ChoiceWheel label={t("sim.crew")} value={config.crew} values={CREW_CHOICES.map(String)} onChange={(n) => set({ crew: Number(n) })} format={(n) => n} />
+              </ChoiceRow>
+            )}
           </div>
           <p className="mt-3 border-t border-white/10 pt-2 text-[11px] leading-snug text-white/60">
             {t("sim.load", { operating: formatPower(locale, operatingLoadW(config)), survival: formatPower(locale, survivalLoadW(config)) })}
@@ -99,6 +110,16 @@ export function MissionSetupForm({ config, onChange, mapTimeMs }: MissionSetupFo
         </div>
         <p className="mt-1.5 text-[11px] leading-snug text-white/45">{t("sim.typical")}</p>
       </Field>
+    </div>
+  );
+}
+
+/** 设备与要求里的一行：左边是名称，右边是横向小滚轮。 */
+function ChoiceRow({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="flex items-center justify-between gap-2">
+      <span className="min-w-0 text-xs text-white/75">{label}</span>
+      {children}
     </div>
   );
 }

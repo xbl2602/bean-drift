@@ -17,6 +17,7 @@ import { toolInfo, type ToolId } from "./menu/tools";
 import { useFirstVisitTutorial } from "./menu/tutorial-overlay";
 import { formatLatLon, normalizeLonDeg, type LatLon } from "./moon-frames";
 import type { MapAnnotations, SavedSite } from "./overlay/annotations";
+import { DEFAULT_COMPARE_HEIGHT_DVH } from "./panels/compare-panel";
 import type { SearchTarget } from "./panels/search-panel";
 import { ToolPanel, rightPanelFor } from "./panels/tool-panel";
 import type { DraftSite } from "./panels/sites-panel";
@@ -41,7 +42,7 @@ export function LunarQuestApp() {
   const t = useT();
   const { locale } = useSettings();
   const theme = useResolvedTheme();
-  const [compareHeight, setCompareHeight] = useState(34);
+  const [compareHeight, setCompareHeight] = useState(DEFAULT_COMPARE_HEIGHT_DVH);
   const [viewRevision, setViewRevision] = useState(0);
   const [appMode, setAppMode] = useState<AppMode>(DEFAULT_APP_MODE);
   const [landingVisited, setLandingVisited] = useState(false);

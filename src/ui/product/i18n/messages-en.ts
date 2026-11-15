@@ -117,7 +117,7 @@ export const en = {
   "sim.load": "Uses {operating} when working, {survival} when sleeping",
   "sim.typical": "Typical values for this kind of mission. You can change them.",
   "sim.earthNote": "Earth link: how high Earth must be above the horizon to talk to it. Any = only hills and crater walls block it.",
-  "sim.scrollToChoose": "Scroll each column to choose",
+  "sim.scrollToChoose": "Scroll or swipe sideways to choose",
   "sim.run": "Run simulation",
   "sim.running": "Simulating… {done}/{total}",
   "sim.cancel": "Cancel",

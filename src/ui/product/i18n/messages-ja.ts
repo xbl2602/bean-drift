@@ -113,7 +113,7 @@ export const ja: Record<MessageKey, string> = {
   "sim.load": "稼働中 {operating}、休止中 {survival} を使います",
   "sim.typical": "この種類のミッションの典型的な値です。変更できます。",
   "sim.earthNote": "地球との通信：通信に必要な、地平線からの地球の最低高度。問わない = 山やクレーターの壁に隠れなければ通信できます。",
-  "sim.scrollToChoose": "各列をスクロールして選びます",
+  "sim.scrollToChoose": "スクロールまたは左右にスワイプして選びます",
   "sim.run": "シミュレーション開始",
   "sim.running": "シミュレーション中… {done}/{total}",
   "sim.cancel": "キャンセル",

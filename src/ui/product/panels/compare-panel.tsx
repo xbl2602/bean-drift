@@ -16,12 +16,14 @@ function WindowBar({data, body}: {data: PointTimeline; body: "sun" | "earth"}) {
  const start = Date.parse(data.startUtc), duration = Date.parse(data.endUtc)-start;
  return <div className="mt-2"><p className={`mb-2 text-xs font-medium ${body === "sun" ? "text-[#dfc89d]" : "text-[#a8c8d9]"}`}>{body === "sun" ? "Sunlight" : "Contact with Earth"} over these dates</p><div role="img" aria-label={`${body === "sun" ? "Sunlight" : "Earth visibility"} windows: ${(data[body].visibleFraction*100).toFixed(1)}% of the period. Solid colour is visible; striped areas are unavailable.`} className="relative h-6 overflow-hidden border border-white/10 bg-[repeating-linear-gradient(45deg,#46505d_0px,#46505d_2px,#141c26_2px,#141c26_6px)]">{data[body].windows.map((window,i)=><span key={i} title={`${window.startUtc} – ${window.endUtc}`} className={`absolute inset-y-0 ${body === "sun" ? "bg-[linear-gradient(90deg,#ae956c,#e3c993)]" : "bg-[linear-gradient(90deg,#779aaf,#accddd)]"}`} style={{left:`${(Date.parse(window.startUtc)-start)/duration*100}%`,width:`${(Date.parse(window.endUtc)-Date.parse(window.startUtc))/duration*100}%`}} />)}</div></div>;
 }
+/** 比较窗口默认高度（屏幕高度的百分比）：接近一半但不到一半，上面还能看到月球和时间轴。双击拖动条也回到这个高度。 */
+export const DEFAULT_COMPARE_HEIGHT_DVH = 46;
 export function ComparePanel({sites,timeMs,onAddSites,onRemoveSite,onExport,onClose,onFocusSite,height,onHeightChange}: {sites:SavedSite[];analyses:SiteAnalyses;timeMs:number;onAddSites:()=>void;onRemoveSite:(id:string)=>void;onExport:()=>void;onClose:()=>void;onFocusSite:(site:SavedSite)=>void;height:number;onHeightChange:(height:number)=>void}) {
  const dragging = useRef(false);
  const resizeTo = (next: number) => onHeightChange(Math.max(24, Math.min(72, next)));
  const [order,setOrder]=useState<Order>("sun");
  const [durationH,setDurationH]=useState(720);
- const [settingsOpen,setSettingsOpen]=useState(true);
+ const [settingsOpen,setSettingsOpen]=useState(false); // 默认收起，点"Change period & order"才打开
  const [pendingDuration,setPendingDuration]=useState(720);
  const [pendingOrder,setPendingOrder]=useState<Order>("sun");
  const [results,setResults]=useState<{key:string;data:Record<string,PointTimeline|"error">}>({key:"",data:{}});
@@ -41,7 +43,7 @@ export function ComparePanel({sites,timeMs,onAddSites,onRemoveSite,onExport,onCl
  onPointerMove={event => { if (dragging.current) resizeTo((window.innerHeight - event.clientY) / window.innerHeight * 100); }}
  onPointerUp={event => { dragging.current = false; if(event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId); }}
  onPointerCancel={() => { dragging.current = false; }} onLostPointerCapture={() => { dragging.current = false; }}
- onDoubleClick={() => resizeTo(34)} onKeyDown={event => { const next = event.key === "ArrowUp" ? height + 2 : event.key === "ArrowDown" ? height - 2 : event.key === "Home" ? 24 : event.key === "End" ? 72 : null; if(next !== null) { event.preventDefault(); resizeTo(next); } }}
+ onDoubleClick={() => resizeTo(DEFAULT_COMPARE_HEIGHT_DVH)} onKeyDown={event => { const next = event.key === "ArrowUp" ? height + 2 : event.key === "ArrowDown" ? height - 2 : event.key === "Home" ? 24 : event.key === "End" ? 72 : null; if(next !== null) { event.preventDefault(); resizeTo(next); } }}
  className="group flex h-5 shrink-0 cursor-ns-resize touch-none select-none items-center justify-center rounded-t-2xl hover:bg-white/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-lime-200"><span className="h-1 w-12 rounded-full bg-slate-400/60 transition-colors group-hover:bg-slate-200" /></div>
  <div className="min-h-0 flex-1 overflow-y-auto px-4 py-2">
  <header className="flex items-center justify-between border-b border-slate-400/25 px-4 py-2"><div><h2 className="text-sm font-semibold uppercase tracking-widest text-slate-100">Compare landing sites</h2><p className="mt-1 text-xs text-slate-400">Sunlight for power · Earth visibility for communication</p></div><button onClick={onClose} aria-label="Close Compare Landing Sites" className="rounded-lg p-2 text-xl text-slate-400 hover:bg-white/10">×</button></header>

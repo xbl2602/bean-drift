@@ -113,7 +113,7 @@ export const zhHans: Record<MessageKey, string> = {
   "sim.load": "工作时用电 {operating}，休眠时 {survival}",
   "sim.typical": "这类任务的典型数值，可以自己修改。",
   "sim.earthNote": "地球通信：地球至少要高出地平线多少度才能通信。任意 = 只看山和坑壁有没有挡住。",
-  "sim.scrollToChoose": "滚动每一列来选择",
+  "sim.scrollToChoose": "滚动或左右滑动来选择",
   "sim.run": "开始模拟",
   "sim.running": "模拟中… {done}/{total}",
   "sim.cancel": "取消",

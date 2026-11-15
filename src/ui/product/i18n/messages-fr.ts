@@ -113,7 +113,7 @@ export const fr: Record<MessageKey, string> = {
   "sim.load": "Consomme {operating} en activité, {survival} en veille",
   "sim.typical": "Valeurs typiques pour ce type de mission. Vous pouvez les modifier.",
   "sim.earthNote": "Liaison Terre : hauteur minimale de la Terre au-dessus de l'horizon pour communiquer. Toute = seuls les reliefs et les bords de cratères la bloquent.",
-  "sim.scrollToChoose": "Faites défiler chaque colonne pour choisir",
+  "sim.scrollToChoose": "Faites défiler ou glissez sur le côté pour choisir",
   "sim.run": "Lancer la simulation",
   "sim.running": "Simulation… {done}/{total}",
   "sim.cancel": "Annuler",

@@ -1,6 +1,6 @@
 "use client";
 // Landing Sites 模式：左边是预设点位清单（真实着陆过的任务 + 南极地名），点一个，地球仪转过去，右边讲解并给出这个位置的数据。
-// 先选类别（载人 → 无人 → 全部），选了才列出这一类的点位，可以随时返回重选；载人琥珀色、无人青绿色，地图上的标记同色。
+// 先选类别（载人 → 无人 → 全部），选了才列出这一类的点位，可以随时返回重选；载人黄绿色（网站主色）、无人浅钢蓝，地图上的标记同色。
 import { useEffect, useState } from "react";
 import { useT } from "../i18n/use-t";
 import { usePointAnalysis } from "../analysis/use-point-analysis";
