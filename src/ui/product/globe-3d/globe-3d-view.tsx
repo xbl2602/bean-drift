@@ -13,6 +13,7 @@ import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { applyAnalysisUniforms, applyGridScale, type AnalysisUniforms } from "../analysis/analysis-glsl";
+import { layerLookKey, snapshotCanvas, useSnapshotOnUnmount, type CaptureFrame } from "../map-transition";
 import { monthSunSamples, sunBodyAt } from "../analysis/sun-samples";
 import { MoonTextureSet, fineMapsForLayer } from "../imagery/moon-texture-set";
 import { TileAtlas } from "../imagery/tile-atlas";
@@ -76,9 +77,13 @@ interface GlobeRuntime {
   fineRequestedFor: LayerSettings["base"] | null;
 }
 
-export function Globe3dView({ timeMs, layers, annotations, focus, rightPanel, cursor, onPick, onDoublePick, onHover, onLoadingChange, onError }: MapViewProps) {
+export function Globe3dView({ timeMs, layers, annotations, focus, rightPanel, cursor, onPick, onDoublePick, onHover, onLoadingChange, onError, onSnapshot }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const runtimeRef = useRef<GlobeRuntime | null>(null);
+  const captureRef = useRef<CaptureFrame | null>(null);
+  const snapshotRef = useRef(onSnapshot);
+  snapshotRef.current = onSnapshot;
+  useSnapshotOnUnmount(captureRef, onSnapshot);
   const settingsRef = useRef({ timeMs, layers, annotations, rightPanel });
   settingsRef.current = { timeMs, layers, annotations, rightPanel };
 
@@ -190,6 +195,7 @@ export function Globe3dView({ timeMs, layers, annotations, focus, rightPanel, cu
         rt.dirty = true;
         rt.shadowDirty = true;
         onLoadingChange(false);
+        captureRef.current = () => snapshotCanvas(renderer.domElement, () => renderer.render(scene, camera));
         textures.request(["slope", "polar"], "coarse");
       })
       .catch(() => {
@@ -220,6 +226,15 @@ export function Globe3dView({ timeMs, layers, annotations, focus, rightPanel, cu
       const reframed = frameBesidePanel(rt, container, settings.rightPanel, performance.now());
       if (!rt.dirty && !settingsChanged && !flying && !cameraMoved && !reframed) return; // 什么都没变：不画
       rt.dirty = false;
+      // 图层换了样子（底图 / 数据图层、日照、经纬网）：先按旧图层重画一帧拍下来，总装组件用它做溶解过渡
+      const before = rt.drawn;
+      if (before && rt.patches && snapshotRef.current && layerLookKey(before.layers) !== layerLookKey(settings.layers)) {
+        const frame = snapshotCanvas(renderer.domElement, () => {
+          applySettings(rt, before.timeMs, before.layers);
+          renderer.render(scene, camera);
+        });
+        if (frame) snapshotRef.current(frame);
+      }
       rt.drawn = { timeMs: settings.timeMs, layers: settings.layers, annotations: settings.annotations };
 
       const sunDirection = applySettings(rt, settings.timeMs, settings.layers);
@@ -250,6 +265,7 @@ export function Globe3dView({ timeMs, layers, annotations, focus, rightPanel, cu
 
     return () => {
       disposed = true;
+      captureRef.current = null;
       cancelAnimationFrame(frame);
       observer.disconnect();
       controls.dispose();

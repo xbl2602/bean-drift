@@ -17,6 +17,7 @@ import { toolInfo, type ToolId } from "./menu/tools";
 import { useFirstVisitTutorial } from "./menu/tutorial-overlay";
 import { formatLatLon, normalizeLonDeg, type LatLon } from "./moon-frames";
 import type { MapAnnotations, SavedSite } from "./overlay/annotations";
+import { DEFAULT_COMPARE_HEIGHT_DVH } from "./panels/compare-panel";
 import type { SearchTarget } from "./panels/search-panel";
 import { ToolPanel, rightPanelFor } from "./panels/tool-panel";
 import type { DraftSite } from "./panels/sites-panel";
@@ -24,6 +25,8 @@ import { MAX_SITES, nextSiteName, useSavedSites } from "./sites/use-saved-sites"
 import { TimelineBar } from "./timeline/timeline-bar";
 import { ViewControls, type MapMode } from "./view-controls";
 import { useAnnounceMapReady } from "./use-announce-map-ready";
+import { useSmoothWheelScroll } from "./use-smooth-wheel-scroll";
+import { SnapshotFade } from "./map-transition";
 import { DEFAULT_APP_MODE, rememberAppMode, rememberedAppMode, type AppMode } from "./modes/app-modes";
 import { FindDataMode } from "./modes/find-data-mode";
 import { LandingSitesMode, usePresetSites } from "./modes/landing-sites-mode";
@@ -39,9 +42,10 @@ const LANDING_PICK_RADIUS_DEG = 8;
 
 export function LunarQuestApp() {
   const t = useT();
+  useSmoothWheelScroll(); // 所有面板的鼠标滚轮滚动：每帧连续滑动，不再一格一跳
   const { locale } = useSettings();
   const theme = useResolvedTheme();
-  const [compareHeight, setCompareHeight] = useState(34);
+  const [compareHeight, setCompareHeight] = useState(DEFAULT_COMPARE_HEIGHT_DVH);
   const [viewRevision, setViewRevision] = useState(0);
   const [appMode, setAppMode] = useState<AppMode>(DEFAULT_APP_MODE);
   const [landingVisited, setLandingVisited] = useState(false);
@@ -53,7 +57,8 @@ export function LunarQuestApp() {
     if (saved === "landing-sites") setLandingVisited(true);
   }, []);
   const [landingSiteId, setLandingSiteId] = useState<string | null>(null);
-  const [landingFilter, setLandingFilter] = useState<LandingFilter>("all");
+  // null = 用户还没选类别（载人 / 无人 / 全部），这时地图上显示全部标记。
+  const [landingFilter, setLandingFilter] = useState<LandingFilter | null>(null);
   const [findTarget, setFindTarget] = useState<SearchTarget | null>(null);
   const [simResultsOpen, setSimResultsOpen] = useState(false);
   // 默认 3D 地球仪（Explore 模式进来就是 3D；2D 展开图可以在右上角切换）
@@ -67,6 +72,9 @@ export function LunarQuestApp() {
   const [measurePoints, setMeasurePoints] = useState<LatLon[]>([]);
   const [searchTarget, setSearchTarget] = useState<SearchTarget | null>(null);
   const [loading, setLoading] = useState(true);
+  // 换视图 / 换图层前拍下的最后一帧：盖在地图上，等新画面好了再溶解掉（map-transition.tsx）
+  const [snapshot, setSnapshot] = useState<HTMLCanvasElement | null>(null);
+  const clearSnapshot = useCallback(() => setSnapshot(null), []);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [draftSite, setDraftSite] = useState<DraftSite | null>(null);
@@ -75,7 +83,7 @@ export function LunarQuestApp() {
   const landingState = usePresetSites(landingVisited || appMode === "landing-sites");
   // 地图上只画筛选后的着陆任务；南极地名挤在极点附近，全画出来会叠成一团，所以只在选中它时才画那一个
   const landingSites = useMemo(
-    () => filterLandingSites(landingState.status === "ready" ? landingState.sites : [], landingFilter).filter((site) => site.kind === "landing-site" || site.id === landingSiteId),
+    () => filterLandingSites(landingState.status === "ready" ? landingState.sites : [], landingFilter ?? "all").filter((site) => site.kind === "landing-site" || site.id === landingSiteId),
     [landingState, landingFilter, landingSiteId],
   );
   const exploring = appMode === "explore";
@@ -89,7 +97,7 @@ export function LunarQuestApp() {
   const draftAnalysis = usePointAnalysis(draftSite, timeMs, layers.weights);
   const hoverAnalysis = useHoverAnalysis(layerPanelOpen && !standingAt ? hover : null, timeMs, layers.weights);
 
-  useFirstVisitTutorial(() => setActiveTool("tutorial"));
+  useFirstVisitTutorial(() => setActiveTool("tutorial"), !loading && !error); // 只在第一次打开网站、地图加载好之后
   useAnnounceMapReady(loading, error); // 首页过场动画等这个信号才揭幕
   useEffect(() => {
     if (!notice) return;
@@ -185,8 +193,9 @@ export function LunarQuestApp() {
     // 不强制切 3D：用户在 2D 平面图里点着陆点，就留在 2D，平面图自己会居中到这个点（3D 球则飞过去）
     requestFocus(site, 45);
   };
-  const changeLandingFilter = (filter: LandingFilter) => {
+  const changeLandingFilter = (filter: LandingFilter | null) => {
     setLandingFilter(filter);
+    if (filter === null) return; // 回到选类别：地图显示全部，讲解可以留着
     // 选中的着陆点不在新的筛选里，就把右边的讲解收起
     const stillShown = landingState.status === "ready" && filterLandingSites(landingState.sites, filter).some((site) => site.id === landingSiteId);
     if (!stillShown) setLandingSiteId(null);
@@ -266,18 +275,23 @@ export function LunarQuestApp() {
     ? rightPanelFor(activeTool)
     : appMode === "landing-sites" && landingSiteId ? "standard"
     : appMode === "find-data" && simResultsOpen ? "wide" : null;
-  const viewProps = { timeMs, layers, annotations, focus, rightPanel, cursor, onPick: handlePick, onDoublePick: exploring && clickMode !== "measure" ? enterFirstPerson : undefined, onHover: setHover, onLoadingChange: setLoading, onError: setError };
+  const viewProps = { timeMs, layers, annotations, focus, rightPanel, cursor, onPick: handlePick, onDoublePick: exploring && clickMode !== "measure" ? enterFirstPerson : undefined, onHover: setHover, onLoadingChange: setLoading, onError: setError, onSnapshot: setSnapshot };
 
   return (
     <main lang={locale} data-theme={theme} className="lunar-explorer fixed inset-0 overflow-hidden bg-black text-white" style={{ "--compare-height": `${compareHeight}dvh`, "--rail-space": comparing ? `calc(100dvh - ${compareHeight}dvh)` : "100dvh" } as React.CSSProperties}>
-      <div className={`absolute inset-x-0 top-0 ${comparing ? "bottom-[var(--compare-height)]" : "bottom-0"}`}>
+      {/* 没有旧画面可溶解时（第一次打开），地图加载好后从黑色淡入 */}
+      <div
+        className={`absolute inset-x-0 top-0 transition-opacity duration-700 ease-out motion-reduce:transition-none ${comparing ? "bottom-[var(--compare-height)]" : "bottom-0"}`}
+        style={{ opacity: loading && !error && !snapshot ? 0 : 1 }}
+      >
       {standingAt ? (
-        <FirstPersonView key={`${standingAt.latDeg},${standingAt.lonDeg}`} point={standingAt} timeMs={timeMs} onExit={leaveFirstPerson} onLoadingChange={setLoading} onError={setError} />
+        <FirstPersonView key={`${standingAt.latDeg},${standingAt.lonDeg}`} point={standingAt} timeMs={timeMs} onExit={leaveFirstPerson} onLoadingChange={setLoading} onError={setError} onSnapshot={setSnapshot} />
       ) : mapMode === "2d" ? (
         <Map2dView key={`map-${viewRevision}`} {...viewProps} />
       ) : (
         <Globe3dView key={`map-${viewRevision}`} {...viewProps} />
       )}
+      <SnapshotFade snapshot={snapshot} hold={loading && !error} onDone={clearSnapshot} />
 
       </div>
       {exploring && <ToolMenu activeTool={activeTool} onSelect={selectMenuTool} onHome={resetExplorer} />}
@@ -285,7 +299,7 @@ export function LunarQuestApp() {
       {!standingAt && <ViewControls mode={mapMode} onModeChange={changeMode} layers={layers} onLayersChange={setLayers} />}
 
       {appMode === "landing-sites" && !standingAt && (
-        <LandingSitesMode state={landingState} selectedId={rightToolOpen ? null : landingSiteId} filter={landingFilter} onFilterChange={changeLandingFilter} onSelect={selectLandingSite} onCloseDetail={() => setLandingSiteId(null)} timeMs={timeMs} weights={layers.weights} onStandHere={enterFirstPerson} />
+        <LandingSitesMode state={landingState} selectedId={rightToolOpen ? null : landingSiteId} category={landingFilter} onCategoryChange={changeLandingFilter} onSelect={selectLandingSite} onCloseDetail={() => setLandingSiteId(null)} timeMs={timeMs} weights={layers.weights} onStandHere={enterFirstPerson} />
       )}
       {appMode === "find-data" && !standingAt && (
         <FindDataMode target={findTarget} onGoTo={lookUpPoint} onClear={() => setFindTarget(null)} timeMs={timeMs} onTimeChange={setTimeMs} weights={layers.weights} onStandHere={enterFirstPerson} onCompareLocation={chooseSiteForComparison} resultsHidden={rightToolOpen} onResultsOpenChange={setSimResultsOpen} />
@@ -338,7 +352,7 @@ export function LunarQuestApp() {
         </div>
       )}
       <div className={`pointer-events-none absolute inset-x-0 top-0 ${comparing ? "bottom-[var(--compare-height)]" : "bottom-0"}`}><div className="pointer-events-auto contents">
-      <TimelineBar key={`timeline-${viewRevision}-${standingAt ? "first-person" : "map"}`} timeMs={timeMs} onTimeChange={setTimeMs} loop={!!standingAt} />
+      <TimelineBar key={`timeline-${viewRevision}-${standingAt ? "first-person" : "map"}`} timeMs={timeMs} onTimeChange={setTimeMs} />
       </div></div>
       <p className={`pointer-events-none absolute ${comparing ? "hidden" : "xl:block"} bottom-0.5 right-3 z-10 hidden text-[10px] text-white/35 hidden`}>
         NASA SVS CGI Moon Kit · NASA Moon Trek / LROC Team / ASU · LRO LOLA · IAU/USGS names · Earth: NASA Blue Marble · Sun: NASA/SDO AIA (false colour)
@@ -349,7 +363,7 @@ export function LunarQuestApp() {
           {notice}
         </p>
       )}
-      {loading && !error && <LoadingVeil firstPerson={standingAt !== null} />}
+      <LoadingVeil shown={loading && !error} firstPerson={standingAt !== null} />
       {error && (
         <div role="alert" className="absolute left-1/2 top-1/2 z-40 w-[min(26rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-red-300/30 bg-[#1a0b0e]/95 p-5 text-sm">
           <p className="font-medium text-red-200">Something went wrong</p>
@@ -365,10 +379,17 @@ export function LunarQuestApp() {
   );
 }
 
-function LoadingVeil({ firstPerson }: { firstPerson: boolean }) {
+/**
+ * 加载提示：一直挂着，只改透明度，出现和消失都是渐变。出现前先等 0.3 秒，
+ * 很快就加载好的情况（贴图已经在缓存里）根本不会闪出转圈，画面直接溶解过去。
+ */
+function LoadingVeil({ shown, firstPerson }: { shown: boolean; firstPerson: boolean }) {
   return (
-    <div className="pointer-events-none absolute inset-0 z-20 grid place-items-center bg-black/70">
-      <div className="flex flex-col items-center gap-4">
+    <div
+      aria-hidden={!shown}
+      className={`pointer-events-none absolute inset-0 z-20 grid place-items-center bg-black/45 transition-opacity motion-reduce:transition-none ${shown ? "opacity-100 delay-300 duration-500" : "opacity-0 duration-300"}`}
+    >
+      <div role={shown ? "status" : undefined} className="flex flex-col items-center gap-4">
         <span className="h-10 w-10 animate-spin rounded-full border-2 border-white/15 border-t-lime-300" />
         <p className="text-sm tracking-wide text-white/70">{firstPerson ? "Landing… building the terrain around you" : "Loading lunar maps…"}</p>
       </div>

@@ -78,6 +78,10 @@ export const MISSION_TYPES: MissionType[] = [
 
 export const DURATION_CHOICES_DAYS = [3, 14, 30, 90, 180, 365];
 export const NUCLEAR_CHOICES_W = [0, 100, 1_000, 10_000, 40_000];
+/** Values on the scroll wheels in the setup form (each mission type's own default is added if missing). */
+export const SOLAR_CHOICES_W = [0, 100, 200, 300, 400, 500, 600, 800, 1_000, 1_200, 1_500, 2_000, 2_500, 3_000, 4_000, 5_000, 6_000, 8_000, 10_000, 15_000, 20_000, 30_000, 40_000, 50_000, 75_000, 100_000, 150_000, 200_000];
+export const BATTERY_CHOICES_WH = [0, 500, 1_000, 1_500, 2_000, 2_500, 3_000, 4_000, 5_000, 6_000, 8_000, 10_000, 12_000, 15_000, 20_000, 25_000, 30_000, 40_000, 50_000, 75_000, 100_000, 150_000, 200_000, 300_000, 500_000, 750_000, 1_000_000, 2_000_000, 5_000_000];
+export const MAX_CREW = 12;
 export const EARTH_ELEVATION_CHOICES: Array<number | null> = [null, 5, 10];
 
 export const missionType = (id: MissionTypeId) => MISSION_TYPES.find((type) => type.id === id)!;

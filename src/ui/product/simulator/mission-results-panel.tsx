@@ -16,7 +16,7 @@ import type { MissionEventKind } from "./mission-sim";
 import type { MissionRun } from "./use-mission-run";
 
 type Tab = "site" | "progress" | "performance";
-const TABS: Tab[] = ["site", "progress", "performance"];
+const TABS: Tab[] = ["performance", "progress", "site"]; // 按重要性：先看任务表现，再看过程，最后看基地位置数据
 const OUTCOME_STYLE = { success: "border-lime-300/40 bg-lime-300/10 text-lime-200", partial: "border-amber-300/40 bg-amber-300/10 text-amber-200", failed: "border-red-300/40 bg-red-400/10 text-red-200" } as const;
 const EVENT_DOT: Record<MissionEventKind, string> = {
   landing: "bg-white", end: "bg-white", sunset: "bg-slate-400", sunrise: "bg-amber-300", "contact-lost": "bg-slate-400", "contact-back": "bg-sky-400",
