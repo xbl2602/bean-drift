@@ -25,12 +25,12 @@ interface SearchPanelProps {
   placeholder?: string;
 }
 
-const DEFAULT_PLACEMENT = "absolute left-24 right-4 top-36 z-20 sm:left-1/2 sm:right-auto sm:top-24 sm:w-[min(34rem,calc(100vw-13rem))] sm:-translate-x-1/2";
+const DEFAULT_PLACEMENT = "absolute left-24 right-4 top-36 z-20 sm:left-1/2 sm:right-auto sm:top-24 sm:w-[min(44rem,calc(100vw-13rem))] sm:-translate-x-1/2";
 const SUGGESTION_LIMIT = 8;
 const targetForName = (entry: LunarName): SearchTarget => ({ latDeg: entry.latDeg, lonDeg: entry.lonDeg, label: entry.name, detail: formatLatLon(entry), spanDeg: viewSpanDegFor(entry.diameterKm) });
 const targetForCoordinates = (point: LatLon): SearchTarget => ({ ...point, label: "Searched point", detail: formatLatLon(point), spanDeg: 25 });
 
-export function SearchPanel({ selected, onGoTo, onStandHere, onSaveSite, onClose, placementClassName = DEFAULT_PLACEMENT, hideResult, placeholder = "Search a place (Shackleton Crater) or coordinates (-89.9, 0)" }: SearchPanelProps) {
+export function SearchPanel({ selected, onGoTo, onStandHere, onSaveSite, onClose, placementClassName = DEFAULT_PLACEMENT, hideResult, placeholder = "Place (Shackleton Crater) or coordinates (-89.9, 0)" }: SearchPanelProps) {
   const [query, setQuery] = useState("");
   const [names, setNames] = useState<LunarName[] | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
