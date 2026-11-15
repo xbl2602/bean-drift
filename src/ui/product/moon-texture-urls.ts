@@ -32,6 +32,8 @@ export type DataMapKey = keyof typeof COARSE_TEXTURES;
 
 export const SKY_TEXTURES = {
   earth: `${SKY_ASSET_BASE}/earth-2k.jpg`,
+  /** 第一人称天空里的地球：放大（滚轮）后会看得比较大，用 4K。 */
+  earth4k: `${SKY_ASSET_BASE}/earth-4k.jpg`,
   sun: `${SKY_ASSET_BASE}/sun-sdo-1k.jpg`,
 } as const;
 

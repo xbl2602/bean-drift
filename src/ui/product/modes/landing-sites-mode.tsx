@@ -7,7 +7,7 @@ import type { LatLon } from "../moon-frames";
 import { PanelShell } from "../panels/panel-shell";
 import { SiteReport } from "../panels/site-report";
 import { usePointApi } from "../point-api/use-point-api";
-import { loadHistoricLandingSites, type HistoricLandingSite } from "./historic-landing-sites";
+import { filterLandingSites, LANDING_FILTERS, LANDING_KIND_COLORS, loadHistoricLandingSites, type HistoricLandingSite, type LandingFilter } from "./historic-landing-sites";
 
 export type LandingSitesState = { status: "loading" } | { status: "ready"; sites: HistoricLandingSite[] } | { status: "error" };
 
@@ -32,6 +32,8 @@ export function useHistoricLandingSites(enabled: boolean): LandingSitesState {
 interface LandingSitesModeProps {
   state: LandingSitesState;
   selectedId: string | null;
+  filter: LandingFilter;
+  onFilterChange: (filter: LandingFilter) => void;
   onSelect: (site: HistoricLandingSite) => void;
   onCloseDetail: () => void;
   timeMs: number;
@@ -39,17 +41,31 @@ interface LandingSitesModeProps {
   onStandHere: (point: LatLon) => void;
 }
 
-export function LandingSitesMode({ state, selectedId, onSelect, onCloseDetail, timeMs, weights, onStandHere }: LandingSitesModeProps) {
-  const sites = state.status === "ready" ? state.sites : [];
+export function LandingSitesMode({ state, selectedId, filter, onFilterChange, onSelect, onCloseDetail, timeMs, weights, onStandHere }: LandingSitesModeProps) {
+  const allSites = state.status === "ready" ? state.sites : [];
+  const sites = filterLandingSites(allSites, filter);
   const selected = sites.find((site) => site.id === selectedId) ?? null;
   return (
     <>
       <nav aria-label="Lunar landing sites" className="absolute left-4 right-4 top-32 z-20 sm:right-auto sm:top-24 sm:w-[17rem]">
         <div className="rounded-2xl border border-white/10 bg-[#0b0f17]/90 p-2 shadow-2xl shadow-black/60 lunar-glass backdrop-blur-xl">
           <h2 className="hidden px-2 pb-2 pt-1 text-sm font-semibold uppercase tracking-[0.18em] text-lime-200/90 sm:block">Landing sites</h2>
+          <fieldset className="px-2 pb-2">
+            <legend className="sr-only">Which landing sites to show</legend>
+            <div className="flex flex-wrap gap-x-3 gap-y-1 sm:flex-col sm:gap-y-1.5">
+              {LANDING_FILTERS.map((option) => (
+                <label key={option.id} className="flex cursor-pointer items-center gap-2 text-xs text-slate-200">
+                  <input type="radio" name="landing-filter" value={option.id} checked={filter === option.id} onChange={() => onFilterChange(option.id)} className="accent-lime-300" />
+                  {option.id !== "all" && <span aria-hidden="true" className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: LANDING_KIND_COLORS[option.id] }} />}
+                  <span>{option.label}</span>
+                  <span className="text-[10px] text-slate-500">{filterLandingSites(allSites, option.id).length}</span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
           {state.status === "loading" && <p role="status" className="px-2 py-2 text-xs text-slate-400">Loading landing sites…</p>}
           {state.status === "error" && <p role="alert" className="px-2 py-2 text-xs text-amber-200">The landing-site list could not be loaded. Check the connection and reload.</p>}
-          <ul className="flex gap-1.5 overflow-x-auto sm:max-h-[calc(100dvh-16rem)] sm:flex-col sm:overflow-y-auto sm:overflow-x-visible">
+          <ul className="flex gap-1.5 overflow-x-auto sm:max-h-[calc(100dvh-25rem)] sm:flex-col sm:overflow-y-auto sm:overflow-x-visible">
             {sites.map((site) => (
               <li key={site.id} className="shrink-0">
                 <button
@@ -58,13 +74,13 @@ export function LandingSitesMode({ state, selectedId, onSelect, onCloseDetail, t
                   onClick={() => onSelect(site)}
                   className={`w-full rounded-xl border px-3 py-2 text-left transition ${site.id === selectedId ? "border-lime-300/40 bg-lime-300/15" : "border-white/10 bg-white/[0.04] hover:bg-white/10"}`}
                 >
-                  <span className="block whitespace-nowrap text-sm font-semibold">{site.mission}</span>
+                  <span className="flex items-center gap-2 whitespace-nowrap text-sm font-semibold"><span aria-hidden="true" className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: LANDING_KIND_COLORS[site.kind] }} />{site.mission}</span>
                   <span className="block whitespace-nowrap text-[11px] text-slate-400">{site.landedUtc.slice(0, 4)} · {site.agency}</span>
                 </button>
               </li>
             ))}
           </ul>
-          {state.status === "ready" && <p className="hidden px-2 pt-2 text-[10px] leading-snug text-slate-500 sm:block">Positions: IAU Gazetteer of Planetary Nomenclature (official landing-site names).</p>}
+          {state.status === "ready" && <p className="hidden px-2 pt-2 text-[10px] leading-snug text-slate-500 sm:block">Positions: IAU Gazetteer, or the Wikipedia list of artificial objects on the Moon.</p>}
         </div>
       </nav>
       {selected && <LandingSiteDetail key={selected.id} site={selected} timeMs={timeMs} weights={weights} onStandHere={onStandHere} onClose={onCloseDetail} />}
@@ -78,7 +94,7 @@ function LandingSiteDetail({ site, timeMs, weights, onStandHere, onClose }: { si
   return (
     <PanelShell title={site.mission} onClose={onClose} side="right" noRail mobileTop="top-56">
       <p className="text-[11px] uppercase tracking-[0.16em] text-slate-400">{site.agency} · landed {site.landedUtc}</p>
-      <p className="mt-0.5 text-xs text-slate-500">{site.iauName}</p>
+      <p className="mt-0.5 text-xs text-slate-500">{site.kind === "human" ? "Crewed" : "Robotic"} · {site.positionNote}</p>
       <p className="mt-3 text-sm leading-relaxed text-slate-200">{site.summary}</p>
       <p className="mt-3 rounded-xl border border-[#a8c8d9]/20 bg-[#a8c8d9]/[0.06] px-3 py-2 text-xs leading-relaxed text-[#d3e6ef]">{site.dataNote}</p>
       <SiteReport point={site} name={site.mission} timeMs={timeMs} analysis={analysis} pointApi={pointApi} onStandHere={() => onStandHere(site)} />

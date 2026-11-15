@@ -41,7 +41,8 @@ void main() {
   float d = length(gl_PointCoord - 0.5) * 2.0;
   // 亮核 + 很淡的光晕
   float glow = exp(-d * d * 5.0) + 0.25 * exp(-d * 3.0);
-  gl_FragColor = vec4(vColor, glow * uOpacity * (1.0 - smoothstep(0.85, 1.0, d)));
+  // uOpacity < 1：变淡（白天）；> 1：颜色整体变亮（第一人称夜里）
+  gl_FragColor = vec4(vColor * max(uOpacity, 1.0), glow * min(uOpacity, 1.0) * (1.0 - smoothstep(0.85, 1.0, d)));
 }`;
 
 function seededRandom(seed: number) {
@@ -115,7 +116,7 @@ export function createStarfield(radius: number, count = 16000): Starfield {
   return stars;
 }
 
-/** pixelRatio = 画布像素 / CSS 像素；opacity 用来在白天把星星调暗。 */
+/** pixelRatio = 画布像素 / CSS 像素；opacity 小于 1 把星星调暗（白天），大于 1 把星星调亮。 */
 export function updateStarfield(stars: Starfield, pixelRatio: number, opacity = 1) {
   stars.material.uniforms.uPixelRatio.value = pixelRatio;
   stars.material.uniforms.uOpacity.value = opacity;

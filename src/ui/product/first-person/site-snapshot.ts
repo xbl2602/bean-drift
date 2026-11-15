@@ -37,6 +37,8 @@ async function renderSnapshot(point: LatLon, timeMs: number): Promise<string> {
     built.camera.updateProjectionMatrix();
     built.setView(openingYawDeg(point, timeMs), OPENING_PITCH_DEG, EYE_HEIGHT_M);
     built.setTime(timeMs);
+    // 曝光和实时画面用同一套规则（白天固定、夜里/阴影里适应黑暗）；曝光是渐变的，这里连走几步让它到位
+    for (let step = 0; step < 4; step++) built.updateLighting(0, 1);
     target.render(built.scene, built.camera);
     const blob = await new Promise<Blob | null>((resolve) => target.domElement.toBlob(resolve, "image/jpeg", 0.88));
     if (!blob) throw new Error("Snapshot could not be encoded");

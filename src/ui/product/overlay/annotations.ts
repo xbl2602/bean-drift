@@ -8,8 +8,11 @@ export interface SavedSite extends LatLon {
   createdAt: string;
 }
 
+/** 地图上画的点；markerColor 不给就用默认的黄绿色（比如 Landing Sites 里载人、无人用不同颜色）。 */
+export type AnnotatedSite = SavedSite & { markerColor?: string };
+
 export interface MapAnnotations {
-  sites: SavedSite[];
+  sites: AnnotatedSite[];
   measurePoints: LatLon[];
   searchPin: (LatLon & { label: string; detail?: string }) | null;
   /** 刚点下去、还没保存的候选点（白色标记）。 */
@@ -66,7 +69,7 @@ export function renderAnnotationsSvg(annotations: MapAnnotations, project: Proje
     const selected = site.id === annotations.selectedSiteId;
     parts.push(
       (selected ? `<circle cx="${s.x}" cy="${s.y - 16}" r="15" fill="none" stroke="#fff" stroke-width="2"/>` : "") +
-        `<path d="M${s.x} ${s.y}l-7 -11a8.5 8.5 0 1 1 14 0z" fill="#bef264" stroke="#0d1400" stroke-width="1.5"/><circle cx="${s.x}" cy="${s.y - 16}" r="3" fill="#0d1400"/>` +
+        `<path d="M${s.x} ${s.y}l-7 -11a8.5 8.5 0 1 1 14 0z" fill="${site.markerColor ?? "#bef264"}" stroke="#0d1400" stroke-width="1.5"/><circle cx="${s.x}" cy="${s.y - 16}" r="3" fill="#0d1400"/>` +
         `<text x="${s.x + (selected ? 20 : 12)}" y="${s.y - 13}" fill="#f7fee7" ${LABEL_STYLE}>${escapeXml(site.name)}</text>`,
     );
   }
