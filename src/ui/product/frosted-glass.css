@@ -79,3 +79,8 @@
 
 .time-wheel-scroll { scrollbar-width: none; -webkit-mask-image: linear-gradient(to bottom, transparent, #000 38%, #000 62%, transparent); mask-image: linear-gradient(to bottom, transparent, #000 38%, #000 62%, transparent); }
 .time-wheel-scroll::-webkit-scrollbar { display: none; }
+/* Sideways choice wheels (simulator equipment): hide the scrollbar and fade the side values. */
+.choice-wheel-scroll { scrollbar-width: none; -webkit-mask-image: linear-gradient(to right, rgba(0,0,0,0.15), #000 33%, #000 67%, rgba(0,0,0,0.15)); mask-image: linear-gradient(to right, rgba(0,0,0,0.15), #000 33%, #000 67%, rgba(0,0,0,0.15)); }
+.choice-wheel-scroll::-webkit-scrollbar { display: none; }
+/* 3-row wheels (month / year): the centre row spans 33–67%, so the fade stops earlier. */
+.time-wheel-scroll.time-wheel-compact { -webkit-mask-image: linear-gradient(to bottom, transparent, #000 30%, #000 70%, transparent); mask-image: linear-gradient(to bottom, transparent, #000 30%, #000 70%, transparent); }

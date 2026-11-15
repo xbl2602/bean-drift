@@ -17,7 +17,7 @@ uniform vec3 uSunBody;
 uniform vec3 uSunSamples[${M.monthSamples}];
 uniform int uBase;
 uniform bool uGrid;
-uniform vec4 uGridDetail;
+uniform vec2 uGridDetail;
 uniform float uGridPixelRatio;
 uniform float uWeights[5]; // slope, sunlight, earth, ice, thermal
 
@@ -197,11 +197,9 @@ float lqGridLine(vec2 degrees, float stepDeg, float halfWidthCss) {
 float lqGrid(LqPoint p, vec2 uv) {
   vec2 degrees = uv * vec2(360.0, 180.0);
   float major = lqGridLine(degrees, ${f(MAJOR_GRID_STEP_DEG)}, 0.35) * 0.85;
-  float minor = max(max(
+  float minor = max(
     lqGridLine(degrees, ${f(MINOR_GRID_LEVELS[0].stepDeg)}, 0.2) * uGridDetail.x,
-    lqGridLine(degrees, ${f(MINOR_GRID_LEVELS[1].stepDeg)}, 0.2) * uGridDetail.y), max(
-    lqGridLine(degrees, ${f(MINOR_GRID_LEVELS[2].stepDeg)}, 0.2) * uGridDetail.z,
-    lqGridLine(degrees, ${f(MINOR_GRID_LEVELS[3].stepDeg)}, 0.2) * uGridDetail.w));
+    lqGridLine(degrees, ${f(MINOR_GRID_LEVELS[1].stepDeg)}, 0.2) * uGridDetail.y);
   return max(major, minor * 0.45);
 }
 `;
@@ -221,7 +219,7 @@ export function createAnalysisUniforms(slots: AnalysisTextureSlots) {
     uSunSamples: { value: Array.from({ length: M.monthSamples }, () => new THREE.Vector3(1, 0, 0)) },
     uBase: { value: 0 },
     uGrid: { value: false },
-    uGridDetail: { value: new THREE.Vector4() },
+    uGridDetail: { value: new THREE.Vector2() },
     uGridPixelRatio: { value: 1 },
     uWeights: { value: [0, 0, 0, 0, 0] },
   };

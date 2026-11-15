@@ -8,17 +8,32 @@ import type { MissionResult } from "./mission-sim";
 export function MissionPerformance({ result }: { result: MissionResult }) {
   const t = useT();
   const locale = useLocale();
+  // 按重要性排：先看任务做成了多少、电量离耗尽有多近（生存），再看最长黑夜和电池能撑多久（为什么会断电），
+  // 然后是阳光和对地通信（选址条件），最后是数据和能量总量。
   const kpis: Array<{ label: string; value: string; meter?: number }> = [
     { label: t("sim.kpi.working"), value: formatPercent(locale, result.operatingFraction), meter: result.operatingFraction },
-    { label: t("sim.kpi.sun"), value: formatPercent(locale, result.sunFraction), meter: result.sunFraction },
-    { label: t("sim.kpi.earth"), value: formatPercent(locale, result.earthFraction), meter: result.earthFraction },
     { label: t("sim.kpi.minBattery"), value: `${formatNumber(locale, result.minBatteryPct)}%`, meter: result.minBatteryPct / 100 },
     { label: t("sim.kpi.longestDark"), value: formatHours(locale, t, result.longestDarkH) },
     { label: t("sim.kpi.endurance"), value: formatHours(locale, t, result.batteryEnduranceH) },
+    { label: t("sim.kpi.sun"), value: formatPercent(locale, result.sunFraction), meter: result.sunFraction },
+    { label: t("sim.kpi.earth"), value: formatPercent(locale, result.earthFraction), meter: result.earthFraction },
     { label: t("sim.kpi.longestNoContact"), value: formatHours(locale, t, result.longestNoContactH) },
-    { label: t("sim.kpi.energy"), value: `${formatEnergyKWh(locale, result.energyGeneratedKWh)} / ${formatEnergyKWh(locale, result.energyUsedKWh)}` },
     { label: t("sim.kpi.data"), value: `${formatDataGB(locale, result.dataReturnedGB)} / ${formatDataGB(locale, result.dataGeneratedGB)}` },
+    { label: t("sim.kpi.energy"), value: `${formatEnergyKWh(locale, result.energyGeneratedKWh)} / ${formatEnergyKWh(locale, result.energyUsedKWh)}` },
   ];
+  const advice = (
+    <>
+      <h3 className="mt-4 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/55">{t("sim.advice")}</h3>
+      <ul className="mt-1.5 space-y-1.5">
+        {result.advice.map((item) => (
+          <li key={item.key} className="flex gap-2 rounded-lg border border-lime-300/15 bg-lime-300/5 px-2.5 py-2 text-xs leading-snug text-white/85">
+            <span aria-hidden className="text-lime-300">→</span>
+            <span>{t(`sim.advice.${item.key}`, Object.fromEntries(Object.entries(item.values).map(([name, value]) => [name, formatNumber(locale, value, 1)])))}</span>
+          </li>
+        ))}
+      </ul>
+    </>
+  );
 
   return (
     <div>
@@ -30,7 +45,9 @@ export function MissionPerformance({ result }: { result: MissionResult }) {
         </div>
       </div>
 
-      <dl className="mt-3 grid grid-cols-2 gap-1.5">
+      {advice}
+
+      <dl className="mt-4 grid grid-cols-2 gap-1.5">
         {kpis.map((kpi) => (
           <div key={kpi.label} className="rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-2">
             <dt className="text-[10px] leading-tight text-white/55">{kpi.label}</dt>
@@ -43,16 +60,6 @@ export function MissionPerformance({ result }: { result: MissionResult }) {
           </div>
         ))}
       </dl>
-
-      <h3 className="mt-4 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/55">{t("sim.advice")}</h3>
-      <ul className="mt-1.5 space-y-1.5">
-        {result.advice.map((advice) => (
-          <li key={advice.key} className="flex gap-2 rounded-lg border border-lime-300/15 bg-lime-300/5 px-2.5 py-2 text-xs leading-snug text-white/85">
-            <span aria-hidden className="text-lime-300">→</span>
-            <span>{t(`sim.advice.${advice.key}`, Object.fromEntries(Object.entries(advice.values).map(([name, value]) => [name, formatNumber(locale, value, 1)])))}</span>
-          </li>
-        ))}
-      </ul>
       <Caveat>{t("sim.assumptions")}</Caveat>
     </div>
   );

@@ -26,4 +26,6 @@ export interface MapViewProps {
   onHover: (point: LatLon | null) => void;
   onLoadingChange: (loading: boolean) => void;
   onError: (message: string) => void;
+  /** 画面要整体换样子（换视图、换图层）之前拍下的最后一帧，总装组件用它做溶解过渡（见 map-transition.tsx）。 */
+  onSnapshot?: (frame: HTMLCanvasElement) => void;
 }

@@ -13,8 +13,8 @@ export const LANDING_FILTERS: ReadonlyArray<{ id: LandingFilter; label: string }
   { id: "robotic", label: "Robotic landing sites" },
 ];
 
-/** 地图标记和清单里的颜色：载人（阿波罗）琥珀色，无人青绿色。 */
-export const LANDING_KIND_COLORS: Record<LandingSiteKind, string> = { human: "#fbbf24", robotic: "#5eead4" };
+/** 地图标记和清单里的颜色，用网站自己的配色：载人（阿波罗）= 主色黄绿（和按钮、选中状态同色），无人 = 网站的浅钢蓝。 */
+export const LANDING_KIND_COLORS: Record<LandingSiteKind, string> = { human: "#bef264", robotic: "#a8c8d9" };
 
 export interface SiteEntry extends LatLon {
   /** 和 /api/presets 里的 id 一致。 */

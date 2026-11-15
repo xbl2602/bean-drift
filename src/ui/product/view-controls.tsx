@@ -26,7 +26,7 @@ export function ViewControls({ mode, onModeChange, layers, onLayersChange }: Vie
           <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18" /></svg>
         </button>
       )}
-      <div className="flex rounded-full border border-white/15 bg-black/55 p-1 lunar-glass backdrop-blur-md">
+      <div data-tour="light-grid" className="flex rounded-full border border-white/15 bg-black/55 p-1 lunar-glass backdrop-blur-md">
         <IconToggle
           label="Sunlight and shadow (surface imagery only)"
           pressed={layers.sunlight}
@@ -34,7 +34,7 @@ export function ViewControls({ mode, onModeChange, layers, onLayersChange }: Vie
           onChange={(sunlight) => onLayersChange({ ...layers, sunlight })}
           path="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm0-5v2m0 14v2M3 12h2m14 0h2M5.6 5.6 7 7m10 10 1.4 1.4M5.6 18.4 7 17M17 7l1.4-1.4"
         />
-        <IconToggle label="Latitude / longitude grid · 30° major lines and four zoom detail levels" pressed={layers.grid} onChange={(grid) => onLayersChange({ ...layers, grid })} path="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Z" />
+        <IconToggle label="Latitude / longitude grid · 30° lines, with 10° and 1° lines as you zoom in" pressed={layers.grid} onChange={(grid) => onLayersChange({ ...layers, grid })} path="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Z" />
       </div>
       <div data-tour="views" role="radiogroup" aria-label="Map view" className="flex rounded-full border border-white/15 bg-black/55 p-1 lunar-glass backdrop-blur-md">
         {(["2d", "3d"] as const).map((m) => (

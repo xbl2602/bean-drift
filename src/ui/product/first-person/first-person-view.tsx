@@ -20,6 +20,7 @@ import { composePhoto, downloadBlob, photoFilename } from "./photo-capture";
 import { destination } from "./terrain-patch";
 import { WALK_LIMIT_M, WalkMotion } from "./walk-motion";
 import { useWalkInput, WalkPad } from "./walk-pad";
+import { snapshotCanvas, useSnapshotOnUnmount, type CaptureFrame } from "../map-transition";
 
 /** 宇航员眼高：固定，滚轮不再升降视点。 */
 const EYE_HEIGHT_M = 1.6;
@@ -50,11 +51,15 @@ interface FirstPersonViewProps {
   timeMs: number;
   onExit: () => void;
   onLoadingChange: (loading: boolean) => void;
+  /** 离开第一人称前拍下的最后一帧，用来溶解回地图（见 map-transition.tsx）。 */
+  onSnapshot?: (frame: HTMLCanvasElement) => void;
   onError: (message: string) => void;
 }
 
-export function FirstPersonView({ point, timeMs, onExit, onLoadingChange, onError }: FirstPersonViewProps) {
+export function FirstPersonView({ point, timeMs, onExit, onLoadingChange, onError, onSnapshot }: FirstPersonViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const captureRef = useRef<CaptureFrame | null>(null);
+  useSnapshotOnUnmount(captureRef, onSnapshot);
   const sceneRef = useRef<FirstPersonScene | null>(null);
   const [render4k, setRender4k] = useState(true);
   const qualityRef = useRef(render4k);
@@ -136,6 +141,7 @@ export function FirstPersonView({ point, timeMs, onExit, onLoadingChange, onErro
         setGroundHeightM(built.groundHeightM);
         resize();
         onLoadingChange(false);
+        captureRef.current = () => snapshotCanvas(renderer.domElement, () => renderer.render(built.scene, built.camera));
         const walk = new WalkMotion(built.startGroundYM);
         walkRef.current = walk;
         let lastMs = performance.now();
@@ -208,6 +214,7 @@ export function FirstPersonView({ point, timeMs, onExit, onLoadingChange, onErro
 
     return () => {
       disposed = true;
+      captureRef.current = null;
       cancelAnimationFrame(frame);
       observer.disconnect();
       resizeRef.current = null;
@@ -302,7 +309,11 @@ export function FirstPersonView({ point, timeMs, onExit, onLoadingChange, onErro
             onClick={() => setHoverLook((value) => !value)}
             className={`rounded-full border px-5 py-2.5 text-sm font-medium lunar-glass backdrop-blur-md transition ${hoverLook ? "border-lime-300/70 bg-lime-300/20 text-lime-100" : "border-white/15 bg-black/60 text-white hover:bg-white/15"}`}
           >
-            {hoverLook ? "Mouse look: ON" : "Mouse look: off"}
+            {/* 两种文字叠在同一格里，按钮宽度取较长的那个：开 / 关时按钮不变宽，旁边的按钮也不挪位置 */}
+            <span className="grid">
+              <span aria-hidden={!hoverLook} className={`col-start-1 row-start-1 ${hoverLook ? "" : "invisible"}`}>Mouse look: ON</span>
+              <span aria-hidden={hoverLook} className={`col-start-1 row-start-1 ${hoverLook ? "invisible" : ""}`}>Mouse look: off</span>
+            </span>
           </button>
           <button
             type="button"

@@ -62,29 +62,32 @@ export function usePointAnalysis(point: LatLon | null, timeMs: number, weights: 
   return point && result?.key === key && result.weights === weights ? result.value : null;
 }
 
-/** Continuously sample the latest cursor at a bounded rate; keep the last labelled reading between samples. */
+/**
+ * 鼠标悬停读数：每一帧（requestAnimationFrame）都取最新的鼠标位置重算一次，读数紧跟鼠标，没有节流延迟。
+ * 新读数算出来之前，继续显示上一个读数（它自带经纬度，数值和位置始终对得上），
+ * 所以时间轴播放（每过一小时重算）或改权重时不会闪回"Move over the Moon"。
+ */
 export function useHoverAnalysis(point: LatLon | null, timeMs: number, weights: SuitabilityWeights): PointAnalysis | null {
   const latest = useRef({ point, weights }); latest.current = { point, weights };
-  const [result, setResult] = useState<{ value: PointAnalysis; hourMs: number; weights: SuitabilityWeights } | null>(null);
+  const [result, setResult] = useState<PointAnalysis | null>(null);
   const hourMs = quantizeToHour(timeMs), active = point !== null;
   useEffect(() => {
     if (!active) return;
-    let cancelled = false, busy = false, frame = 0, lastSampleMs = -Infinity, lastPointKey = "";
-    setResult(null);
-    const tick = (now: number) => {
+    let cancelled = false, busy = false, frame = 0, lastPointKey = "";
+    const tick = () => {
       frame = requestAnimationFrame(tick);
       const current = latest.current;
-      if (busy || !current.point || now - lastSampleMs < 80) return;
+      if (busy || !current.point) return; // 上一帧的计算还没回来：这帧跳过，下一帧用最新位置
       const pointKey = `${current.point.latDeg},${current.point.lonDeg}`;
       if (pointKey === lastPointKey) return;
       lastPointKey = pointKey;
-      busy = true; lastSampleMs = now;
+      busy = true;
       analyzePoint(current.point, hourMs, current.weights).then(value => {
-        if (!cancelled) setResult({ value, hourMs, weights: current.weights });
+        if (!cancelled) setResult(value);
       }).catch(() => { if (!cancelled) setResult(null); }).finally(() => { busy = false; });
     };
     frame = requestAnimationFrame(tick);
     return () => { cancelled = true; cancelAnimationFrame(frame); };
   }, [active, hourMs, weights]);
-  return active && result?.hourMs === hourMs && result.weights === weights ? result.value : null;
+  return active ? result : null;
 }
