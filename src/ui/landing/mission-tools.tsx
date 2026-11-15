@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { Preset } from "@/core/types";
 import { CodeTyper } from "./code-typer";
-import { ConsoleOrbit } from "./console-orbit";
+import { AnalysisNetwork } from "./analysis-network";
 import { angle, DEMO_EPOCH, DEMO_SITES, queryPoint } from "./demo-data";
 import { type ReplySegment, TypedReply } from "./typed-reply";
 import "./mission-tools.css";
@@ -97,12 +97,13 @@ export function MissionTools() {
 
   return (
     <section className="lq-section lq-tools" id="mission-tools" aria-labelledby="lq-tools-heading">
-      <ConsoleOrbit />
-      <div className="lq-tools-intro">
-        <p className="lq-kicker">04 / Console</p>
-        <h2 className="lq-group-heading" id="lq-tools-heading">Explore lunar data your way.</h2>
-        <p className="lq-section-lead">Start with a question or bring Lunar Quest data into your own app.</p>
-        <p className="lq-orbit-caption">Earth orbits the Sun. The Moon orbits Earth. Diagram not to scale.</p>
+      <div className="lq-tools-overview">
+        <div className="lq-tools-intro">
+          <p className="lq-kicker">04 / Console</p>
+          <h2 className="lq-group-heading" id="lq-tools-heading">Explore lunar data your way.</h2>
+          <p className="lq-section-lead">Start with a question or bring Lunar Quest data into your own app.</p>
+        </div>
+        <AnalysisNetwork />
       </div>
       <div className="lq-tools-grid">
         <article className="lq-tool lq-tool-assistant">

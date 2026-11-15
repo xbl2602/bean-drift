@@ -10,7 +10,10 @@ const FOLLOW_PER_S = 4.5;
 /** The picture is drawn a little taller than its window so it can also tilt up and down. */
 const EXTRA_HEIGHT = 0.14;
 
-export function LookAroundPanorama({ src, alt, width, height }: { src: string; alt: string; width: number; height: number }) {
+/** A picture wider than its window glides sideways; a taller one (like a square photo) also glides up and down. */
+const MIN_WIDTH_FACTOR = 1.3;
+
+export function LookAroundPanorama({ src, alt, width, height, focusY = 0.62 }: { src: string; alt: string; width: number; height: number; focusY?: number }) {
   const windowRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLDivElement>(null);
   const [hasMoved, setHasMoved] = useState(false);
@@ -22,7 +25,7 @@ export function LookAroundPanorama({ src, alt, width, height }: { src: string; a
 
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const pointer = { x: 0.5, y: 0.5, isOver: false };
-    const view = { x: 0.27, y: 0.71 };
+    const view = { x: 0.27, y: Math.min(focusY + 0.09, 1) };
     const card = frame.closest<HTMLElement>(".lq-card-horizon") ?? frame;
     const clamp01 = (value: number) => Math.min(Math.max(value, 0), 1);
     let isVisible = false;
@@ -49,7 +52,7 @@ export function LookAroundPanorama({ src, alt, width, height }: { src: string; a
       const rect = frame.getBoundingClientRect();
       const progress = reducedMotion ? 0.5 : clamp01((window.innerHeight * 0.8 - rect.top) / (window.innerHeight * 0.58));
       const targetX = clamp01(0.27 + 0.18 * progress + (pointer.isOver ? (pointer.x - 0.5) * 0.68 : 0));
-      const targetY = clamp01(0.62 + 0.16 * progress + (pointer.isOver ? (pointer.y - 0.5) * 0.56 : 0));
+      const targetY = clamp01(focusY + 0.16 * progress + (pointer.isOver ? (pointer.y - 0.5) * 0.56 : 0));
       const follow = reducedMotion ? 1 : 1 - Math.exp(-stepS * FOLLOW_PER_S);
       zoom += (1 + (reducedMotion ? 0 : progress * 0.2) - zoom) * follow;
       view.x += (targetX - view.x) * follow;
@@ -57,8 +60,10 @@ export function LookAroundPanorama({ src, alt, width, height }: { src: string; a
 
       const frameWidth = frame.clientWidth;
       const frameHeight = frame.clientHeight;
-      const pictureHeight = frameHeight * (1 + EXTRA_HEIGHT) * zoom;
-      const pictureWidth = Math.max((pictureHeight * width) / height, frameWidth);
+      const aspect = width / height;
+      const baseHeight = frameHeight * (1 + EXTRA_HEIGHT) * zoom;
+      const pictureWidth = Math.max(baseHeight * aspect, frameWidth * MIN_WIDTH_FACTOR * zoom);
+      const pictureHeight = pictureWidth / aspect;
       picture.style.width = `${pictureWidth}px`;
       picture.style.height = `${pictureHeight}px`;
       const shiftX = -(pictureWidth - frameWidth) * view.x;

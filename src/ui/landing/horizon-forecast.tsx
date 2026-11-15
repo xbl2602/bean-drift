@@ -27,8 +27,10 @@ export function HorizonForecast({ sky }: { sky: { sun: Direction; earth: Directi
         <Body name="sun" direction={sky.sun} />
         <Body name="earth" direction={sky.earth} />
       </div>
-      <div className="lq-horizon-ground" />
       <div className="lq-horizon-cardinals">{COMPASS.map((letter, i) => <span key={i}>{letter}</span>)}</div>
+      <div className="lq-horizon-ground">
+        <span>TRANQUILITY BASE · 1969</span>
+      </div>
     </div>
   );
 }

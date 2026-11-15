@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import { MissionGauges } from "./mission-gauges";
 import { LookAroundPanorama } from "./look-around-panorama";
 import { SiteSurvey } from "./site-survey";
 import { SkyForecast } from "./sky-forecast";
@@ -20,12 +21,13 @@ export function StoryDemo({ kind }: { kind: "survey" | "horizon" | "forecast" | 
       return (
         <figure className="lq-demo lq-pov-demo">
           <LookAroundPanorama
-            src="/landing/apollo-15-hadley.webp"
-            alt="Sunlit lunar hills, boulders and the Apollo 15 rover at Hadley–Apennine"
-            width={3200}
-            height={572}
+            src="/landing/apollo-17-boulder.jpg"
+            alt="Apollo 17 astronaut beside a house-sized boulder on the Taurus-Littrow valley floor, with sunlit hills beyond and a black sky"
+            width={2400}
+            height={2486}
+            focusY={0.44}
           />
-          <figcaption className="lq-demo-caption">APOLLO 15 · HADLEY–APENNINE · NASA / USGS</figcaption>
+          <figcaption className="lq-demo-caption">APOLLO 17 · TAURUS-LITTROW · NASA / JSC</figcaption>
         </figure>
       );
     case "forecast":
@@ -34,27 +36,8 @@ export function StoryDemo({ kind }: { kind: "survey" | "horizon" | "forecast" | 
       return (
         <div className="lq-demo lq-progress-demo">
           <p className="lq-demo-caption">EXAMPLE · 30-DAY SURFACE MISSION · ILLUSTRATIVE NUMBERS</p>
-          <div className="lq-gauges">
-            {MISSION_GAUGES.map((gauge) => (
-              <div
-                key={gauge.label}
-                className="lq-gauge"
-                role="img"
-                aria-label={`${gauge.label}: ${gauge.percent} percent, ${gauge.detail}`}
-              >
-                <div
-                  className="lq-gauge-ring"
-                  style={{ "--lq-gauge-value": gauge.percent, "--lq-gauge-color": gauge.color } as CSSProperties}
-                >
-                  <strong>{gauge.percent}%</strong>
-                </div>
-                <div>
-                  <span className="lq-gauge-label">{gauge.label}</span>
-                  <span className="lq-gauge-detail">{gauge.detail}</span>
-                </div>
-              </div>
-            ))}
-          </div>
+          <MissionGauges />
+
         </div>
       );
     case "goal":

@@ -4,7 +4,7 @@
 
 import { buildFullscreenProgram, type CanvasRenderer, createFullscreenQuad, loadGlobeTexture } from "./gl-utils";
 import { EARTH_TEXTURE_URL, SUN_IMAGE_URL } from "./space-renderer";
-import { SURFACE_MARCH_FRAGMENT_SHADER, SURFACE_SHADE_FRAGMENT_SHADER } from "./surface-shaders";
+import { FXAA_FRAGMENT_SHADER, SURFACE_MARCH_FRAGMENT_SHADER, SURFACE_SHADE_FRAGMENT_SHADER } from "./surface-shaders";
 import { loadSurfaceTerrain, type SurfaceTerrain } from "./surface-terrain";
 
 type Vec3 = [number, number, number];
@@ -98,6 +98,7 @@ const UNIT_MID = 1;
 const UNIT_FINE = 2;
 const UNIT_DEPTH = 3;
 const UNIT_EARTH = 4;
+const UNIT_SCENE = 6;
 const UNIT_SUN = 5;
 
 /** Returns null when the browser has no WebGL2, so the caller can leave the plain background in place. */
@@ -107,6 +108,7 @@ export function createSurfaceRenderer(canvas: HTMLCanvasElement, camera: Surface
 
   const marchProgram = buildFullscreenProgram(gl, SURFACE_MARCH_FRAGMENT_SHADER);
   const shadeProgram = buildFullscreenProgram(gl, SURFACE_SHADE_FRAGMENT_SHADER);
+  const fxaaProgram = buildFullscreenProgram(gl, FXAA_FRAGMENT_SHADER);
   const quad = createFullscreenQuad(gl);
 
   const forward = directionFromCompass(camera.headingDeg, camera.pitchDeg);
@@ -123,6 +125,20 @@ export function createSurfaceRenderer(canvas: HTMLCanvasElement, camera: Surface
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
   const depthTarget = gl.createFramebuffer();
+
+  // The finished picture is first drawn into this image, then an edge-smoothing pass (FXAA)
+  // copies it to the canvas. The ground is shaded per pixel, so without this its edges stair-step.
+  const sceneTexture = gl.createTexture();
+  gl.activeTexture(gl.TEXTURE0 + UNIT_SCENE);
+  gl.bindTexture(gl.TEXTURE_2D, sceneTexture);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  const sceneTarget = gl.createFramebuffer();
+  gl.useProgram(fxaaProgram);
+  gl.uniform1i(gl.getUniformLocation(fxaaProgram, "uScene"), UNIT_SCENE);
+  const fxaaInverseResolution = gl.getUniformLocation(fxaaProgram, "uInvRes");
 
   const earth = loadGlobeTexture(gl, UNIT_EARTH, EARTH_TEXTURE_URL);
   const sunImage = loadGlobeTexture(gl, UNIT_SUN, SUN_IMAGE_URL);
@@ -177,6 +193,7 @@ export function createSurfaceRenderer(canvas: HTMLCanvasElement, camera: Surface
     time: shade("uTime"),
     starDrift: shade("uStarDrift"),
     sunDir: shade("uSunDir"),
+    earthDir: shade("uEarthDir"),
     sunCenter: shade("uSunCenter"),
     sunRadius: shade("uSunRadius"),
     earthCenter: shade("uEarthCenter"),
@@ -216,6 +233,12 @@ export function createSurfaceRenderer(canvas: HTMLCanvasElement, camera: Surface
         gl.activeTexture(gl.TEXTURE0 + UNIT_DEPTH);
         gl.bindTexture(gl.TEXTURE_2D, depthTexture);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, bufferWidth, bufferHeight, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+        gl.activeTexture(gl.TEXTURE0 + UNIT_SCENE);
+        gl.bindTexture(gl.TEXTURE_2D, sceneTexture);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, bufferWidth, bufferHeight, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, sceneTarget);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, sceneTexture, 0);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
         depthIsStale = true;
       }
       return { widthPx, heightPx };
@@ -245,18 +268,25 @@ export function createSurfaceRenderer(canvas: HTMLCanvasElement, camera: Surface
 
       gl.viewport(0, 0, canvas.width, canvas.height);
       gl.useProgram(shadeProgram);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, sceneTarget);
       gl.uniform2f(locations.resolution, canvas.width, canvas.height);
       gl.uniform1f(locations.pixelRatio, pixelRatio);
       gl.uniform1f(locations.pixelAngle, (2 * tanHalfFov) / canvas.height);
       gl.uniform1f(locations.time, scene.timeS);
       gl.uniform1f(locations.starDrift, scene.starDriftPx);
       gl.uniform3fv(locations.sunDir, sun.direction);
+      gl.uniform3fv(locations.earthDir, earthOnScreen.direction);
       gl.uniform2f(locations.sunCenter, sun.x, sun.y);
       gl.uniform1f(locations.sunRadius, sun.radius);
       gl.uniform2f(locations.earthCenter, earthOnScreen.x, earthOnScreen.y);
       gl.uniform1f(locations.earthRadius, earthOnScreen.radius);
       gl.uniformMatrix3fv(locations.earthRotation, false, scene.earthRotation);
       gl.uniform3fv(locations.earthLight, earthLight);
+      gl.drawArrays(gl.TRIANGLES, 0, 6); // the picture, into the scene image
+      // Smooth the stair-stepped edges while copying it to the canvas.
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      gl.useProgram(fxaaProgram);
+      gl.uniform2f(fxaaInverseResolution, 1 / canvas.width, 1 / canvas.height);
       gl.drawArrays(gl.TRIANGLES, 0, 6);
     },
 
@@ -265,6 +295,9 @@ export function createSurfaceRenderer(canvas: HTMLCanvasElement, camera: Surface
       isDisposed = true;
       heightTextures.forEach((texture) => gl.deleteTexture(texture));
       gl.deleteTexture(depthTexture);
+      gl.deleteTexture(sceneTexture);
+      gl.deleteFramebuffer(sceneTarget);
+      gl.deleteProgram(fxaaProgram);
       gl.deleteTexture(earth.texture);
       gl.deleteTexture(sunImage.texture);
       gl.deleteFramebuffer(depthTarget);

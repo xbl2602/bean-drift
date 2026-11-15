@@ -4,7 +4,7 @@
 // buttons are on the right, and a photo plus four short facts open under the one you choose.
 
 import Image from "next/image";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useLayoutEffect, useRef, useState, type PointerEvent } from "react";
 import { FAMOUS_SITES, type FamousSite } from "./landing-sites-content";
 import { globeRotation, lerp } from "./space-math";
 import { createSpaceRenderer, type SpaceScene } from "./space-renderer";
@@ -36,13 +36,47 @@ export function LandingSites() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const markerRefs = useRef<(HTMLSpanElement | null)[]>([]);
   const selectedRef = useRef<number | null>(null);
+  const itemRefs = useRef<(HTMLLIElement | null)[]>([]);
   const viewRef = useRef({ latDeg: IDLE_LATITUDE_DEG, lonDeg: 0, lastTimeS: 0 });
 
+  const drag = useRef<{ id: number; x: number; y: number } | null>(null);
+  const manual = useRef(false);
+  const [dragging, setDragging] = useState(false);
+
+  const rotate = (dx: number, dy: number) => {
+    manual.current = true;
+    const view = viewRef.current;
+    view.lonDeg = ((view.lonDeg - dx + 540) % 360 + 360) % 360 - 180;
+    view.latDeg = Math.max(-89, Math.min(89, view.latDeg + dy));
+  };
+
+  const finishDrag = (event: PointerEvent<HTMLDivElement>) => {
+    if (drag.current?.id !== event.pointerId) return;
+    drag.current = null;
+    setDragging(false);
+  };
+
   const choose = (index: number) => {
-    const next = selected === index ? null : index;
+    const next = selected === index && !manual.current ? null : index;
+    manual.current = false;
     selectedRef.current = next;
     setSelected(next);
   };
+
+  useLayoutEffect(() => {
+    if (selected === null) return;
+    const item = itemRefs.current[selected];
+    if (!item) return;
+    const bounds = item.getBoundingClientRect();
+    const topbar = document.querySelector(".lq-topbar")?.getBoundingClientRect().bottom ?? 0;
+    const top = topbar + 12;
+    const available = window.innerHeight - top - 12;
+    if (bounds.top >= top && bounds.bottom <= window.innerHeight - 12) return;
+    const distance = bounds.height <= available && bounds.top >= top
+      ? bounds.bottom - window.innerHeight + 12
+      : bounds.top - top;
+    window.scrollBy(0, distance);
+  }, [selected]);
 
   const buildScene = useCallback((timeS: number, widthPx: number, heightPx: number): SpaceScene => {
     const view = viewRef.current;
@@ -53,10 +87,12 @@ export function LandingSites() {
     // Ease towards the chosen site (or keep drifting when none is chosen) so the turn is a glide.
     const catchUp = elapsedS > 0 ? 1 - Math.exp(-elapsedS * TURN_CATCH_UP_PER_S) : 1;
     const targetLat = site ? site.latDeg : IDLE_LATITUDE_DEG;
-    view.latDeg = lerp(view.latDeg, targetLat, catchUp);
-    if (site) view.lonDeg += lonGap(view.lonDeg, site.lonDeg) * catchUp;
-    else view.lonDeg += IDLE_TURN_DEG_PER_S * elapsedS;
-    view.lonDeg = ((view.lonDeg + 540) % 360) - 180;
+    if (!manual.current) {
+      view.latDeg = lerp(view.latDeg, targetLat, catchUp);
+      if (site) view.lonDeg += lonGap(view.lonDeg, site.lonDeg) * catchUp;
+      else view.lonDeg += IDLE_TURN_DEG_PER_S * elapsedS;
+      view.lonDeg = ((view.lonDeg + 540) % 360) - 180;
+    }
 
     const rotation = globeRotation(-view.lonDeg * DEG, view.latDeg * DEG, 0);
     const radiusPx = Math.min(widthPx, heightPx) * 0.44;
@@ -93,12 +129,42 @@ export function LandingSites() {
         Three sites. Three lessons.
       </h2>
       <p className="lq-section-lead">
-        New to landing sites? Pick one of three places spacecraft have already touched down. The Moon turns to show
-        where it is.
+        Drag the Moon to look around, or choose a landing site to bring it into view.
       </p>
 
       <div className="lq-sites-layout">
-        <div className="lq-sites-moon">
+        <div
+          className={`lq-sites-moon${dragging ? " is-dragging" : ""}`}
+          role="group"
+          aria-label="Interactive Moon. Drag or use the arrow keys to rotate."
+          tabIndex={0}
+          onPointerDown={(event) => {
+            if (!event.isPrimary || event.button !== 0) return;
+            drag.current = { id: event.pointerId, x: event.clientX, y: event.clientY };
+            event.currentTarget.setPointerCapture(event.pointerId);
+            setDragging(true);
+          }}
+          onPointerMove={(event) => {
+            const pointer = drag.current;
+            if (!pointer || pointer.id !== event.pointerId) return;
+            const degreesPerPixel = 230 / event.currentTarget.clientWidth;
+            rotate((event.clientX - pointer.x) * degreesPerPixel, (event.clientY - pointer.y) * degreesPerPixel);
+            pointer.x = event.clientX;
+            pointer.y = event.clientY;
+          }}
+          onPointerUp={finishDrag}
+          onPointerCancel={finishDrag}
+          onLostPointerCapture={finishDrag}
+          onKeyDown={(event) => {
+            const directions: Record<string, [number, number]> = {
+              ArrowLeft: [-12, 0], ArrowRight: [12, 0], ArrowUp: [0, -12], ArrowDown: [0, 12],
+            };
+            const direction = directions[event.key];
+            if (!direction) return;
+            event.preventDefault();
+            rotate(...direction);
+          }}
+        >
           <canvas ref={canvasRef} className="lq-space-canvas lq-sites-canvas" aria-hidden="true" />
           {FAMOUS_SITES.map((site, index) => (
             <span
@@ -119,7 +185,11 @@ export function LandingSites() {
           {FAMOUS_SITES.map((site, index) => {
             const isOpen = selected === index;
             return (
-              <li key={site.id} className={`lq-site-item${isOpen ? " is-open" : ""}`}>
+              <li
+                key={site.id}
+                ref={(element) => { itemRefs.current[index] = element; }}
+                className={`lq-site-item${isOpen ? " is-open" : ""}`}
+              >
                 <button
                   type="button"
                   className="lq-site-pick"
@@ -134,7 +204,7 @@ export function LandingSites() {
                   </span>
                   <span className="lq-site-pick-icon" aria-hidden="true" />
                 </button>
-                <div className="lq-site-panel" id={`lq-site-panel-${site.id}`} role="region" aria-label={`${site.mission} details`}>
+                <div className="lq-site-panel" id={`lq-site-panel-${site.id}`} role="region" aria-label={`${site.mission} details`} hidden={!isOpen}>
                   <div className="lq-site-panel-inner">
                     <figure className="lq-site-photo">
                       <Image src={site.photo.src} alt={site.photo.alt} width={1000} height={1000} sizes="(max-width: 900px) 90vw, 40vw" unoptimized />

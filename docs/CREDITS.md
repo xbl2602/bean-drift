@@ -35,11 +35,17 @@
 |---|---|---|---|---|---|---|
 | 主页缩略图 | `prototypes/lunar-scene-demo/thumbs/` | 我们自己场景的截图，无外部素材 | 否（场景由 AI 辅助编写的代码渲染） | — | xbl2602 | |
 | landing page 月面视角图（HD 渲染）5 张 | `public/landing/shot-earthrise-hd.jpg`、`shot-crater-rim-hd.jpg`、`shot-long-shadows-hd.jpg`（画廊）、`panorama-rim-hd.jpg`（"Stand there first" 卡片）、`panorama-sky-hd.jpg`（"forecast" 卡片背景） | 用我们自己的南极场景渲染器（`src/ui/landing/surface-renderer.ts`，地形是 NASA LOLA 南极数据 + 程序生成的细节）重新渲染，1920×1280 / 3840×1080 / 3000×760，无外部素材；取代了之前从原型复制的低清截图 | 否（场景由 AI 辅助编写的代码渲染，不是 AI 生成的图片） | — | chanjy0806 | 2026-11-14 |
-| 阿波罗 15 号哈德利月面全景 | `public/landing/apollo-15-hadley.webp`、`public/landing/forecast-ground.webp` | NASA、USGS 和 Apollo 15 crew，[Astronaut Exploring: An Apollo 15 Panorama](https://science.nasa.gov/image-article/apod-2018-november-11-astronaut-exploring-an-apollo-15-panorama/)。美国政府任务影像，按 [NASA 媒体使用指引](https://www.nasa.gov/nasa-brand-center/images-and-media/) 署名使用。源图 4000×723，裁切照片拼接边缘后以 WebP 展示；地表局部裁切仅为阿波罗 11 号天空预报的示意前景。 | 否 | — | chanjy0806 | 2026-11-14 |
+| 阿波罗 11 号静海基地实拍地表 | `public/landing/forecast-tranquility.webp` | Neil Armstrong / Apollo 11 / NASA，[Apollo 11 Landing Panorama](https://science.nasa.gov/image-article/apod-2024-july-20-apollo-11-landing-panorama/)。按 [NASA 媒体使用指引](https://www.nasa.gov/nasa-brand-center/images-and-media/) 署名使用。源图裁切为预报画面的地表前景；星历与照片分别呈现。 | 否 | — | chanjy0806 | 2026-11-14 |
+| 阿波罗 17 号金牛座-利特罗山谷：舒密特与巨石（AS17-140-21496） | `public/landing/apollo-17-boulder.jpg` | NASA 约翰逊航天中心（JSC）拍摄的任务影像，来自 NASA 图像库 https://images.nasa.gov/details/as17-140-21496 （原图 3953×4095）。美国政府任务影像，按 [NASA 媒体使用指引](https://www.nasa.gov/nasa-brand-center/images-and-media/) 署名使用。仅缩小到 2400 宽、略微提高饱和度/对比度并锐化，没有合成或改动画面内容。用在"Stand there first"卡片。 | 否 | — | chanjy0806 | 2026-11-15 |
 | 阿波罗 11 号着陆点轨道照片 | `public/landing/site-apollo-11-lroc.png` | NASA LRO 相机（LROC M175124932R）"Apollo 11 From Low Altitude"，署名 NASA/GSFC/Arizona State University；来自 https://lroc.im-ldi.com/images/484 。NASA 任务影像，一般按公共领域使用；**LROC 网站页脚写 "All rights reserved"，请 `leeziqi0531-debug`/`xbl2602` 确认后再用于最终提交** | 否 | — | chanjy0806 | 2026-11-14 |
 | 嫦娥四号着陆点轨道照片 | `public/landing/site-change-4-lroc.png` | NASA LRO 相机（LROC M1303619844LR），署名 NASA/GSFC/Arizona State University；来自 https://lroc.im-ldi.com/images/1092 ；许可备注同上，**待确认** | 否 | — | chanjy0806 | 2026-11-14 |
 | 月船三号着陆点轨道照片 | `public/landing/site-chandrayaan-3-lroc.png` | NASA LRO 相机（LROC M1447750764LR），署名 NASA/GSFC/Arizona State University；来自 https://lroc.im-ldi.com/images/1314 ；EurekAlert 将其标为公共领域，但 LROC 页脚许可备注同上，**待确认** | 否 | — | chanjy0806 | 2026-11-14 |
-| landing page 的星空、云层、太阳（米粒组织、黑子、临边昏暗、日珥）、光照效果 | `src/ui/landing/space-shaders.ts`、`shader-chunks.ts` | 用代码（着色器）画的装饰效果，太阳的样子参照公开的太阳照片但不是真实数据，无外部素材，不是真实数据；月球和地球表面用的是下面"数据源"表里的 NASA 贴图 | 是（代码由 AI 辅助编写） | 见 `docs/logs/chanjy0806/2026-11-14.md` | chanjy0806 | 2026-11-14 |
+| 太阳照片（SDO/AIA 171 Å，4096×4096，2026-11-14 09:47 UT 一帧） | `public/landing/sun-sdo-171-4k.jpg` | NASA Solar Dynamics Observatory，来自 https://sdo.gsfc.nasa.gov/assets/img/latest/latest_4096_0171.jpg ；NASA 任务影像，按 NASA 媒体使用指引署名使用；颜色是 171 Å 极紫外波段的标准伪彩色，不是肉眼所见的白光太阳；已涂黑左下角的日期文字 | 否 | — | chanjy0806 | 2026-11-14 |
+| 月球彩色图 6144×3072 | `public/landing/moon-color-6k.jpg` | 由 NASA SVS CGI Moon Kit 的 `lroc_color_poles_8k.tif`（https://svs.gsfc.nasa.gov/4720 ）缩小得到，用于滚动故事里放大的月球 | 否 | — | chanjy0806 | 2026-11-14 |
+| 月面起伏图 4096×2048 | `public/landing/moon-relief-4k.jpg` | 由 NASA SVS Moon Kit 的 LOLA 高程图 `ldem_16_uint.tif`（5760×2880，约 1.9 km/像素）做"去掉大尺度形状"的高通处理后编码成 8 位灰度（每级约 14 m），只用来给月球着色器算坑洞的明暗，不是可测量的高程数据 | 否 | — | chanjy0806 | 2026-11-14 |
+| 月面高度图 2048×1024（console 背景里判断基地是否被地形挡住） | `public/landing/moon-height-2k.png` | 由 NASA SVS Moon Kit / LRO LOLA 的 16 位高程图 `ldem_16_uint`（h = DN×0.5 − 10000 米）缩小并压成 8 位（-9200 m 到 +10800 m），只在网页里读高度用，不直接显示 | 否 | — | chanjy0806 | 2026-11-15 |
+| console 背景里的中继卫星 3D 模型与贴图 | `src/ui/landing/satellite-model.ts`、`bake-satellite.mjs`、`public/landing/satellite/`（`foil/panel/dish` 的 color 与 normal PNG、`ao.json`） | 我们自己用代码建的模型（圆角盒、抛物面天线、三节太阳翼），**非真实卫星外形**；颜色/法线贴图由脚本程序生成，遮蔽（AO）由脚本离线射线烘焙；无外部素材 | 是（由 AI 辅助编写的代码生成，无提示词素材） | 见 `bake-satellite.mjs` 注释 | chanjy0806 | 2026-11-15 |
+| landing page 的星空、云层、首屏太阳（米粒组织、黑子、日珥的程序化画法）、月球与太空场景、ASCII 终章动画、月球通信示意（中继轨道器、直连地球、频段标注，速率为示意值）、光照效果 | `src/ui/landing/space-shaders.ts`、`shader-chunks.ts` | 用代码（着色器）画的装饰效果，太阳的样子参照公开的太阳照片但不是真实数据，无外部素材，不是真实数据；月球和地球表面用的是下面"数据源"表里的 NASA 贴图 | 是（代码由 AI 辅助编写） | 见 `docs/logs/chanjy0806/2026-11-14.md` | chanjy0806 | 2026-11-14 |
 
 ## 4. AI 辅助声明
 
@@ -55,6 +61,8 @@
 | 阿波罗 11 号 | 0.67416°N 23.47314°E | 原型使用值，来自 LROC 影像中"鹰号"下降级位置（见 PROJECT_CONTEXT），误差几米 | xbl2602 | |
 | 嫦娥四号（landing page"三个著名着陆点"） | 45.457°S 177.589°E | NASA LROC 根据影像定位的着陆器位置，误差约 ±20 m：https://www.lroc.asu.edu/posts/1087 | chanjy0806 | 2026-11-14 |
 | 月船三号 Chandrayaan-3（Statio Shiv Shakti，landing page"三个著名着陆点"） | 69.373°S 32.319°E | IAU 批准的地名条目所列坐标，转引自 https://en.wikipedia.org/wiki/Statio_Shiv_Shakti ；另有文档写 69.3676°S 32.3481°E，两者相差约 0.03°，**未能核对哪个更准** | chanjy0806 | 2026-11-14 |
+| console 背景里的月面基地（13 个真实着陆点：Luna 9/13/16/24、Surveyor 1/6、Apollo 11/12/14/16/17、SLIM、Blue Ghost 1） | 见 `src/ui/landing/lunar-bases.ts` | 坐标取自维基百科 "List of artificial objects on the Moon" 的表（该表引用 NASA/LROC 与各航天机构），**待 xbl2602 / leeziqi0531-debug 复核**；IM-1 一行的坐标看起来不对，已弃用 | chanjy0806 | 2026-11-15 |
+| console 背景里的 6 个**虚构**远侧基地（far-1 到 far-6） | `src/ui/landing/lunar-bases.ts`（`real: false`） | 纯属编造，只为让卫星飞越远侧时也有可连的基地；画面里没有文字，不会被当成真实任务。如需公开说明，请注明是示意 | chanjy0806 | 2026-11-15 |
 
 ## 3D globe sky imagery (2026-11-14, ShanLe1224 / Codex)
 | Asset | Local file | Source and rights | Processing / limitations |
