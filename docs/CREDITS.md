@@ -73,7 +73,7 @@
 | 嫦娥四号（预设点位） | 45.457°S 177.589°E | 同上一条 landing page 的行：NASA LROC 影像定位，±20 m。我重新打开了该页面，确认数值与页面一致：https://www.lroc.asu.edu/posts/1087 | xbl2602 | 2026-11-15 |
 | 南极 10 个地名（Shackleton、Mons Malapert、Haworth、Nobile、Faustini、Cabeus、Amundsen、de Gerlache、Slater、Mons Mouton；预设点位） | 见 `src/core/data/presets.ts` | IAU 月面地名库（USGS）的**地名中心点**，坐标保证约 2 位小数；**只代表"这个地名在哪"，不是任何任务的着陆目标**（预设描述里已写明）。Artemis III 候选区的官方坐标仍未核实，没有写进来 | xbl2602 | 2026-11-15 |
 | console 背景里的月面基地（13 个真实着陆点：Luna 9/13/16/24、Surveyor 1/6、Apollo 11/12/14/16/17、SLIM、Blue Ghost 1） | 见 `src/ui/landing/lunar-bases.ts` | 坐标取自维基百科 "List of artificial objects on the Moon" 的表（该表引用 NASA/LROC 与各航天机构），**待 xbl2602 / leeziqi0531-debug 复核**；IM-1 一行的坐标看起来不对，已弃用 | chanjy0806 | 2026-11-15 |
-| console 背景里的 6 个**虚构**远侧基地（far-1 到 far-6） | `src/ui/landing/lunar-bases.ts`（`real: false`） | 纯属编造，只为让卫星飞越远侧时也有可连的基地；画面里没有文字，不会被当成真实任务。如需公开说明，请注明是示意 | chanjy0806 | 2026-11-15 |
+| console 背景里的 6 个**虚构**远侧基地（far-1 到 far-6） | `src/ui/landing/lunar-bases.ts`（`real: false`） | 纯属编造，只为让卫星飞越远侧时也有可连的基地；画面里没有文字，不会被当成真实任务。如需公开说明，请注明是示意 | chanjy0806 | 2026-11-15 ；**2026-11-15 起**还有程序生成的"哨站"（`outpost-N`，每隔 10° 经度一个、纬度在赤道以南几度，共约 30 个，也是纯属虚构、`real: false`），用来保证画面里指定的通信区域（`LINK_REGION`）里几乎一直有一个基地可以连；它们只在被连上时才亮，平时不显示光点 |
 
 ## 3D globe sky imagery (2026-11-14, ShanLe1224 / Codex)
 | Asset | Local file | Source and rights | Processing / limitations |

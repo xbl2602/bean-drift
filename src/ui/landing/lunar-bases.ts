@@ -7,9 +7,17 @@
 // turn from NASA/LROC and agency sources; see docs/CREDITS.md section 5). The far side has no real
 // sites on this track, so a few invented bases fill the gap; they are marked `real: false`.
 
-export type LunarBase = { id: string; name: string; latDeg: number; lonDeg: number; real: boolean };
+export type LunarBase = {
+  id: string;
+  name: string;
+  latDeg: number;
+  lonDeg: number;
+  real: boolean;
+  /** Generated gap filler: no glowing dot on the ground until a link to it is open. */
+  quiet?: boolean;
+};
 
-export const LUNAR_BASES: LunarBase[] = [
+const HAND_PLACED_BASES: LunarBase[] = [
   // Near side, real.
   { id: "luna-9", name: "Luna 9", latDeg: 7.08, lonDeg: -64.37, real: true },
   { id: "luna-13", name: "Luna 13", latDeg: 18.87, lonDeg: -62.05, real: true },
@@ -32,3 +40,27 @@ export const LUNAR_BASES: LunarBase[] = [
   { id: "far-5", name: "Far-side base 5", latDeg: 8, lonDeg: -140, real: false },
   { id: "far-6", name: "Far-side base 6", latDeg: -11, lonDeg: -110, real: false },
 ];
+
+// Links are only drawn in the part of the picture that was chosen for them (LINK_REGION in lunar-orbit-scene.ts): the
+// patch of ground just ahead of and below the satellite, about 2 to 14 degrees of longitude wide and a few degrees south
+// of the equator. The real sites above are far too sparse for that patch to have a base in it most of the time, so
+// invented "outposts" are added along the ground track, one every FILLER_SPACING_DEG degrees of longitude. That keeps
+// one or two links open nearly all the time. They are invented (real: false) and quiet: they glow only while linked.
+const FILLER_SPACING_DEG = 10;
+const FILLER_LATITUDES_DEG = [-2.5, -4.5, -1, -3.5, -5.5, -1.5];
+/** A filler is skipped when a hand-placed base on the track is already this close in longitude. */
+const FILLER_CLEARANCE_DEG = 3;
+
+function buildFillerBases(): LunarBase[] {
+  const onTrack = HAND_PLACED_BASES.filter((base) => Math.abs(base.latDeg) < 7);
+  const fillers: LunarBase[] = [];
+  for (let step = 0; ; step++) {
+    const lonDeg = -177 + step * FILLER_SPACING_DEG;
+    if (lonDeg >= 180) break;
+    if (onTrack.some((base) => Math.abs(base.lonDeg - lonDeg) < FILLER_CLEARANCE_DEG)) continue;
+    fillers.push({ id: `outpost-${step}`, name: `Outpost ${step + 1}`, latDeg: FILLER_LATITUDES_DEG[step % FILLER_LATITUDES_DEG.length], lonDeg, real: false, quiet: true });
+  }
+  return fillers;
+}
+
+export const LUNAR_BASES: LunarBase[] = [...HAND_PLACED_BASES, ...buildFillerBases()];
