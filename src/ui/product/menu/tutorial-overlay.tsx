@@ -5,12 +5,23 @@ import { useSmoothNumbers } from "../motion/use-smooth-numbers";
 import { ToolIcon } from "./tool-menu";
 import { TOUR_SEEN_KEY, TOUR_STEPS } from "./tour-steps";
 
-export function useFirstVisitTutorial(open: () => void) {
+/**
+ * 只在第一次打开网站时自动弹出导览，并且等地图加载好（ready）再弹，不盖在加载画面上。
+ * 一弹出就记下"看过了"：中途刷新、点了别的工具把导览关掉，下次都不会再自动弹；想再看可以点顶栏的 ?。
+ */
+export function useFirstVisitTutorial(open: () => void, ready: boolean) {
+  const checked = useRef(false);
+  const openRef = useRef(open);
+  openRef.current = open;
   useEffect(() => {
-    try { if (localStorage.getItem(TOUR_SEEN_KEY)) return; } catch { /* Storage is optional. */ }
-    open();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (!ready || checked.current) return;
+    checked.current = true;
+    try {
+      if (localStorage.getItem(TOUR_SEEN_KEY)) return;
+      localStorage.setItem(TOUR_SEEN_KEY, "1");
+    } catch { /* Storage is optional: without it the tour shows on each visit. */ }
+    openRef.current();
+  }, [ready]);
 }
 interface Box { left: number; top: number; width: number; height: number }
 /** 高亮框、卡片移动和按钮放大都是 C2 平滑的（motion/smooth-value.ts），连续点"下一步"也不会突然加速。 */

@@ -14,6 +14,7 @@ import { prefersReducedMotion } from "../motion/smooth-value";
 import { LunarFeatureLayer } from "../overlay/lunar-feature-layer";
 import { AnnotationLayer } from "../overlay/annotations";
 import { usePointerGestures } from "../use-pointer-gestures";
+import { layerLookKey, snapshotCanvas, useSnapshotOnUnmount, type CaptureFrame } from "../map-transition";
 import { createMap2dMaterial } from "./map-2d-material";
 import { clampCamera, initialCamera, latLonToScreen, panCamera, screenToUv, uvToLatLon, zoomCameraAt, type MapCamera, type ScreenSize } from "./map-2d-camera";
 import { mapCameraOnFlight, startMapFlight, type MapFlight } from "./map-2d-flight";
@@ -35,11 +36,17 @@ interface Map2dRuntime {
   flight: MapFlight | null;
   screen: ScreenSize;
   frame: number;
+  /** 上一帧按什么时间和图层画的：图层换了样子时，先按它重画一帧拍照，做溶解过渡。 */
+  drawn: { timeMs: number; layers: LayerSettings } | null;
 }
 
-export function Map2dView({ timeMs, layers, annotations, focus, cursor, onPick, onDoublePick, onHover, onLoadingChange, onError }: MapViewProps) {
+export function Map2dView({ timeMs, layers, annotations, focus, cursor, onPick, onDoublePick, onHover, onLoadingChange, onError, onSnapshot }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const runtimeRef = useRef<Map2dRuntime | null>(null);
+  const captureRef = useRef<CaptureFrame | null>(null);
+  const snapshotRef = useRef(onSnapshot);
+  snapshotRef.current = onSnapshot;
+  useSnapshotOnUnmount(captureRef, onSnapshot);
   const settingsRef = useRef({ timeMs, layers, annotations });
   settingsRef.current = { timeMs, layers, annotations };
   const focusRef = useRef(focus);
@@ -52,6 +59,12 @@ export function Map2dView({ timeMs, layers, annotations, focus, cursor, onPick, 
       rt.frame = 0;
       const stillFlying = advanceFlight(rt);
       const { timeMs: t, layers: l, annotations: a } = settingsRef.current;
+      const before = rt.drawn;
+      if (before && snapshotRef.current && layerLookKey(before.layers) !== layerLookKey(l)) {
+        const frame = snapshotCanvas(rt.renderer.domElement, () => drawFrame(rt, before.timeMs, before.layers));
+        if (frame) snapshotRef.current(frame);
+      }
+      rt.drawn = { timeMs: t, layers: l };
       applyUniforms(rt, t, l);
       rt.renderer.render(rt.scene, rt.camera3);
       rt.features.draw(a, (point) => latLonToScreen(rt.mapCamera, rt.screen, point), { ...rt.screen, pixelsPerDegree: rt.mapCamera.mapWidthPx / 360 });
@@ -88,7 +101,12 @@ export function Map2dView({ timeMs, layers, annotations, focus, cursor, onPick, 
         const subSolar = bodyToLatLon(sunDirectionBody(settingsRef.current.timeMs));
         const pending = focusRef.current;
         const mapCamera = pending ? cameraForFocus(pending, screen) : initialCamera(screen, subSolar.lonDeg - 45);
-        runtimeRef.current = { atlases, textures, fineRequestedFor: null, renderer, scene, camera3: new THREE.Camera(), material, analysisUniforms, features: new LunarFeatureLayer(container, requestRender), overlay: new AnnotationLayer(container), mapCamera, flight: null, screen, frame: 0 };
+        runtimeRef.current = { atlases, textures, fineRequestedFor: null, renderer, scene, camera3: new THREE.Camera(), material, analysisUniforms, features: new LunarFeatureLayer(container, requestRender), overlay: new AnnotationLayer(container), mapCamera, flight: null, screen, frame: 0, drawn: null };
+        captureRef.current = () => {
+          const live = runtimeRef.current;
+          const { timeMs: t, layers: l } = settingsRef.current;
+          return live ? snapshotCanvas(live.renderer.domElement, () => drawFrame(live, t, l)) : null;
+        };
         resize();
         onLoadingChange(false);
         textures.request(["relief", "slope", "polar"], "coarse");
@@ -128,6 +146,7 @@ export function Map2dView({ timeMs, layers, annotations, focus, cursor, onPick, 
         textures.dispose(); // 还没建好就被关掉：只有贴图集需要释放
       }
       runtimeRef.current = null;
+      captureRef.current = null;
       renderer.dispose();
       renderer.domElement.remove();
     };
@@ -203,6 +222,12 @@ function cameraForFocus(focus: FocusRequest, screen: ScreenSize): MapCamera {
   const lonSpanDeg = Math.min(focus.spanDeg / Math.max(Math.cos((focus.point.latDeg * Math.PI) / 180), 0.05), 360);
   const mapWidthPx = screen.widthPx * (360 / lonSpanDeg);
   return clampCamera({ centerU: focus.point.lonDeg / 360 + 0.5, centerV: focus.point.latDeg / 180 + 0.5, mapWidthPx }, screen);
+}
+
+/** 只重画地图本身（不动标签和标记），给拍照用。 */
+function drawFrame(rt: Map2dRuntime, timeMs: number, layers: LayerSettings) {
+  applyUniforms(rt, timeMs, layers);
+  rt.renderer.render(rt.scene, rt.camera3);
 }
 
 function applyUniforms(rt: Map2dRuntime, timeMs: number, layers: LayerSettings) {
