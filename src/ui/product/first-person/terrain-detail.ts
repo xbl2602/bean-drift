@@ -9,10 +9,12 @@
 import type { RealCrater } from "./crater-catalog";
 
 /** 小起伏的最大波长：比这更大的形状应该由真实 LOLA 数据来表达。 */
-const MAX_WAVELENGTH_M = 1000;
+const MAX_WAVELENGTH_M = 4000;
 const MIN_WAVELENGTH_M = 4;
 /** 每个波长的起伏幅度 = 波长 × 这个比例（1 km 波长约 ±12 m）。 */
-const ROUGHNESS = 0.008;
+const ROUGHNESS = 0.006;
+/** 较长的波长（几百米到几公里的缓坡、小丘）起伏更明显：真实月面上最显眼的就是这种柔和起伏的丘陵（阿波罗 15 号照片里的样子）。 */
+const ROUGHNESS_ROLLING = 0.009;
 /** 生成小坑的范围：半径 4 m ~ 400 m，只铺在人周围这么远的地方（更远的小坑本来也看不清）。 */
 const SMALL_MIN_RADIUS_M = 4;
 const SMALL_MAX_RADIUS_M = 400;
@@ -94,7 +96,8 @@ function craterProfileM(rho: number, radiusM: number, crispness: number): number
   const depthRatio = (0.025 + 0.18 * Math.pow(crispness, 1.2)) * (complex ? (1.044 * Math.pow(diameterM / 1000, -0.699)) / 0.2 : 1);
   // 比统计值略深一点：站在地面上（眼睛只有 1.6 m 高），统计上真实的浅坑几乎看不出来
   const depthM = diameterM * depthRatio * (complex ? 1 : 1.3);
-  const rimM = diameterM * (0.004 + 0.018 * crispness);
+  // 坑沿隆起：新鲜的简单坑约为直径的 3.6%（Pike 1977 的经验式），老坑被磨低
+  const rimM = diameterM * (0.01 + 0.026 * crispness);
   const rimWidth = 0.35 - 0.22 * crispness;
   let h = rimM * Math.exp(-(((rho - 1) / rimWidth) ** 2));
   if (rho < 1) {
@@ -152,7 +155,8 @@ export function createTerrainDetail(latDeg: number, lonDeg: number, realCraters:
   // 1. 真实坑
   let realNear = 0;
   for (const c of realCraters) {
-    add({ eastM: c.eastM, northM: c.northM, radiusM: c.radiusM, crispness: c.crispness });
+    // 数据库里"坑沿被识别出的比例"大多在 0.5~1 之间：拉开到 0~1，新旧坑的差别才明显
+    add({ eastM: c.eastM, northM: c.northM, radiusM: c.radiusM, crispness: Math.min(Math.max((c.crispness - 0.35) / 0.55, 0), 1) });
     if (Math.hypot(c.eastM, c.northM) < realRadiusM && c.radiusM * 2 >= 1000) realNear++;
   }
 
@@ -222,7 +226,7 @@ export function createTerrainDetail(latDeg: number, lonDeg: number, realCraters:
       for (let wavelengthM = MAX_WAVELENGTH_M, octave = 0; wavelengthM >= MIN_WAVELENGTH_M; wavelengthM /= 2, octave++) {
         const keep = smooth(2 * cellM, 4 * cellM, wavelengthM);
         if (keep <= 0) break;
-        h += valueNoise(eastM / wavelengthM, northM / wavelengthM, seed + octave * 1013) * wavelengthM * ROUGHNESS * keep;
+        h += valueNoise(eastM / wavelengthM, northM / wavelengthM, seed + octave * 1013) * wavelengthM * (ROUGHNESS + ROUGHNESS_ROLLING * smooth(300, 2500, wavelengthM)) * keep;
       }
       visitCraters(eastM, northM, cellM, (crater, rho) => {
         h += craterProfileM(rho, crater.radiusM, crater.crispness) * (crater.radiusM >= BIG_CRATER_RADIUS_M ? lolaCovers(crater.radiusM) : 1);
