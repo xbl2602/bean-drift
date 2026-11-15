@@ -152,10 +152,8 @@ vec3 sunGlow(vec2 offset, float radius) {
   float d = length(offset) / radius;
   float angle = atan(offset.y, offset.x);
   float rays = 0.6 + 0.4 * noise3(vec3(angle * 5.0, uTime * 0.12, 1.7)) + 0.25 * noise3(vec3(angle * 17.0, uTime * 0.2, 9.1));
-  vec3 glow = vec3(1.0, 0.86, 0.62) * (1.1 / (1.0 + pow(d, 2.1) * 0.55)) * smoothstep(26.0, 2.0, d);
-  glow += vec3(1.0, 0.8, 0.5) * rays * exp(-d * 0.42) * 0.3;
-  // Thin horizontal streak, as a camera lens would show.
-  glow += vec3(1.0, 0.92, 0.8) * exp(-abs(offset.y) / (radius * 0.07)) * exp(-abs(offset.x) / (radius * 4.5)) * 0.45;
+  vec3 glow = vec3(1.0, 0.9, 0.7) * (1.1 / (1.0 + pow(d, 2.1) * 0.55)) * smoothstep(26.0, 2.0, d);
+  glow += vec3(1.0, 0.82, 0.55) * rays * exp(-d * 0.42) * 0.26;
   return glow;
 }
 
@@ -176,55 +174,44 @@ vec3 sunSurface(vec3 n, float radius) {
     float fineCells = granuleDistance(p * 70.0 + 11.0);
     granules = mix(0.5, 1.0 - smoothstep(0.18, 0.78, mix(coarseCells, fineCells, 0.45)), detail);
   }
-  float lanes = mix(0.76, 1.12, granules);
+  float lanes = mix(0.9, 1.07, granules);
 
   // Sunspots appear in two bands either side of the equator: a dark core inside a lighter fringe.
   float band = smoothstep(0.05, 0.25, abs(p.y)) * smoothstep(0.7, 0.4, abs(p.y));
   float spotField = noise3(p * 2.6 + vec3(4.0, 1.0, 7.0)) + 0.35 * noise3(p * 9.0);
   float penumbra = smoothstep(0.8, 0.95, spotField) * band * detail;
   float umbra = smoothstep(0.96, 1.08, spotField) * band * detail;
-  float spots = 1.0 - 0.4 * penumbra - 0.5 * umbra;
+  float spots = 1.0 - 0.28 * penumbra - 0.4 * umbra;
 
   // Bright, veined "plage" regions, strongest towards the edge.
-  float plage = smoothstep(0.58, 0.86, noise3(p * 5.0 + vec3(9.0))) * (1.0 - mu) * 0.55;
+  float plage = smoothstep(0.58, 0.86, noise3(p * 5.0 + vec3(9.0))) * (1.0 - mu) * 0.3;
 
   // Limb darkening: the edge shows cooler, higher layers, so it is dimmer and more orange.
-  float limbDim = 1.0 - 0.68 * (1.0 - mu) - 0.12 * pow(1.0 - mu, 3.0);
-  vec3 hot = vec3(2.25, 1.62, 0.88);
-  vec3 cool = vec3(1.9, 0.92, 0.36);
-  vec3 tone = mix(cool, hot, pow(mu, 0.55));
+  float limbDim = 1.0 - 0.62 * (1.0 - mu) - 0.08 * pow(1.0 - mu, 3.0);
+  vec3 hot = vec3(2.8, 2.55, 2.15);   // visible light: the middle is nearly white
+  vec3 cool = vec3(2.2, 1.3, 0.62);   // and only the very edge turns orange
+  vec3 tone = mix(cool, hot, pow(mu, 0.45));
   return tone * limbDim * lanes * spots * (1.0 + plage);
 }
 
-// Paints the Sun's glow and disc over "color"; "strength" (0..1) dims it, e.g. when partly hidden.
+// Paints the Sun's glare and disc over "color"; "strength" (0..1) dims it, e.g. when partly hidden.
+// There is no sharp outline: the disc's edge is soft, and a little bloom just outside it matches the brightness of the
+// darkened limb, so the edge melts into the glare like an overexposed photograph of the real Sun.
 vec3 drawSun(vec3 color, vec2 frag, vec2 center, float radius, float strength) {
   vec2 offset = frag - center;
   float dist = length(offset);
   float d = dist / radius;
   color += sunGlow(offset, radius) * strength * 0.7;
+  color += vec3(2.4, 1.9, 1.2) * exp(-max(d - 0.9, 0.0) * 6.0) * 0.2 * strength;
 
-  // Arcs of glowing gas ("prominences") and the thin red chromosphere hugging the edge.
-  // Prominences only show once the Sun is big enough on screen; as a small disc it stays a clean glow.
-  float prominenceShare = smoothstep(20.0, 70.0, radius / uPixelRatio);
-  if (d > 0.98 && d < 1.7 && prominenceShare > 0.0) {
-    float angle = atan(offset.y, offset.x);
-    float lift = noise3(vec3(angle * 2.4, 1.3, uTime * 0.03));
-    float arcs = smoothstep(0.58, 0.82, lift);
-    float height = 0.03 + 0.16 * arcs;
-    float fibres = 0.65 + 0.35 * noise3(vec3(angle * 60.0, d * 24.0, uTime * 0.07));
-    float outside = step(0.995, d);
-    float shape = exp(-pow(max(d - 1.0, 0.0) / height, 1.4)) * outside;
-    color += vec3(1.0, 0.3, 0.16) * shape * (0.25 + 1.5 * arcs) * fibres * strength * 1.4 * prominenceShare;
-    color += vec3(1.0, 0.25, 0.14) * exp(-max(d - 1.0, 0.0) * 90.0) * outside * 0.8 * strength * prominenceShare;
-  }
-
-  if (dist < radius * 1.01) {
-    float disc = smoothstep(radius, radius - 1.5 * uPixelRatio, dist);
-    color = mix(color, sunSurface(discNormal(offset, radius), radius), disc);
+  if (dist < radius * 1.1) {
+    float soft = max(2.5 * uPixelRatio, 0.035 * radius);
+    float disc = 1.0 - smoothstep(radius - soft, radius + 0.4 * soft, dist);
+    vec3 surface = sunSurface(discNormal(offset, radius), radius);
+    color = mix(color, color + surface * strength, disc);
   }
   return color;
 }
-
 `;
 
 export const GLSL_FINISH = `
@@ -236,49 +223,3 @@ vec3 finishColor(vec3 color, vec2 frag) {
 `;
 
 export const GLSL_SUN = GLSL_SUN_PROCEDURAL + GLSL_FINISH;
-
-// The Sun as photographed by NASA's Solar Dynamics Observatory (171 angstrom, 4096 x 4096).
-// The disc fills 79% of the picture's width and the corona streams out to its edges.
-export const GLSL_SUN_PHOTO = `
-const float SUN_DISC_SHARE = 0.396;   // disc radius / image width in the SDO picture
-const float SUN_IMAGE_TEXELS = 4096.0;
-const float SUN_SPIN_PER_S = 0.06;    // radians of longitude per second: a visible, gentle turn
-
-vec3 sunGlow(vec2 offset, float radius) {
-  float d = length(offset) / radius;
-  float angle = atan(offset.y, offset.x);
-  float rays = 0.6 + 0.4 * noise3(vec3(angle * 5.0, uTime * 0.12, 1.7)) + 0.25 * noise3(vec3(angle * 17.0, uTime * 0.2, 9.1));
-  vec3 glow = vec3(1.0, 0.72, 0.36) * (0.8 / (1.0 + pow(d, 2.1) * 0.6)) * smoothstep(22.0, 2.0, d);
-  glow += vec3(1.0, 0.68, 0.32) * rays * exp(-d * 0.5) * 0.22;
-  return glow;
-}
-
-// Paints the Sun from the photograph: granular surface, bright active regions, loops of glowing
-// gas, and the corona beyond the edge. "strength" (0..1) dims it.
-vec3 drawSun(vec3 color, vec2 frag, vec2 center, float radius, float strength) {
-  vec2 offset = frag - center;
-  float d = length(offset) / radius;
-  color += sunGlow(offset, radius) * strength * 0.7;
-  if (d < 0.5 / SUN_DISC_SHARE) {
-    // The Sun turns about its own axis: wrap the disc around a sphere, advance the longitude, and
-    // project it back. The photograph only shows one face, so the face is reused as it turns away.
-    vec2 q = offset / radius;
-    float r2 = dot(q, q);
-    if (r2 < 1.0) {
-      float lon = atan(q.x, sqrt(1.0 - r2)) + uTime * SUN_SPIN_PER_S;
-      lon = mod(lon + 1.5708, 3.14159) - 1.5708;
-      float lat = asin(clamp(q.y, -1.0, 1.0));
-      q = vec2(cos(lat) * sin(lon), sin(lat));
-    }
-    vec2 uv = vec2(0.5) + q * SUN_DISC_SHARE;
-    uv.y = 1.0 - uv.y; // the photograph's first row is the top
-    float texelsPerPixel = SUN_DISC_SHARE * SUN_IMAGE_TEXELS / radius;
-    vec3 photo = textureLod(uSunImage, uv, max(log2(texelsPerPixel) - 0.5, 0.0)).rgb;
-    // The picture is slightly dim and its brightest loops clip; lift both so it glows like a star.
-    photo = pow(photo, vec3(0.82)) * 1.75;
-    float fade = 1.0 - smoothstep(0.82, 1.0, d * SUN_DISC_SHARE * 2.0);
-    color += photo * fade * strength;
-  }
-  return color;
-}
-` + GLSL_FINISH;

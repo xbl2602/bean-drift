@@ -3,7 +3,7 @@
 // the same convention as the rest of the project.
 
 import { buildFullscreenProgram, type CanvasRenderer, createFullscreenQuad, loadGlobeTexture } from "./gl-utils";
-import { EARTH_TEXTURE_URL, SUN_IMAGE_URL } from "./space-renderer";
+import { EARTH_TEXTURE_URL } from "./space-renderer";
 import { FXAA_FRAGMENT_SHADER, SURFACE_MARCH_FRAGMENT_SHADER, SURFACE_SHADE_FRAGMENT_SHADER } from "./surface-shaders";
 import { loadSurfaceTerrain, type SurfaceTerrain } from "./surface-terrain";
 
@@ -99,7 +99,6 @@ const UNIT_FINE = 2;
 const UNIT_DEPTH = 3;
 const UNIT_EARTH = 4;
 const UNIT_SCENE = 6;
-const UNIT_SUN = 5;
 
 /** Returns null when the browser has no WebGL2, so the caller can leave the plain background in place. */
 export function createSurfaceRenderer(canvas: HTMLCanvasElement, camera: SurfaceCamera): CanvasRenderer<SurfaceScene> | null {
@@ -141,7 +140,6 @@ export function createSurfaceRenderer(canvas: HTMLCanvasElement, camera: Surface
   const fxaaInverseResolution = gl.getUniformLocation(fxaaProgram, "uInvRes");
 
   const earth = loadGlobeTexture(gl, UNIT_EARTH, EARTH_TEXTURE_URL);
-  const sunImage = loadGlobeTexture(gl, UNIT_SUN, SUN_IMAGE_URL);
   const heightTextures: WebGLTexture[] = [];
   let terrain: SurfaceTerrain | null = null;
   let isDisposed = false;
@@ -178,7 +176,6 @@ export function createSurfaceRenderer(canvas: HTMLCanvasElement, camera: Surface
     setSharedUniforms(shadeProgram, loaded);
     gl.uniform1i(gl.getUniformLocation(shadeProgram, "uDepth"), UNIT_DEPTH);
     gl.uniform1i(gl.getUniformLocation(shadeProgram, "uEarthColor"), UNIT_EARTH);
-    gl.uniform1i(gl.getUniformLocation(shadeProgram, "uSunImage"), UNIT_SUN);
     terrain = loaded;
     depthIsStale = true;
   });
@@ -215,7 +212,7 @@ export function createSurfaceRenderer(canvas: HTMLCanvasElement, camera: Surface
   };
 
   return {
-    ready: Promise.all([terrainReady, earth.loaded, sunImage.loaded]).then(() => undefined),
+    ready: Promise.all([terrainReady, earth.loaded]).then(() => undefined),
 
     resize() {
       pixelRatio = Math.min(window.devicePixelRatio || 1, MAX_PIXEL_RATIO);
@@ -299,7 +296,6 @@ export function createSurfaceRenderer(canvas: HTMLCanvasElement, camera: Surface
       gl.deleteFramebuffer(sceneTarget);
       gl.deleteProgram(fxaaProgram);
       gl.deleteTexture(earth.texture);
-      gl.deleteTexture(sunImage.texture);
       gl.deleteFramebuffer(depthTarget);
       gl.deleteBuffer(quad);
       gl.deleteProgram(marchProgram);

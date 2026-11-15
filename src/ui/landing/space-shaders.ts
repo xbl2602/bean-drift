@@ -2,7 +2,7 @@
 // and up to four bodies (Moon, Earth, Sun) as lit spheres wrapped in real NASA image maps.
 // The Moon and Earth textures are data; the stars, clouds, glow and lighting model are artistic.
 
-import { GLSL_EARTH, GLSL_GLOBE, GLSL_NOISE, GLSL_STARS, GLSL_SUN_PHOTO } from "./shader-chunks";
+import { GLSL_EARTH, GLSL_GLOBE, GLSL_NOISE, GLSL_STARS, GLSL_SUN } from "./shader-chunks";
 
 export const SPACE_FRAGMENT_SHADER = `#version 300 es
 precision highp float;
@@ -24,14 +24,13 @@ uniform vec3 uLight[MAX_BODIES];    // direction towards the Sun, in view space
 uniform sampler2D uMoonColor;
 uniform sampler2D uMoonHeight;   // relief: LOLA heights with the broad shape removed, 8-bit (see shadeMoon)
 uniform sampler2D uEarthColor;
-uniform sampler2D uSunImage;
 
 out vec4 outColor;
 ${GLSL_NOISE}
 ${GLSL_STARS}
 ${GLSL_GLOBE}
 ${GLSL_EARTH}
-${GLSL_SUN_PHOTO}
+${GLSL_SUN}
 
 vec3 shadeMoon(vec3 viewNormal, mat3 rotation, vec3 viewLight, float radius) {
   vec3 n = rotation * viewNormal;
