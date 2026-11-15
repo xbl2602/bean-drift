@@ -18,8 +18,12 @@ export const COLOR_PYRAMID_SOURCE: TileSource = {
   minLevel: COLOR_TILES.levels[0],
   maxLevel: COLOR_TILES.levels[COLOR_TILES.levels.length - 1],
   opacityFor: () => 1,
+  // 显存里常驻 10×8 个 512 像素格子（约 84 MB），只在放大到需要瓦片时才分配；窗口放不进就降一级
+  slotsX: 10,
+  slotsY: 8,
   maxTilesPerAxis: 10,
-  cacheTiles: 72,
+  // 位图只用来"被顶掉的瓦片再看回来时免重下"，已经写进显存的不靠它，所以不用留很多（每块约 1 MB）
+  cacheTiles: 40,
   fetchTimeoutMs: 15000,
 };
 
@@ -34,8 +38,11 @@ export const MOON_TREK_SOURCE: TileSource = {
   minLevel: 6,
   maxLevel: 8,
   opacityFor: (worldWidthPx) => Math.min(Math.max((worldWidthPx - 18000) / 12000, 0), 1),
+  // 12×12 个 256 像素格子（约 38 MB）
+  slotsX: 12,
+  slotsY: 12,
   maxTilesPerAxis: 12,
-  cacheTiles: 128,
+  cacheTiles: 160,
   fetchTimeoutMs: 15000,
 };
 
@@ -53,9 +60,11 @@ export function atlasUniforms({ tiles, detail }: MoonAtlases) {
   return {
     uTilesMap: tiles.uniforms.map,
     uTilesBounds: tiles.uniforms.bounds,
+    uTilesLayout: tiles.uniforms.layout,
     uTilesOpacity: tiles.uniforms.opacity,
     uDetailMap: detail.uniforms.map,
     uDetailBounds: detail.uniforms.bounds,
+    uDetailLayout: detail.uniforms.layout,
     uDetailOpacity: detail.uniforms.opacity,
   };
 }

@@ -134,8 +134,8 @@ export function Globe3dView({ timeMs, layers, annotations, focus, cursor, onPick
       .then(([color]) => {
         if (disposed) return;
         const atlases: MoonAtlases = {
-          tiles: new TileAtlas(COLOR_PYRAMID_SOURCE, container, true, invalidate),
-          detail: new TileAtlas(MOON_TREK_SOURCE, container, true, invalidate),
+          tiles: new TileAtlas(COLOR_PYRAMID_SOURCE, renderer, container, true, invalidate),
+          detail: new TileAtlas(MOON_TREK_SOURCE, renderer, container, true, invalidate),
         };
         rt.atlases = atlases;
         const materials = createGlobeMaterials(color, textures.slots, atlases);

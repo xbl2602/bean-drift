@@ -67,8 +67,8 @@ export function Map2dView({ timeMs, layers, annotations, focus, cursor, onPick, 
       .then(([color]) => {
         if (disposed) return textures.dispose();
         const atlases: MoonAtlases = {
-          tiles: new TileAtlas(COLOR_PYRAMID_SOURCE, container, false, requestRender),
-          detail: new TileAtlas(MOON_TREK_SOURCE, container, false, requestRender),
+          tiles: new TileAtlas(COLOR_PYRAMID_SOURCE, renderer, container, false, requestRender),
+          detail: new TileAtlas(MOON_TREK_SOURCE, renderer, container, false, requestRender),
         };
         const { material, analysisUniforms } = createMap2dMaterial(color, textures.slots, atlases);
         const scene = new THREE.Scene();
