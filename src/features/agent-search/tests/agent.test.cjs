@@ -1,4 +1,4 @@
-const { test } = require('node:test');
+﻿const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -160,7 +160,7 @@ test('DeepSeek request uses Flash, tool schemas, disabled thinking and bounded t
     const body = JSON.parse(options.body);
     assert.equal(body.model, 'deepseek-flash');
     assert.deepEqual(body.thinking, { type: 'disabled' });
-    assert.equal(body.max_tokens, 1200);
+    assert.equal(body.max_tokens, 2400);
     assert.equal(body.tools.length, 6);
     return Response.json({ choices: [{ finish_reason: 'stop', message: { content: 'Hello' } }] });
   });
@@ -321,3 +321,4 @@ test('an oversized tool result is reported to the model instead of failing the w
   assert.deepEqual(result.sources, []);
   assert.equal(result.answer, answer.content);
 });
+
