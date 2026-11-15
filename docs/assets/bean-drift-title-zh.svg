@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="210" viewBox="0 0 760 210" role="img" aria-labelledby="title desc">
+<title id="title">BEAN DRIFT</title>
+<desc id="desc">月球着陆点导航仪 · 3D/2D/第一人称 · 可视化 AI · MCP. Decorative moving green shape behind the title.</desc>
+<defs><linearGradient id="green"><stop stop-color="#112129"/><stop offset=".55" stop-color="#243c30"/><stop offset="1" stop-color="#a3e635"/></linearGradient></defs>
+<style>
+.blob{transform-origin:380px 94px;animation:drift 8s ease-in-out infinite}
+@keyframes drift{0%,100%{transform:translate(-18px,0) rotate(-12deg) scale(1)}50%{transform:translate(22px,5px) rotate(14deg) scale(1.12,.92)}}
+@media(prefers-reduced-motion:reduce){.blob{animation:none}}
+text{font-family:Arial,"Microsoft YaHei",sans-serif;text-anchor:middle}
+</style>
+<rect width="760" height="210" rx="18" fill="#101514"/>
+<path class="blob" d="M326 26 C351 16 427 27 449 53 C478 89 444 155 407 160 C372 171 303 158 291 123 C278 85 294 37 326 26Z" fill="url(#green)"/>
+<text x="380" y="126" font-size="64" font-weight="800" fill="#f1f6f2" stroke="#101514" stroke-width="2" paint-order="stroke">BEAN DRIFT</text>
+<text x="380" y="174" font-size="18" font-weight="600" fill="#e3ece6">月球着陆点导航仪 · 3D/2D/第一人称 · 可视化 AI · MCP</text>
+</svg>

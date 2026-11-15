@@ -1,7 +1,6 @@
 <div align="center">
 
-<h1>BEAN DRIFT</h1>
-<p><strong>Lunar Landing Site Navigator · 3D/2D · Visual AI · MCP</strong></p>
+![Bean Drift animated title](docs/assets/bean-drift-title-en.svg)
 
 <a href="https://bean-drift.vercel.app/product">
   <img src="docs/assets/bean-drift-mascot.svg" alt="Bean Drift: astronaut, lander, satellite and rover in a three-scene animation with passing meteors" width="740" />
