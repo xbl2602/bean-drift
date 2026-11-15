@@ -143,6 +143,7 @@ export function FirstPersonView({ point, timeMs, onExit, onLoadingChange, onErro
           if (Math.abs(v.fovDeg - v.fovTargetDeg) > 0.01) {
             v.fovDeg += (v.fovTargetDeg - v.fovDeg) * (1 - Math.exp(-FOV_EASE_PER_S * dtS));
             built.camera.fov = v.fovDeg;
+            redraw = true; // 视场角变了，下一帧要重画
             built.camera.updateProjectionMatrix();
             setZoomX(FOV_DEFAULT_DEG / v.fovDeg);
           }
@@ -171,6 +172,7 @@ export function FirstPersonView({ point, timeMs, onExit, onLoadingChange, onErro
           drawn = { yawDeg: v.yawDeg, pitchDeg: v.pitchDeg, eyeHeightM: v.eyeHeightM, timeMs, eastM: feet.eastM, northM: feet.northM, groundYM: feet.groundYM };
           built.setView(v.yawDeg, v.pitchDeg, v.eyeHeightM, feet);
           built.setTime(timeMs);
+          if (built.updateLighting(v.yawDeg, dtS)) redraw = true; // 曝光还在渐变：下一帧接着画
           if (built.takeShadowDirty()) renderer.shadowMap.needsUpdate = true;
           renderer.render(built.scene, built.camera);
         };

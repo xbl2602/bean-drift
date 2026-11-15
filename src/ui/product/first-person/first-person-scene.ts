@@ -40,6 +40,11 @@ export interface FirstPersonScene {
   groundHeightM: number;
   /** 按时间更新太阳、地球、阴影方向；返回当时的方位角/高度角。 */
   setTime: (timeMs: number) => SkyState;
+  /**
+   * 自动曝光：太阳在背后/被地形挡住/已经落下、画面里没有直射阳光时，把曝光和对比度往上调，让月面还是看得清。
+   * dtS 是距上一帧的秒数；返回 true 表示曝光还在渐变，下一帧要接着画。
+   */
+  updateLighting: (yawDeg: number, dtS: number) => boolean;
   /** 阴影贴图自上次取走后是否需要重画（太阳方向变了，或阴影范围重新收放过、人走动了）。取走即清零。 */
   takeShadowDirty: () => boolean;
   /** yaw 是罗盘方位（度），pitch 是仰角（度），eyeHeightM 是眼睛离地高度。 */
@@ -58,7 +63,7 @@ export function configureFirstPersonRenderer(renderer: THREE.WebGLRenderer) {
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   // 月面没有大气，阳光下的地面比 ACES 默认曝光亮得多；提高曝光，让低太阳角下的地面也看得清
   // 对照阿波罗 15 号的真实照片：阳光下的月壤是明亮的浅灰色，影子是纯黑，所以曝光要再高一些
-  renderer.toneMappingExposure = 2.4;
+  renderer.toneMappingExposure = BASE_EXPOSURE;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 }
@@ -69,6 +74,20 @@ export function openingYawDeg(center: LatLon, timeMs: number): number {
   return c.sun.elevationDeg > 0 ? (c.sun.azimuthDeg + 90) % 360 : c.earth.azimuthDeg;
 }
 export const OPENING_PITCH_DEG = -4;
+
+/** 正常阳光下的曝光（和 configureFirstPersonRenderer 里一致）。 */
+const BASE_EXPOSURE = 2.4;
+const SUN_INTENSITY = 3.4;
+/** 没有直射阳光时，曝光最多提高到基础值的这么多倍。 */
+const MAX_EXPOSURE_BOOST = 6;
+/** 太阳很高、地面特别亮（接近全白）时，曝光反过来最多降到基础值的这么多倍，避免过曝。 */
+const MIN_EXPOSURE_BOOST = 0.5;
+/** 曝光追着目标值走的时间常数（秒）：日落、转头时亮度是慢慢适应的，不是一下跳。 */
+const EXPOSURE_EASE_S = 0.45;
+/** 无阳光时地球光的强度（真实的地球光比阳光暗十万倍，这里调到刚好能看清地面起伏）。 */
+const EARTH_LIGHT_MAX = 0.7;
+const D2R_LIGHT = Math.PI / 180;
+const R2D_LIGHT = 180 / Math.PI;
 
 export async function buildFirstPersonScene(center: LatLon, renderer: THREE.WebGLRenderer): Promise<FirstPersonScene> {
   // 地面颜色只用 4K 底图：站在地上，一个像素对应的月面有好几百米，更细的底图在这里看不出区别
@@ -102,7 +121,9 @@ export async function buildFirstPersonScene(center: LatLon, renderer: THREE.WebG
   sunLight.shadow.mapSize.set(shadowSize, shadowSize);
   Object.assign(sunLight.shadow.camera, { near: 1000, far: SUN_LIGHT_DISTANCE_M * 2 });
   const ambient = new THREE.AmbientLight(0x9fb4d0, 0.015);
-  scene.add(sunLight, sunLight.target, ambient);
+  // 地球光：太阳照不到地面时（落下了、被地形挡住了），地球反射的光是唯一的光源，带方向，所以坡面朝向地球的一侧亮、别处暗，地形起伏看得清
+  const earthLight = new THREE.DirectionalLight(0xc3d5ff, 0);
+  scene.add(sunLight, sunLight.target, ambient, earthLight);
 
   const sun = createSun();
   const earth = createEarth();
@@ -114,6 +135,7 @@ export async function buildFirstPersonScene(center: LatLon, renderer: THREE.WebG
   let shadowHalfM = 0;
   let shadowDirty = true;
   let lastTimeMs = Number.NaN;
+  let lastSky: SkyState | null = null;
 
   /** 眼睛越低，能看到的范围越小，就把阴影贴图集中到近处（1.6 m 时约 1.7 m 一个像素）。 */
   const fitShadowToView = (eyeHeightM: number) => {
@@ -147,7 +169,48 @@ export async function buildFirstPersonScene(center: LatLon, renderer: THREE.WebG
     // 离屏画布（对比表快照）没有显示尺寸，clientWidth 是 0：按缩小一半显示估算星点大小
     const shownWidth = renderer.domElement.clientWidth || renderer.domElement.width / 2;
     updateStarfield(stars, renderer.domElement.width / Math.max(shownWidth, 1), c.sun.elevationDeg > 0 ? 0.25 : 1);
-    return { sunAzimuthDeg: c.sun.azimuthDeg, sunElevationDeg: c.sun.elevationDeg, earthAzimuthDeg: c.earth.azimuthDeg, earthElevationDeg: c.earth.elevationDeg };
+    earthLight.position.copy(azElToLocal(c.earth.azimuthDeg, c.earth.elevationDeg)).multiplyScalar(1000);
+    lastSky = { sunAzimuthDeg: c.sun.azimuthDeg, sunElevationDeg: c.sun.elevationDeg, earthAzimuthDeg: c.earth.azimuthDeg, earthElevationDeg: c.earth.elevationDeg };
+    return lastSky;
+  };
+
+  /** 从眼睛往 azimuthDeg 方向看过去，被地形挡住的最高仰角（度）：太阳低于它，就被地形挡住了。 */
+  const terrainHorizonDeg = (azimuthDeg: number): number => {
+    const az = azimuthDeg * D2R_LIGHT;
+    let best = -90;
+    for (let i = 0; i < 28; i++) {
+      const distanceM = 12 * Math.pow(1.38, i); // 12 m ~ 70 km
+      const height = surfaceYAt(eye.x + Math.sin(az) * distanceM, -eye.z + Math.cos(az) * distanceM);
+      best = Math.max(best, Math.atan2(height - eye.y, distanceM) * R2D_LIGHT);
+    }
+    return best;
+  };
+
+  let exposure = BASE_EXPOSURE;
+  const updateLighting = (yawDeg: number, dtS: number): boolean => {
+    const sky = lastSky;
+    if (!sky) return false;
+    // 太阳有没有真的照到地面：圆盘中心高过地形地平线才开始亮，高出 1.5° 后全亮
+    const sunLit = THREE.MathUtils.smoothstep(sky.sunElevationDeg, terrainHorizonDeg(sky.sunAzimuthDeg) - 0.3, terrainHorizonDeg(sky.sunAzimuthDeg) + 1.5);
+    const sunHeight = Math.sin(Math.max(sky.sunElevationDeg, 0) * D2R_LIGHT);
+    // 面朝太阳看过去时，看到的是背光面和拖向镜头的影子，画面更暗
+    const facingSun = Math.max(Math.cos((yawDeg - sky.sunAzimuthDeg) * D2R_LIGHT), 0);
+    const direct = SUN_INTENSITY * sunLit * Math.max(sunHeight, 0.05) * (1 - 0.45 * facingSun);
+    // 地球光只在阳光弱的时候补上（有阳光时它不起作用，免得把影子里照亮）
+    const earthUp = THREE.MathUtils.smoothstep(sky.earthElevationDeg, -1, 5);
+    earthLight.intensity = EARTH_LIGHT_MAX * earthUp * (0.5 + 0.5 * Math.sin(Math.max(sky.earthElevationDeg, 0) * D2R_LIGHT)) * (1 - 0.9 * sunLit);
+    const brightness = direct + earthLight.intensity * 0.6 + 0.05;
+    const typical = SUN_INTENSITY * Math.sin(30 * D2R_LIGHT); // 阳光下 30° 高度时的地面亮度：这时不需要补
+    const boost = THREE.MathUtils.clamp(typical / brightness, MIN_EXPOSURE_BOOST, MAX_EXPOSURE_BOOST);
+    const target = BASE_EXPOSURE * boost;
+    const before = exposure;
+    exposure += (target - exposure) * (1 - Math.exp(-Math.min(dtS, 1) / EXPOSURE_EASE_S));
+    if (Math.abs(target - exposure) < 0.01) exposure = target;
+    renderer.toneMappingExposure = exposure;
+    // 对比度：曝光抬得越高，画面越容易发灰，所以同时把对比拉开一点
+    const lifted = THREE.MathUtils.clamp((exposure / BASE_EXPOSURE - 1) / 3, 0, 1);
+    renderer.domElement.style.filter = lifted > 0.01 ? `contrast(${(1 + 0.3 * lifted).toFixed(3)}) brightness(${(1 + 0.08 * lifted).toFixed(3)})` : "";
+    return Math.abs(exposure - before) > 0.002;
   };
 
   const setView = (yawDeg: number, pitchDeg: number, eyeHeightM: number, feet?: FeetPosition) => {
@@ -170,6 +233,7 @@ export async function buildFirstPersonScene(center: LatLon, renderer: THREE.WebG
     camera,
     groundHeightM,
     setTime,
+    updateLighting,
     takeShadowDirty: () => {
       const dirty = shadowDirty;
       shadowDirty = false;
@@ -179,6 +243,7 @@ export async function buildFirstPersonScene(center: LatLon, renderer: THREE.WebG
     surfaceYAt,
     startGroundYM: footOffsetM,
     dispose: () => {
+      renderer.domElement.style.filter = "";
       ground.dispose();
       rocks.dispose();
       // 阴影贴图挂在灯上，不随网格释放，要单独释放
