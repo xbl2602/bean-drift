@@ -11,6 +11,7 @@ const { repoRoot } = require('./load-typescript-for-tests.cjs');
 const ALLOWED_READERS = {
   'src/core/data/precomputed-maps.ts': '全月预计算地图的底层读取函数（单点读取要经 terrain-source-routing.ts 才能调用它，见下面第二道关）',
   'src/core/data/site-search.ts': '"按条件找位置"要把整张高度、坡度、统计图读进内存，单独读取',
+  'src/core/data/polar-terrain.ts': '南极 160 m 高精度地形（public/data/polar-v1/，压缩文件，解压进内存后按点取样、现算地平线）；单点读取要经 terrain-source-routing.ts 才能调用它，见下面第二道关；已列入 next.config.ts 的打包清单',
   'src/features/agent-search/logic/gazetteer.ts': 'agent 的 IAU 月面地名表查找，读的是 public/product/moon/lunar-names.json（不是预计算地图）；已列入 next.config.ts 的 /api/agent 打包清单',
 };
 
@@ -31,6 +32,20 @@ const ALLOWED_PRECOMPUTED_MAPS_IMPORTERS = {
   'src/core/data/terrain-source-routing.ts': '单点读取的唯一入口，由它按位置选数据源',
   'src/core/data/site-search.ts': '整张图搜索，只读全月数据（尚未支持按区域换数据源）',
 };
+
+// 极区读取模块同理：只有"选数据源"的那个文件能引用它。
+const ALLOWED_POLAR_TERRAIN_IMPORTERS = {
+  'src/core/data/terrain-source-routing.ts': '单点读取的唯一入口，由它按位置选数据源',
+};
+
+test('only the routing module imports the polar terrain reader', () => {
+  const importers = ['src', 'app']
+    .flatMap((root) => sourceFiles(path.join(repoRoot, root)))
+    .filter((file) => /from\s+["'][^"']*polar-terrain["']/.test(fs.readFileSync(file, 'utf8')))
+    .map((file) => path.relative(repoRoot, file).split(path.sep).join('/'))
+    .sort();
+  assert.deepEqual(importers, Object.keys(ALLOWED_POLAR_TERRAIN_IMPORTERS).sort(), 'A file imports polar-terrain directly. Point reads must go through terrain-source-routing.ts.');
+});
 
 test('only the routing module and the whole-map search import the low-level map readers', () => {
   const importers = ['src', 'app']

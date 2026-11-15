@@ -44,11 +44,13 @@ const round = (value: number, digits: number) => Number(value.toFixed(digits));
 
 export const POINT_ACROSS_TIMES_PROVENANCE: Provenance = {
   status: "ok",
-  source: "Sun/Earth ephemeris + terrain from NASA LRO LOLA LDEM_64 (0.25 degree map cells, public/data/v1/manifest.json)",
+  source:
+    "Sun/Earth ephemeris + terrain from NASA LRO LOLA: LDEM_64 in 0.25 degree map cells (public/data/v1/manifest.json), and south of 80 degrees S LDEM_80S_40M in 160 m cells (public/data/polar-v1/manifest.json). " +
+    "Each point's terrain.resolutionM says which one it got.",
   note:
     "Per time: same visibility rule as get_point_conditions (disk upper limb above the terrain horizon); nextRiseUtc / nextSetUtc are searched up to 60 days ahead, null = no change found. " +
     "terrain and yearStats do not depend on the time (yearStats is always the 8760 hours from 2030-01-01T00:00:00Z). " +
-    "Heights and slopes are 0.25 degree map cell values (about 7.6 km), slope is not a landing-safety slope. Ephemeris accuracy about 0.02 degrees, not mission-grade.",
+    "Heights and slopes are map cell values (about 7.6 km north of 80 degrees S, 160 m south of it), slope is not a landing-safety slope. Ephemeris accuracy about 0.02 degrees, not mission-grade.",
 };
 
 /** 一个点在 timesMs 里每个时刻的情况。读不到预计算地形数据时抛错。 */

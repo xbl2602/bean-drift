@@ -6,8 +6,9 @@
 /** 着陆点周围能走的范围（米）。近处示意细节铺到约 2.6 km，网格在 2 km 处约 50 m 一格。 */
 export const WALK_LIMIT_M = 2000;
 const SLOW_ZONE_M = 250;
-const WALK_SPEED_MPS = 6;
-const RUN_FACTOR = 4;
+// 宇航员实际走路的速度大约 1~3 m/s；这里取 2 m/s，按住 Shift 约 5 m/s（原来是 6 和 24 m/s，太快，看不清细节）。
+const WALK_SPEED_MPS = 2;
+const RUN_FACTOR = 2.5;
 const VELOCITY_TAU_S = 0.12;
 const GROUND_TAU_S = 0.08;
 const MAX_SINK_M = 1;

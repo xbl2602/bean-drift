@@ -6,7 +6,8 @@
 // 没有任何数据源负责时抛错，不悄悄用别的数据顶上（用错分辨率比报错更难发现）。
 // 这里不放任何模块级可变状态（服务端无状态，见 AGENTS.md 5.3）；TERRAIN_SOURCES 是只读列表。
 import type { Provenance } from "../types";
-import { openPrecomputedMaps, readHorizonProfileAt, readTerrainAt, type TerrainSample } from "./precomputed-maps";
+import { computePolarHorizonProfile, loadPolarGrid, POLAR_COVERAGE_NORTH_LATDEG, readPolarTerrainAt } from "./polar-terrain";
+import { loadGlobalHeightSampler, openPrecomputedMaps, readHorizonProfileAt, readTerrainAt, type TerrainSample } from "./precomputed-maps";
 
 export interface TerrainSource {
   /** 稳定的数据源编号，测试里用它断言"选对了"；之后也会写进返回结果的来源说明。 */
@@ -18,6 +19,8 @@ export interface TerrainSource {
   readHorizonProfile(latDeg: number, lonDeg: number): number[];
   /** 地形这一组数据的来源和限制说明；horizonAzimuths 是这次实际返回的方位数。 */
   terrainProvenance(horizonAzimuths: number): Provenance;
+  /** 时间线的来源说明里要用的两句话：数据集是什么、地平线有多准。时间线不读地形高度，所以没有完整的 terrainProvenance。 */
+  timelineTerrain: { source: string; horizonNote: string };
 }
 
 export interface PointTerrainData {
@@ -35,6 +38,10 @@ const globalTerrainSource: TerrainSource = {
   covers: () => true,
   readTerrain: (latDeg, lonDeg) => readTerrainAt(openPrecomputedMaps(), latDeg, lonDeg),
   readHorizonProfile: (latDeg, lonDeg) => readHorizonProfileAt(openPrecomputedMaps(), latDeg, lonDeg),
+  timelineTerrain: {
+    source: "NASA LRO LOLA LDEM_64 (0.25 degree map cells, public/data/v1/manifest.json)",
+    horizonNote: "Horizon is the map cell horizon (about 7.6 km cells), not the exact point.",
+  },
   terrainProvenance: (azimuths) => ({
     status: "ok",
     source: GLOBAL_DEM_SOURCE,
@@ -44,8 +51,37 @@ const globalTerrainSource: TerrainSource = {
   }),
 };
 
+const POLAR_DEM_SOURCE =
+  "NASA LRO LOLA south-polar DEM LDEM_80S_40M (40 m/pixel), averaged into 160 m cells (pipeline polar step, public/data/polar-v1/manifest.json)";
+
+/** 南极（南纬 80° 到极点）160 m 高精度数据。地平线不预存，按点现算。负责纬度 ≤ -80°（正好 -80° 归它）。 */
+const polarTerrainSource: TerrainSource = {
+  id: "polar-160m",
+  covers: (latDeg) => latDeg <= POLAR_COVERAGE_NORTH_LATDEG,
+  readTerrain: (latDeg, lonDeg) => readPolarTerrainAt(loadPolarGrid(), latDeg, lonDeg),
+  readHorizonProfile: (latDeg, lonDeg) => {
+    // 射线走出 80°S 圈外才需要全月高度；用到时才读那 2 MB，只在这一次调用里用。
+    let globalHeightM: ((latDeg: number, lonDeg: number) => number) | undefined;
+    const outsideHeightM = (lat: number, lon: number) => (globalHeightM ??= loadGlobalHeightSampler(openPrecomputedMaps()))(lat, lon);
+    return computePolarHorizonProfile(loadPolarGrid(), latDeg, lonDeg, outsideHeightM);
+  },
+  timelineTerrain: {
+    source: "NASA LRO LOLA LDEM_80S_40M (160 m cells, 80 degrees S to the pole, public/data/polar-v1/manifest.json)",
+    horizonNote: "Horizon is computed for the exact point from the 160 m cells (90 azimuths, rays up to 300 km); the 160 m averaging smooths very small relief.",
+  },
+  terrainProvenance: (azimuths) => ({
+    status: "ok",
+    source: POLAR_DEM_SOURCE,
+    note:
+      "Height is interpolated between 160 m cells (stereographic map metres, about 0.8% shorter on the ground at 80 degrees S); slope is the mean over the cell of the slope over an 80 m baseline, in 0.25 degree steps, so it is not a landing-safety slope at lander scale; " +
+      "aspect is derived from the heights around the point over a 320 m baseline. " +
+      `The horizon profile has ${azimuths} azimuths (${360 / azimuths} degree steps), computed for the exact point from the 160 m heights with rays up to 300 km on a spherical Moon; ` +
+      "rays that leave the polar map (north of 80 degrees S) continue on the global 0.25 degree map.",
+  }),
+};
+
 /** 单点查询可用的数据源，范围小、精度高的在前，全月兜底在最后。 */
-export const TERRAIN_SOURCES: readonly TerrainSource[] = [globalTerrainSource];
+export const TERRAIN_SOURCES: readonly TerrainSource[] = [polarTerrainSource, globalTerrainSource];
 
 /** 这个位置该用哪份数据。sources 只给测试注入假数据源用，业务代码不要传。 */
 export function chooseTerrainSource(latDeg: number, lonDeg: number, sources: readonly TerrainSource[] = TERRAIN_SOURCES): TerrainSource {
@@ -60,7 +96,17 @@ export function readPointTerrainData(latDeg: number, lonDeg: number, sources: re
   return { source, terrain: source.readTerrain(latDeg, lonDeg), horizonProfileDeg: source.readHorizonProfile(latDeg, lonDeg) };
 }
 
-/** 只要地平线剖面时用（时间线不需要地形高度、坡度，不必多读那几个文件）。 */
+/** 时间线用：只要地平线剖面（不必多读高度、坡度文件），同时返回选中的数据源，来源说明要用。 */
+export function readPointHorizonData(
+  latDeg: number,
+  lonDeg: number,
+  sources: readonly TerrainSource[] = TERRAIN_SOURCES,
+): { source: TerrainSource; horizonProfileDeg: number[] } {
+  const source = chooseTerrainSource(latDeg, lonDeg, sources);
+  return { source, horizonProfileDeg: source.readHorizonProfile(latDeg, lonDeg) };
+}
+
+/** 只要地平线剖面时用（不需要知道数据源是哪个）。 */
 export function readPointHorizonProfile(latDeg: number, lonDeg: number, sources: readonly TerrainSource[] = TERRAIN_SOURCES): number[] {
   return chooseTerrainSource(latDeg, lonDeg, sources).readHorizonProfile(latDeg, lonDeg);
 }

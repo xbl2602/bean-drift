@@ -80,9 +80,75 @@
 - **时间范围限制 2000–2100**：截断星历理论在这个范围内可靠。
 - **原因**：先让网页、API、MCP 三条通路都用同一份 `logic/` 跑通，别人接手时照着抄就行，不会各写各的口径；手写 MCP 的协议子集很小，少一个依赖，也避免 SDK 默认带会话状态（Vercel 多实例下会出问题）；如实返回 `null` 是因为不把没验证的写成完成。
 - **备选**：用 `mcp-handler` / 官方 MCP SDK（功能更全，但引入依赖和会话状态问题，以后需要流式、采样时再换）；现在就接 Supabase（没有数据要存，只会多一套要保管的密钥）。
+- **后续更新（2026-11-15 整理）**：上面几条当时是对的，现在已变：`/api/agent` 已做（D-0019）；预设点位已补到 24 个（TODO Q3）；地形和一年统计已接入真实数据（D-0017、D-0028）。
 
 ## D-0015 用本机身份文件 `IDENTITY.md` 告诉 agent"操作者是谁"（`采纳`）
 
 - **决定**：AGENTS.md 是 5 个人共用的一份规则，agent 要靠 `IDENTITY.md`（GitHub 用户名、角色、负责的目录）才知道该套用归属表里的哪一行。`IDENTITY.md` 是本机文件，已写进 `.gitignore`，**不提交、不公开**；模板 `IDENTITY.example.md` 会提交。
 - **原因**：不靠 agent 猜操作者是谁，也不把每个人的本机信息混进仓库；"只改自己负责的目录"这条核心规则才能被 agent 真正执行。
 - **约束**：`IDENTITY.md` 里不写密钥、密码、邮箱、手机号、真实姓名。
+
+---
+
+> 以下 D-0016 起是 2026-11-15 整合时从 `docs/decisions/` 里整理进来的（当时积压了 16 条没整理）。每条只写结论，原因和细节看链接里的原文件。
+
+## D-0016 点位参数接口：先留槽位，数据后接入（`采纳`）
+
+- 每组参数永远存在，没有数据时字段为 `null`，是否有数据看 `provenance.<组>.status`。见 [decisions/2026-11-14_xbl2602_point-conditions-slots.md](decisions/2026-11-14_xbl2602_point-conditions-slots.md)。
+
+## D-0017 整月地形遮挡与一年统计：口径定了，数据随网站发布（`采纳`）
+
+- 解决 TODO Q1：L6 按次平均、"可见"= 圆盘上缘高于地形地平线、统计期默认 2030 全年逐小时。整月 0.25° 预计算（约 55 MB）放 `public/data/v1/`，不需要外部存储。见 [decisions/2026-11-14_xbl2602_precomputed-terrain-and-year-stats.md](decisions/2026-11-14_xbl2602_precomputed-terrain-and-year-stats.md)。
+
+## D-0018 新增三个查询工具、"同时可见"统计、地球最低仰角（选填）（`采纳`）
+
+- `get_point_timeline`、`compare_dates`、`find_sites` 三个工具，加上同时可见比例和选填的地球最低仰角（不设默认值，因为没有官方来源）。见 [decisions/2026-11-14_xbl2602_new-query-tools-and-min-earth-elevation.md](decisions/2026-11-14_xbl2602_new-query-tools-and-min-earth-elevation.md)。
+
+## D-0019 agent 窗口：路由接线，每个 IP 每分钟最多 20 次（`采纳`）
+
+- **更新 D-0014 的"不做 `/api/agent`"**：路由已接线；频率限制用 Vercel 防火墙规则做（不是代码里限流）。louis068 最初的提议见 [decisions/2026-11-14_louis068_agent-search-contract.md](decisions/2026-11-14_louis068_agent-search-contract.md)。
+- 见 [decisions/2026-11-14_xbl2602_agent-route-wiring.md](decisions/2026-11-14_xbl2602_agent-route-wiring.md)、[decisions/2026-11-14_xbl2602_agent-rate-limit.md](decisions/2026-11-14_xbl2602_agent-rate-limit.md)。
+
+## D-0020 agent 接上三个新工具，`compare_points` 在 agent 里最多 6 点（`采纳`）
+
+- 原因是 agent 单个工具结果上限 65,536 字节；超限时改为把 `result_too_large` 交给模型而不是整个回答失败。输出上限后来提到 2400 tokens，见 SHARED_INTERFACES 第 6 节。见 [decisions/2026-11-14_xbl2602_agent-new-tools-and-compare-cap.md](decisions/2026-11-14_xbl2602_agent-new-tools-and-compare-cap.md)。
+
+## D-0021 接受产品页第一版（Lunar Quest）并合并进 main（`采纳`）
+
+- 2D 默认 + 3D 阴影 + 点击进第一人称。见 [decisions/2026-11-14_ShanLe1224_lunar-quest-product-page.md](decisions/2026-11-14_ShanLe1224_lunar-quest-product-page.md)、[decisions/2026-11-14_xbl2602_accept-product-page-and-merge-to-main.md](decisions/2026-11-14_xbl2602_accept-product-page-and-merge-to-main.md)。
+
+## D-0022 产品页加载提速：首页空闲时提前下载贴图（`采纳`，贴图部分已被 D-0029 取代）
+
+- 当时是把底图 16K 改 8K。现在改成 4K 底图加瓦片，预下载也改成分三批，见 D-0029。见 [decisions/2026-11-14_xbl2602_product-page-load-speed.md](decisions/2026-11-14_xbl2602_product-page-load-speed.md)。
+
+## D-0023 产品页浏览器代码不再直接引用 core 的数据入口（`采纳`）
+
+- 地形遮挡后的可见性改走 `/api/point`。**例外（已写在原文里，不算违规）**：逐帧要用的太阳/地球方向在浏览器里直接用 `src/core/ephemeris` 里同一个纯函数算（和接口里的 `sun`/`earth` 是同一份代码），不然拖时间轴每帧都要等网络。见 [decisions/2026-11-14_xbl2602_product-page-use-api-for-terrain-visibility.md](decisions/2026-11-14_xbl2602_product-page-use-api-for-terrain-visibility.md)。
+
+## D-0024 产品页分成三个模式（Landing Sites / Explore / Find Data），默认 3D（`暂定`）
+
+- 已合并进 main。**其中"着陆点用 IAU 官方 Statio 名、前端自己写 6 个点"等 xbl2602 明确确认**，见 TODO Q8。见 [decisions/2026-11-15_ShanLe1224_product-three-modes.md](decisions/2026-11-15_ShanLe1224_product-three-modes.md)。
+
+## D-0025 放大后接 NASA Moon Trek 瓦片看近景（`已实现`）
+
+- 2D 和 3D 都在放大到全球底图不够清楚时叠加 Moon Trek 的 LRO WAC 瓦片，仅用于显示。见 [decisions/2026-11-14_ShanLe1224_close-up-lunar-imagery.md](decisions/2026-11-14_ShanLe1224_close-up-lunar-imagery.md)。
+
+## D-0026 AI 回答：附近地名示意图和 IAU 地名来源（`已实现`）
+
+- 服务端用 IAU 地名表查坐标附近的地名，作为 `lunar_gazetteer` 来源（不是模型能调用的工具，不算"已计算"）。见 [decisions/2026-11-15_louis068_agent-nearby-map.md](decisions/2026-11-15_louis068_agent-nearby-map.md)。
+
+## D-0027 AI 回答画图：地平线、天体高度、年占比条（`已实现`）
+
+- 只在 agent-search 内，不改共用接口。见 [decisions/2026-11-15_louis068_agent-visual-answers.md](decisions/2026-11-15_louis068_agent-visual-answers.md)。
+
+## D-0028 南极（80°S 到极点）160 m 高精度数据（`采纳`，已实现并测试）
+
+- 点查询用 40 m 原始数据平均成 160 m，地平线 90 个方位现算（不存），不用外部储存（共 17.4 MB）；按位置在"南极 160 m / 全月 0.25°"之间选数据，返回里写明用了哪份。整月地图和 `find_sites` 仍是 0.25°；年份扫描（2035、2043）只是提议，没确认。同时新增太阳能量估算 `GET /api/energy` 和 MCP `get_solar_energy_estimate`。见 [decisions/2026-11-15_xbl2602_polar-highres-data-and-routing.md](decisions/2026-11-15_xbl2602_polar-highres-data-and-routing.md)。
+
+## D-0029 产品页只渲染"此刻需要的"（`采纳`，已实现并验证）
+
+- 画布按屏幕像素；画面没变不重画；贴图金字塔（4K 底图 + 8K/16K 瓦片按需）；阴影图只盖看得见的范围；3D 球切块；遮罩只等当前要看的。追加：瓦片图集常驻显存，放大缩小不再卡顿。见 [decisions/2026-11-15_xbl2602_product-on-demand-rendering.md](decisions/2026-11-15_xbl2602_product-on-demand-rendering.md)。
+
+## D-0030 以整合后的 main 作为全员新起点（`采纳`）
+
+- 2026-11-15 把还没进主线的分支合进 main，修了文档矛盾，所有人以后从这个 main 开新分支。做了什么、没合什么、怎么对齐，见 [decisions/2026-11-15_xbl2602_integration-baseline.md](decisions/2026-11-15_xbl2602_integration-baseline.md)。

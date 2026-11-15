@@ -180,26 +180,26 @@ src/features/<功能名>/
 ```
 AGENTS.md  CLAUDE.md  README.md  .env.example  .gitignore  IDENTITY.example.md（身份文件模板；每人自己的 IDENTITY.md 只在本机，已被忽略）
 package.json  next.config.ts  tsconfig.json  Dockerfile  docker-compose.yml   Next.js 项目（名字 bean-drift）
-app/                      layout、(landing)/ 占位页、(product)/product/ 占位页、api/（health、point、compare、presets）、mcp/
-src/core/                 类型、星历、统一数据接口、工具注册表、MCP 服务
+app/                      layout、(landing)/ 落地页、(product)/product/ 产品页、api/（health、point、compare、presets、timeline、compare-dates、find-sites、energy、agent）、mcp/
+src/core/                 类型、星历、统一数据接口（data/）、地形与遮挡算法（terrain/）、工具注册表、MCP 服务
 src/lib/shared/           输入校验与 HTTP 响应小工具
-src/features/             point-conditions、compare-points、presets（新功能照这三个抄）
+src/features/             point-conditions、compare-points、presets、point-timeline、compare-dates、find-sites、solar-energy、agent-search（新功能照 point-conditions 抄）
+src/ui/                   网页组件：landing/（落地页）、product/（产品页：2D/3D/第一人称、面板、AI 聊天框）
+pipeline/                 数据预计算脚本（整月 0.25°、南极 160 m；只在 xbl2602 的电脑上跑，产物是静态文件）
+public/                   landing/、product/（贴图、瓦片、撞击坑）、data/v1/（整月预计算）、data/polar-v1/（南极 160 m）
 docs/                     所有文档（索引见 docs/README.md）
 .github/                  CODEOWNERS（目录归属）、PR 模板、CI（类型检查 + 构建）
 prototypes/lunar-scene-demo/   现有的 three.js 原型（南极和阿波罗 11 号第一人称场景、真实 LOLA/LROC 地形、真实星历）
-prototypes/landing-page-demo/、landing-page-v2/   landing page 的两版视觉原型（参考用，产品页在 app/(landing)/）
+prototypes/landing-page-demo/、landing-page-v2/   landing page 的两版视觉原型（参考用，落地页在 app/(landing)/）
 ```
 
 运行产品：`npm install` 后 `npm run dev`，详见 [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)。运行原型：先在 `prototypes/lunar-scene-demo/` 里 `npm install`，再在**该目录里**执行 `python serve.py 5191`，浏览器打开 `http://localhost:5191/`。原始 NASA 数据文件（`.JP2`、`.TIF`）不在 git 里，重新下载的地址见 `docs/PROJECT_CONTEXT.md`。
 
-**目标结构里还没创建的部分（由对应负责人按第 2 节的归属创建）：**
+**目标结构里还没创建、或和目标不一样的部分：**
 
 ```
-src/lib/llm/        DeepSeek 封装（做 agent 窗口时再建）
-src/ui/{landing,product}/   前端组件（landing / product 负责人建）
-public/{landing,product}/   前端静态资源
-pipeline/           数据预计算脚本（从原型的 tools/ 迁移而来）
-pitch/              视频脚本、分镜、素材清单
+src/lib/llm/        没有创建。DeepSeek 封装实际在 src/features/agent-search/api/deepseek.ts（归 louis068）；要不要搬到 src/lib/llm/ 待 xbl2602 定（见 TODO Q9）
+pitch/              视频脚本、分镜、素材清单（leeziqi0531-debug，还没创建）
 ```
 
 ## 13. 时间不够时的砍法（从下往上砍，不要砍上面的）

@@ -18,16 +18,20 @@ function fakeSource(id, covers) {
     readTerrain: () => { calls.terrain += 1; return { heightM: 1, slopeDeg: 2, aspectDeg: null, resolutionM: 3 }; },
     readHorizonProfile: () => { calls.horizon += 1; return [0, 1, 2, 3]; },
     terrainProvenance: (azimuths) => ({ status: 'ok', source: id, note: `${azimuths} azimuths` }),
+    timelineTerrain: { source: id, horizonNote: `horizon of ${id}` },
   };
   return { source, calls };
 }
 
 const POLAR_SOUTH_OF_80 = (latDeg) => latDeg <= -80;
 
-test('with only the global source in the list, every kind of place is routed to it', () => {
-  assert.deepEqual(TERRAIN_SOURCES.map((source) => source.id), ['global-0.25deg']);
-  for (const [latDeg, lonDeg] of [[90, 0], [-90, 0], [-89.9, 129.8], [-80, 40], [-79.99, 40], [0, 180], [0, -179.99], [45, -100]]) {
+test('the real list is the polar source first and the global source last; only places north of 80 S go to the global one', () => {
+  assert.deepEqual(TERRAIN_SOURCES.map((source) => source.id), ['polar-160m', 'global-0.25deg']);
+  for (const [latDeg, lonDeg] of [[90, 0], [-79.99, 40], [0, 180], [0, -179.99], [45, -100]]) {
     assert.equal(chooseTerrainSource(latDeg, lonDeg).id, 'global-0.25deg', `${latDeg}, ${lonDeg}`);
+  }
+  for (const [latDeg, lonDeg] of [[-90, 0], [-89.9, 129.8], [-80, 40], [-80.01, 40]]) {
+    assert.equal(chooseTerrainSource(latDeg, lonDeg).id, 'polar-160m', `${latDeg}, ${lonDeg}`);
   }
 });
 
@@ -86,7 +90,7 @@ test('when no source covers a place it throws instead of quietly using something
 
 test('the real global source returns exactly what the low-level map readers return', () => {
   const maps = precomputedMaps.openPrecomputedMaps();
-  for (const [latDeg, lonDeg] of [[0.67416, 23.47314], [-89.9, 129.8], [0, 180], [60, -170]]) {
+  for (const [latDeg, lonDeg] of [[0.67416, 23.47314], [-79.99, 129.8], [0, 180], [60, -170]]) {
     const data = readPointTerrainData(latDeg, lonDeg);
     assert.equal(data.source.id, 'global-0.25deg');
     assert.deepStrictEqual(data.terrain, precomputedMaps.readTerrainAt(maps, latDeg, lonDeg));

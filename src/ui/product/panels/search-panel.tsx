@@ -48,6 +48,10 @@ export function SearchPanel({ selected, onGoTo, onStandHere, onSaveSite, onClose
     };
   }, []);
 
+  useEffect(() => {
+    if (selected) { setShowSuggestions(false); setNotFound(null); }
+  }, [selected?.latDeg, selected?.lonDeg, selected?.label]);
+
   const coordinates = useMemo(() => parseCoordinates(query), [query]);
   const matches = useMemo(() => (names && !coordinates ? searchLunarNames(names, query, SUGGESTION_LIMIT) : []), [names, query, coordinates]);
 
@@ -155,7 +159,7 @@ export function SearchPanel({ selected, onGoTo, onStandHere, onSaveSite, onClose
           </span>
           <span className="flex gap-2">
             <ResultButton primary onClick={() => onStandHere(selected)}>Stand here</ResultButton>
-            <ResultButton onClick={() => onSaveSite(selected, selected.label)}>Save site</ResultButton>
+            <ResultButton onClick={() => onSaveSite(selected, selected.label)}>Add to comparison</ResultButton>
           </span>
         </div>
       )}

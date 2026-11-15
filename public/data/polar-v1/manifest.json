@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "generatedUtc": "2026-11-15T03:29:38.346Z",
+  "name": "south-polar-160m",
+  "source": "NASA LRO LOLA south-polar DEM LDEM_80S_40M (40 m/pixel, 80 deg S to the pole), averaged 4 x 4 pixels into 160 m cells by pipeline/build-polar-terrain.mjs",
+  "coverage": {
+    "southOfLatDeg": -80,
+    "note": "cells whose centre lies beyond 80 deg S are outside the product (height = outsideValue)"
+  },
+  "projection": {
+    "type": "polar stereographic, true scale at the south pole, sphere of radius moonRadiusM, planetocentric latitude, east longitude",
+    "moonRadiusM": 1737400,
+    "equations": "rho = 2 R tan((90 + latDeg) / 2); x = rho sin(lon), y = rho cos(lon); col = x / cellM + centreCell; row = centreCell - y / cellM (cell-centre coordinates)",
+    "note": "longitude 0 is the top of the image, longitude 90 E points right"
+  },
+  "grid": {
+    "sizeCells": 3800,
+    "cellM": 160,
+    "centreCell": 1899.5,
+    "validCells": 11341608,
+    "sourcePixelM": 40
+  },
+  "height": {
+    "file": "height-polar-160m.i16.br",
+    "heightUnitM": 0.5,
+    "outsideValue": -32768,
+    "bytes": 9618115,
+    "decodedSha256": "eb0407714a644f2158c5c16820a648540541e957d80a1f6ae894074cd67c2173",
+    "encoding": "int16 -> row difference (wraps in 16 bits) -> plane of low bytes then plane of high bytes -> brotli"
+  },
+  "slope": {
+    "file": "slope-polar-160m.u8.br",
+    "stepDeg": 0.25,
+    "noValue": 255,
+    "bytes": 7806524,
+    "decodedSha256": "79462d4d92fa19ff038848c864ee8127540348ee16a7952e22d9d57206f0aadc",
+    "meaning": "mean over the 16 source pixels of the cell of the slope measured over an 80 m baseline",
+    "encoding": "uint8 -> brotli"
+  },
+  "horizon": {
+    "azimuths": 90,
+    "rayMaxKm": 300,
+    "note": "computed per request from the heights, not stored"
+  },
+  "limits": [
+    "Slope is stored in 0.25 degree steps and capped at 63.5 degrees (the steepest cell is 59.9 degrees).",
+    "Downhill direction is derived from the heights around the point (320 m baseline), not stored.",
+    "The stereographic map stretches real distances by 1 / cos^2(colatitude / 2) (0.8% at 80 deg S); cell size is given in map metres."
+  ]
+}

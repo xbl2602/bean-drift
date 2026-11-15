@@ -32,9 +32,6 @@
 .lunar-rail { --rail-item-height: clamp(44px, calc((var(--rail-space, 100dvh) - 76px) / 6), 56px); }
 .lunar-rail > button { min-height: var(--rail-item-height); height: var(--rail-item-height); gap: 2px; }
 .lunar-rail > div { margin-block: clamp(3px, calc((var(--rail-space, 100dvh) - 340px) / 8), 8px); }
-.time-wheel { color-scheme: dark; scrollbar-width: thin; scrollbar-color: #748799 transparent; }
-.time-wheel option:checked { background: linear-gradient(#405143,#405143); color: #edf5dc; }
-.time-wheel:focus-visible { outline: 2px solid #c8d8ad; outline-offset: 2px; }
 
 /* Appearance setting (settings/settings-store.ts): light mode turns the bars, panels and tooltips into light frosted glass.
    Space, the Moon and the first-person view stay dark. Tailwind 4 colours are CSS variables, so inside light glass we swap
@@ -79,3 +76,6 @@
 @media (prefers-reduced-transparency: reduce) {
   .lunar-explorer[data-theme="light"] .lunar-glass { background: linear-gradient(135deg,#ffffff,#e6edf5) !important; }
 }
+
+.time-wheel-scroll { scrollbar-width: none; -webkit-mask-image: linear-gradient(to bottom, transparent, #000 38%, #000 62%, transparent); mask-image: linear-gradient(to bottom, transparent, #000 38%, #000 62%, transparent); }
+.time-wheel-scroll::-webkit-scrollbar { display: none; }

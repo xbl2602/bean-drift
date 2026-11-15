@@ -4,6 +4,10 @@ const { installTypescriptLoader } = require('./load-typescript-for-tests.cjs');
 installTypescriptLoader();
 const { getPointConditions, getPointAcrossTimes, getPointTimeline, findSites } = require('../index.ts');
 
+/** 极区数据（80°S 以南，含 80°S）负责的探测点：它们的基线单独存放（point-output-polar.baseline.json）。 */
+const POLAR_COVERAGE_NORTH_LATDEG = -80;
+const isPolarProbe = (probe) => probe.position.latDeg <= POLAR_COVERAGE_NORTH_LATDEG;
+
 /** 固定的查询时刻（UTC）：基线必须不随"现在"变化。 */
 const EVALUATED_AT_MS = Date.UTC(2030, 5, 15, 12, 0, 0);
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -51,4 +55,4 @@ function computeProbeOutputs() {
   return { conditions, conditionsWithEarthFloor, acrossTimes, timelines, siteSearches };
 }
 
-module.exports = { computeProbeOutputs, EVALUATED_AT_MS };
+module.exports = { computeProbeOutputs, EVALUATED_AT_MS, PROBES, isPolarProbe };
