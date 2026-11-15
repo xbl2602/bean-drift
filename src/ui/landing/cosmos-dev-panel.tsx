@@ -1,7 +1,7 @@
 "use client";
 
 // Developer panel for the closing ASCII scene: a slider for every look-and-feel number, so the
-// look can be tuned by eye. Open it with `?dev` on the page address or Shift+D. Values are kept in
+// look can be tuned by eye. Hidden from visitors: it opens only with `?dev` on the address of a development build. Values are kept in
 // this browser; "Copy changed values" gives the text to send back so they can become the defaults.
 // Nothing here is shown to normal visitors.
 

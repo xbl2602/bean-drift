@@ -37,23 +37,14 @@ export function DescentAnimation() {
     const cosmos = new AsciiCosmos();
     cosmosRef.current = cosmos;
     setEngine(cosmos);
-    // The developer panel opens with ?dev on the address, or Shift+D; only then are saved slider values used.
+    // The developer panel is hidden: it only opens with ?dev on the address of a development build, and only then are saved slider values used.
     const openDev = () => {
       const saved = loadSavedParams();
       cosmos.setParams(saved);
       setParams(saved);
       setDevOpen(true);
     };
-    if (new URLSearchParams(window.location.search).has("dev")) openDev();
-    const onKey = (event: KeyboardEvent) => {
-      if (!event.shiftKey || event.key.toLowerCase() !== "d" || event.ctrlKey || event.metaKey) return;
-      if (event.target instanceof Element && event.target.closest("input, textarea, select")) return;
-      setDevOpen((open) => {
-        if (!open) openDev();
-        return !open;
-      });
-    };
-    window.addEventListener("keydown", onKey);
+    if (process.env.NODE_ENV !== "production" && new URLSearchParams(window.location.search).has("dev")) openDev();
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     let frameRequest = 0;
     let isVisible = false;
@@ -157,7 +148,6 @@ export function DescentAnimation() {
       section.removeEventListener("pointerup", onUp);
       section.removeEventListener("pointercancel", onUp);
       window.removeEventListener("blur", onBlur);
-      window.removeEventListener("keydown", onKey);
       if (frameRequest !== 0) cancelAnimationFrame(frameRequest);
       cosmosRef.current = null;
     };

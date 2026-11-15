@@ -30,7 +30,10 @@ const SATELLITE_SCREEN = { x: 0.74, y: 0.62 };
 const EARTH_SCREEN = { x: 0.85, y: 0.2 };
 const EARTH_DISTANCE = 420;
 const EARTH_ANGULAR_RADIUS = 0.07;
-const MAX_PIXEL_RATIO = 1.5;
+// Drawn at 1.5x to 2x the screen size and scaled down: smooth edges even on ordinary screens.
+const MIN_PIXEL_RATIO = 1.5;
+const MAX_PIXEL_RATIO = 2;
+const FLOOR_PIXEL_RATIO = 1.1;
 const LINK_FADE_PER_S = 5;
 
 const TEXTURES = {
@@ -228,7 +231,7 @@ async function buildScene(canvas: HTMLCanvasElement) {
   camera.lookAt(satellitePosition);
 
   const size = { width: 1, height: 1 };
-  let pixelRatio = Math.min(window.devicePixelRatio || 1, MAX_PIXEL_RATIO);
+  let pixelRatio = Math.max(MIN_PIXEL_RATIO, Math.min(window.devicePixelRatio || 1, MAX_PIXEL_RATIO));
   const placeEarth = () => {
     camera.updateMatrixWorld();
     const ndc = new THREE.Vector3(EARTH_SCREEN.x * 2 - 1, 1 - EARTH_SCREEN.y * 2, 0.5).unproject(camera);
@@ -320,8 +323,8 @@ async function buildScene(canvas: HTMLCanvasElement) {
     // If this device cannot keep up, quietly draw fewer pixels.
     if (stepS > 0.034) slowFrames += 1;
     else slowFrames = Math.max(0, slowFrames - 1);
-    if (slowFrames > 40 && pixelRatio > 0.8) {
-      pixelRatio = Math.max(0.8, pixelRatio - 0.2);
+    if (slowFrames > 40 && pixelRatio > FLOOR_PIXEL_RATIO) {
+      pixelRatio = Math.max(FLOOR_PIXEL_RATIO, pixelRatio - 0.2);
       slowFrames = 0;
       resize(size.width, size.height);
     }
@@ -385,4 +388,17 @@ export function createLunarOrbitRenderer(canvas: HTMLCanvasElement): CanvasRende
       built = null;
     },
   };
+}
+
+/**
+ * Starts downloading three.js and the pictures in the background, so by the time the section scrolls
+ * into view they are already in the browser cache and the scene appears at once instead of popping in.
+ */
+export function prefetchLunarOrbitAssets(): void {
+  void import("three");
+  void import("three/examples/jsm/geometries/RoundedBoxGeometry.js");
+  for (const [key, url] of Object.entries(TEXTURES)) {
+    if (key === "ao") void fetch(url);
+    else new Image().src = url;
+  }
 }

@@ -24,7 +24,7 @@ export function useAnimatedCanvas<Scene>(
   createRenderer: (canvas: HTMLCanvasElement) => CanvasRenderer<Scene> | null,
   buildScene: SceneBuilder<Scene>,
   maxFramesPerSecond = 0,
-  lazy = false,
+  lazy: boolean | string = false,
 ): void {
   const buildSceneRef = useRef(buildScene);
   useEffect(() => {
@@ -104,7 +104,7 @@ export function useAnimatedCanvas<Scene>(
           if (entry.isIntersecting) startRenderer();
           else stopRenderer();
         },
-        { rootMargin: LAZY_ROOT_MARGIN },
+        { rootMargin: typeof lazy === "string" ? lazy : LAZY_ROOT_MARGIN },
       );
       nearObserver.observe(canvas);
     } else {

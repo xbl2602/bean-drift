@@ -202,10 +202,10 @@ vec3 shadeGround(vec3 origin, vec3 ray, float t) {
   // By night the Earth is the only big light, low in the sky: slopes facing it glow and everything
   // else falls into long shadows, which is what makes craters and rocks stand out instead of a flat grey plain.
   float earthShadow = night > 0.02 ? rayShadow(p + normal * (0.02 + t * 0.0008), uEarthDir, t, footprintM) : 1.0;
-  vec3 earthLight = vec3(0.62, 0.74, 1.0) * (0.1 + 1.3 * earthFacing * earthShadow) * (0.6 + 2.8 * night);
-  vec3 ambient = vec3(0.07, 0.082, 0.11) * (1.0 + 2.6 * night);
+  vec3 earthLight = vec3(0.62, 0.74, 1.0) * (0.06 + 1.6 * earthFacing * earthShadow) * (0.6 + 2.8 * night);
+  vec3 ambient = vec3(0.05, 0.058, 0.078) * (1.0 + 2.0 * night);
   // The overall exposure is set a little high so the lunar ground reads as bright regolith.
-  return dust * (light * 3.0 + ambient + earthLight) * 1.22;
+  return dust * (light * 3.3 + ambient + earthLight) * 1.32;
 }
 
 vec3 skyColor(vec2 frag, float sunVisible) {
@@ -251,7 +251,10 @@ void main() {
     color = mix(skyColor(frag, sunVisible), groundColor(groundFrag, groundSample, sunVisible), smoothstep(0.0, 1.0, cover));
   }
 
-  outColor = vec4(finishColor(color, frag), 1.0);
+  // An S-curve on top of the soft roll-off: deeper blacks and brighter lit ground, so the Moon is not a flat grey.
+  vec3 finished = finishColor(color, frag);
+  finished = mix(finished, finished * finished * (3.0 - 2.0 * finished), 0.36);
+  outColor = vec4(finished, 1.0);
 }
 `;
 

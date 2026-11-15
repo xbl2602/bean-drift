@@ -111,7 +111,7 @@ export function MissionTools() {
           <div className="lq-tool-copy">
             <p className="lq-kicker">AI assistant preview</p>
             <h3>Ask in plain language.</h3>
-            <p>New to lunar data? Type what you want to know in everyday words and the built-in AI runs the right query for you.</p>
+            <p>Ask in everyday words and the built-in AI runs the right query for you.</p>
             <div className="lq-chat-prompts">
               {PROMPTS.map(option => (
                 <button key={option.question} className="lq-tool-action" type="button" onClick={() => void runExample(option)}>{option.question}</button>
