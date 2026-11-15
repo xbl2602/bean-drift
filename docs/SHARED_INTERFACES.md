@@ -237,3 +237,8 @@ POST /api/find-sites   { "maxSlopeDeg": 15, "maxLongestSunOutageH": 300, "latMax
 - **可用工具**（代码里写死的只读白名单，`logic/run-agent.ts` 里的 `ALLOWED`）：`get_point_conditions`、`compare_points`、`list_presets`、`get_point_timeline`、`compare_dates`、`find_sites`，即 `registry.ts` 里的全部 6 个。**agent 专用的两条限制**（REST API 和 MCP 不受影响）：①`compare_points` 一次最多 **6 个点**（API/MCP 仍是 10 个）。原因：全月网格扫描里单个点的结果最大 9.9 KB（南纬 89.9°，一年有 40 个日照窗口），而 agent 单个工具结果上限是 65,536 字节；满 10 个点实测约 68.5 KB，按最大单点估算 8 个点也有约 79 KB，都会超限；6 个最大的点带 `minEarthElevationDeg` 实测 61,754 字节，在上限内。其余新工具都远低于上限（时间曲线最大实测约 26 KB，找位置 20 个结果约 6 KB，跨日期对比 5 点 × 8 时刻按最大单点估算约 20 KB）。②工具结果超过 65,536 字节时，不再让整个回答失败（原来是 502 `tool_error`），而是把 `result_too_large` 作为工具结果回给模型，让它用更少的点或更短的时段重问。决定记录：`docs/decisions/2026-11-14_xbl2602_agent-new-tools-and-compare-cap.md`。
 - **密钥**：`DEEPSEEK_API_KEY`，仅服务端、每次请求时读取。网址和模型名（`deepseek-flash`）写死在代码里，不读环境变量。
 - **频率限制**：每个访问者 IP 每分钟最多 20 次请求（固定窗口），在 Vercel 防火墙里执行，不在代码里。超出时**还没进到我们的代码**就被拦下，返回 `429`，body 形如 `{"error":{"code":"429","message":"Too Many Requests","id":"..."}}`（`code` 是字符串 `"429"`）。DeepSeek 自己限速时是我们的代码返回 429，`code` 为 `rate_limited`。**前端不要按 `code` 区分，统一按状态码 429 提示"请求太频繁，稍后再试"，不要自动重发。** 注意：同一个 IP（例如同一个展位的 Wi-Fi）的所有人共用这 20 次。它限的是速度不是总花费，细节和重建办法见 `docs/decisions/2026-11-14_xbl2602_agent-rate-limit.md`。
+
+
+### Steep-slope search extension (2026-11-15)
+
+User-authorized shared change: find_sites now accepts optional minSlopeDeg (inclusive, 0–90 degrees), combined with maxSlopeDeg; min greater than max is invalid. rankBy highestSlope orders cell-average slopes descending, with descending grid index for ties. Defaults, geographic filters, separation and limits are unchanged. Applies to REST, MCP and agent through the shared schema. This is coarse-grid screening, not a physical cliff maximum.

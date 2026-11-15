@@ -97,3 +97,15 @@ test('returns nothing (and matchedCells 0) when no cell qualifies', async () => 
   const result = searchSites(makeMaps(), { minBothVisibleFraction: 0.999 }, 'bothVisibleFraction', 5, 0);
   assert.deepEqual(result, { matchedCells: 0, totalCells: 36 * 18, sites: [] });
 });
+
+
+test('steepest ranking respects inclusive slope range and existing filters', async () => {
+  const { searchSites } = await load();
+  const maps = makeMaps();
+  assert.deepEqual(names(searchSites(maps, {}, 'highestSlope', 4, 0)), [D, A, B, C]);
+  assert.deepEqual(names(searchSites(maps, { minSlopeDeg: 3, maxSlopeDeg: 5 }, 'highestSlope', 9, 0)), [A, B]);
+  assert.deepEqual(names(searchSites(maps, { minSlopeDeg: 3, latMaxDeg: -80 }, 'highestSlope', 9, 50)), [A]);
+  assert.equal(searchSites(maps, { minSlopeDeg: 41 }, 'highestSlope', 9, 0).matchedCells, 0);
+  maps.slopeRaw[17 * 36 + 1] = 500;
+  assert.deepEqual(names(searchSites(maps, { minSlopeDeg: 5, maxSlopeDeg: 5 }, 'highestSlope', 9, 0)), [B, A]);
+});
