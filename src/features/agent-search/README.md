@@ -100,7 +100,7 @@ npm run build
 
 产品页负责人可在页面中 import `{ LunarSearch }` from `@/features/agent-search/ui/lunar-search` 并渲染 `<LunarSearch />`。
 组件只向 `/api/agent` 发送 `{message}`；支持例题填入、Ctrl/Cmd+Enter、取消、来源展开和安全错误提示。
-2026-11-15 起产品页的 AI Tools 面板已经挂上它：`src/ui/product/panels/ai-panel.tsx` 渲染 `<LunarSearch embedded />`。`embedded` 去掉卡片外框、眉标和大标题，适合放进已有标题的侧边面板；回答出来后会自动滚到回答开头。不加 `embedded` 时仍是原来的独立大卡片。
+**现状（2026-11-15 整合时更正）**：产品页 AI Tools 面板现在用的是产品页自己的聊天框 `src/ui/product/panels/ai-chat/`（`ShanLe1224`），它复用这里的回答排版 `AnswerText` 和回答图表 `AnswerVisuals`，请求由它自己的 `agent-client.ts` 发出；`LunarSearch`（含"快捷问题"）目前没有任何页面挂载，保留着，它的类型 `SelectedLunarLocation` 还被产品页引用。两套请求代码是否合并成一套，见 TODO。
 
 2026-11-14 实测线上 `/api/agent` 返回 200、model=deepseek-flash，sources 中确有 list_presets；这次真实请求会产生正常 API 用量。
 本地浏览器以明确标注的模拟模型响应检查例题、答案显示、429 和取消。没有把模拟接口加入产品代码。
