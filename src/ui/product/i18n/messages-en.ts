@@ -17,9 +17,9 @@ export const en = {
   "hint.find-data": "Click anywhere on the Moon to pick your landing spot",
   "hint.drop-site": "Click to place a site marker",
   "hint.measure": "Click to add a measuring point",
-  "hint.stand": "Click to stand here",
-  "hint.explore3d": "Drag to orbit · slide time to move the Sun and shadows · click to stand",
-  "hint.explore2d": "Click anywhere on the Moon to stand there",
+  "hint.stand": "Click to pick · double-click for first-person view",
+  "hint.explore3d": "Drag to orbit · click to pick · double-click for first-person view",
+  "hint.explore2d": "Click to pick a location · double-click for first-person view",
 
   // 左边工具栏
   "rail.home": "Home",

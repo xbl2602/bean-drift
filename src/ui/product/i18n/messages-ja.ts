@@ -17,9 +17,9 @@ export const ja: Record<MessageKey, string> = {
   "hint.find-data": "月のどこかをクリックして着陸地点を選びます",
   "hint.drop-site": "クリックして地点マーカーを置く",
   "hint.measure": "クリックして測定点を追加",
-  "hint.stand": "クリックしてここに立つ",
-  "hint.explore3d": "ドラッグで回転 · 時間を動かすと太陽と影が動く · クリックで月面に立つ",
-  "hint.explore2d": "月のどこかをクリックしてそこに立つ",
+  "hint.stand": "クリックで地点選択 · ダブルクリックで一人称視点",
+  "hint.explore3d": "ドラッグで回転 · クリックで地点選択 · ダブルクリックで一人称視点",
+  "hint.explore2d": "クリックで地点選択 · ダブルクリックで一人称視点",
 
   "rail.home": "ホーム",
   "rail.explore": "探索",

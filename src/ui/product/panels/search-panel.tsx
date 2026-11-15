@@ -48,6 +48,10 @@ export function SearchPanel({ selected, onGoTo, onStandHere, onSaveSite, onClose
     };
   }, []);
 
+  useEffect(() => {
+    if (selected) { setShowSuggestions(false); setNotFound(null); }
+  }, [selected?.latDeg, selected?.lonDeg, selected?.label]);
+
   const coordinates = useMemo(() => parseCoordinates(query), [query]);
   const matches = useMemo(() => (names && !coordinates ? searchLunarNames(names, query, SUGGESTION_LIMIT) : []), [names, query, coordinates]);
 

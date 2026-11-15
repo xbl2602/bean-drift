@@ -17,9 +17,9 @@ export const zhHans: Record<MessageKey, string> = {
   "hint.find-data": "点击月球上任意位置，选择你的着陆点",
   "hint.drop-site": "点击放置着陆点标记",
   "hint.measure": "点击添加测量点",
-  "hint.stand": "点击站到这里",
-  "hint.explore3d": "拖动旋转 · 拖时间轴让太阳和阴影移动 · 点击站上月面",
-  "hint.explore2d": "点击月球任意位置，站到那里",
+  "hint.stand": "单击选点 · 双击进入第一人称视角",
+  "hint.explore3d": "拖动旋转 · 单击选点 · 双击进入第一人称视角",
+  "hint.explore2d": "单击月球选点 · 双击进入第一人称视角",
 
   "rail.home": "首页",
   "rail.explore": "探索",

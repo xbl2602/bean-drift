@@ -17,9 +17,9 @@ export const fr: Record<MessageKey, string> = {
   "hint.find-data": "Cliquez n'importe où sur la Lune pour choisir votre site d'alunissage",
   "hint.drop-site": "Cliquez pour placer un repère de site",
   "hint.measure": "Cliquez pour ajouter un point de mesure",
-  "hint.stand": "Cliquez pour vous tenir ici",
-  "hint.explore3d": "Faites glisser pour tourner · déplacez le temps pour bouger le Soleil et les ombres · cliquez pour vous y tenir",
-  "hint.explore2d": "Cliquez n'importe où sur la Lune pour vous y tenir",
+  "hint.stand": "Cliquez pour choisir · double-cliquez pour la vue à la première personne",
+  "hint.explore3d": "Glissez pour tourner · cliquez pour choisir · double-cliquez pour la vue à la première personne",
+  "hint.explore2d": "Cliquez pour choisir · double-cliquez pour la vue à la première personne",
 
   "rail.home": "Accueil",
   "rail.explore": "Explorer",

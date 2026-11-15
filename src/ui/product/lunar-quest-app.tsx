@@ -203,7 +203,10 @@ export function LunarQuestApp() {
       setSelectedSiteId(null);
     }
     else if (clickMode === "measure") setMeasurePoints((points) => [...points, { latDeg: point.latDeg, lonDeg: normalizeLonDeg(point.lonDeg) }]);
-    else enterFirstPerson(point);
+    else {
+      const picked = { latDeg: point.latDeg, lonDeg: normalizeLonDeg(point.lonDeg) };
+      setSearchTarget({ ...picked, label: t("sim.picked"), detail: formatLatLon(picked), spanDeg: 25 });
+    }
   };
   const saveDraft = () => {
     if (!draftSite) return;
@@ -242,7 +245,7 @@ export function LunarQuestApp() {
     ? rightPanelFor(activeTool)
     : appMode === "landing-sites" && landingSiteId ? "standard"
     : appMode === "find-data" && simResultsOpen ? "wide" : null;
-  const viewProps = { timeMs, layers, annotations, focus, rightPanel, cursor, onPick: handlePick, onHover: setHover, onLoadingChange: setLoading, onError: setError };
+  const viewProps = { timeMs, layers, annotations, focus, rightPanel, cursor, onPick: handlePick, onDoublePick: exploring && clickMode !== "measure" ? enterFirstPerson : undefined, onHover: setHover, onLoadingChange: setLoading, onError: setError };
 
   return (
     <main lang={locale} data-theme={theme} className="lunar-explorer fixed inset-0 overflow-hidden bg-black text-white" style={{ "--compare-height": `${compareHeight}dvh`, "--rail-space": comparing ? `calc(100dvh - ${compareHeight}dvh)` : "100dvh" } as React.CSSProperties}>

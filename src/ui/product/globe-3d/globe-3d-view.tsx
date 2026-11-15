@@ -74,7 +74,7 @@ interface GlobeRuntime {
   fineRequestedFor: LayerSettings["base"] | null;
 }
 
-export function Globe3dView({ timeMs, layers, annotations, focus, rightPanel, cursor, onPick, onHover, onLoadingChange, onError }: MapViewProps) {
+export function Globe3dView({ timeMs, layers, annotations, focus, rightPanel, cursor, onPick, onDoublePick, onHover, onLoadingChange, onError }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const runtimeRef = useRef<GlobeRuntime | null>(null);
   const settingsRef = useRef({ timeMs, layers, annotations, rightPanel });
@@ -285,6 +285,10 @@ export function Globe3dView({ timeMs, layers, annotations, focus, rightPanel, cu
 
   usePointerGestures(containerRef, {
     capturePointer: false,
+    onDoubleTap: onDoublePick ? (x, y) => {
+      const point = latLonAt(x, y);
+      if (point) onDoublePick(point);
+    } : undefined,
     onTap: (x, y) => {
       const point = latLonAt(x, y);
       if (point) onPick(point);
