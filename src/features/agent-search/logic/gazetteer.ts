@@ -33,6 +33,12 @@ const TYPE_ALIASES: Record<string, string> = {
   peak: "Mons", valley: "Vallis", sea: "Mare", bay: "Sinus", lake: "Lacus",
 };
 
+// 地名表只有这一个固定位置（由产品页的 data-build/build-lunar-names.mjs 生成）。
+// 必须写成固定路径，不能写成"几个候选路径挨个试"：构建工具看不出会读哪个文件时，会保险起见把整个项目
+// （包括 public 里所有大图）都打进 /api/agent 的线上函数包，体积从约 54 MB 涨到约 240 MB。
+// 这个文件已列在 next.config.ts 的 outputFileTracingIncludes 里。
+const LUNAR_NAMES_FILE = path.join(process.cwd(), "public", "product", "moon", "lunar-names.json");
+
 let cachedEntries: RawLunarEntry[] | null = null;
 
 function fold(text: string): string {
@@ -41,24 +47,16 @@ function fold(text: string): string {
 
 function loadEntries(): RawLunarEntry[] {
   if (cachedEntries) return cachedEntries;
-  const candidates = [
-    path.join(process.cwd(), "public/product/moon/lunar-names.json"),
-    path.join(process.cwd(), "public/data/lunar-names.json"),
-    path.join(process.cwd(), "public/data/v1/lunar-names.json"),
-  ];
-  for (const file of candidates) {
-    try {
-      if (!fs.existsSync(file)) continue;
-      const raw = JSON.parse(fs.readFileSync(file, "utf8")) as { names?: Array<[string, string, number, number, number]> };
-      if (Array.isArray(raw.names)) {
-        cachedEntries = raw.names.map(([name, featureType, latDeg, lonDeg, diameterKm]) => ({
-          name, featureType, latDeg, lonDeg, diameterKm, key: fold(name),
-        }));
-        return cachedEntries;
-      }
-    } catch {
-      // Fall back safely if file cannot be read
+  try {
+    const raw = JSON.parse(fs.readFileSync(LUNAR_NAMES_FILE, "utf8")) as { names?: Array<[string, string, number, number, number]> };
+    if (Array.isArray(raw.names)) {
+      cachedEntries = raw.names.map(([name, featureType, latDeg, lonDeg, diameterKm]) => ({
+        name, featureType, latDeg, lonDeg, diameterKm, key: fold(name),
+      }));
+      return cachedEntries;
     }
+  } catch {
+    // Fall back safely if file cannot be read
   }
   cachedEntries = [];
   return cachedEntries;
