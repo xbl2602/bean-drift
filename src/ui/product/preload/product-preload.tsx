@@ -6,7 +6,10 @@
 //   2. 切分析图层 / 3D 时马上要用的粗版本和天空小图（约 3 MB）；
 //   3. 细版本（4K 法线，3 MB）——只在网络好的时候下。
 // 省流量模式和很慢的网络（2G 及以下）一概不预下：这些人可能根本不会点进去，不该替他们花流量。
+// 还要等首页第一屏真正画完（hero 的地形和贴图，见 landing-readiness.ts）才开始：
+// 2026-11-15 之前它在 window.load 后立刻开闸，约 8 MB 的预下载曾把 hero 必需的地形文件挤到二十多秒才到达。
 import { useEffect } from "react";
+import { landingFirstScreenReady } from "@/ui/landing/landing-readiness";
 import { ENTRY_TEXTURE_URLS, FINE_TEXTURE_URLS, WARM_TEXTURE_URLS } from "../moon-texture-urls";
 import { fetchTextureBlob } from "./texture-blob-cache";
 
@@ -53,10 +56,17 @@ export function ProductPreload() {
       if (typeof window.requestIdleCallback === "function") window.requestIdleCallback(() => void start(), { timeout: 4000 });
       else window.setTimeout(() => void start(), 1500);
     };
-    if (document.readyState === "complete") whenIdle();
-    else window.addEventListener("load", whenIdle, { once: true });
+    // 首屏的贴图没下完之前不开闸（慢网上曾把 hero 的地形挤到 20+ 秒才到达）；
+    // 就绪信号正常一定会来（hero 失败也算就绪），再加一个兜底超时防止信号意外丢失时预载永不开始。
+    const fallbackTimer = window.setTimeout(whenIdle, 10000);
+    void landingFirstScreenReady.then(() => {
+      window.clearTimeout(fallbackTimer);
+      if (document.readyState === "complete") whenIdle();
+      else window.addEventListener("load", whenIdle, { once: true });
+    });
     return () => {
       cancelled = true;
+      window.clearTimeout(fallbackTimer);
       window.removeEventListener("load", whenIdle);
     };
   }, []);

@@ -18,10 +18,26 @@ export function AnalysisNetwork() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   useAnimatedCanvas(canvasRef, createLunarOrbitRenderer, identity, 40, START_MARGIN);
 
-  // Warm the browser cache shortly after the page settles.
+  // Warm the browser cache, but only once the visitor has started scrolling into the story and the
+  // main thread is idle: at the very first seconds the connection belongs to the pictures they are
+  // actually looking at (the hero's terrain and maps), and prefetching used to starve them.
   useEffect(() => {
-    const timer = window.setTimeout(prefetchLunarOrbitAssets, 1500);
-    return () => window.clearTimeout(timer);
+    let prefetched = false;
+    const start = () => {
+      if (typeof window.requestIdleCallback === "function") {
+        window.requestIdleCallback(prefetchLunarOrbitAssets, { timeout: 4000 });
+      } else {
+        prefetchLunarOrbitAssets();
+      }
+    };
+    const onScroll = () => {
+      if (prefetched || window.scrollY < window.innerHeight * 0.5) return;
+      prefetched = true;
+      window.removeEventListener("scroll", onScroll);
+      start();
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
   return (

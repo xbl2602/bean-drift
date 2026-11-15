@@ -5,9 +5,11 @@
 // Keyboard: focus the "Black hole" button, hold Space or Enter, then release.
 
 import { useEffect, useRef, useState } from "react";
+import { createAdaptivePixelRatio } from "./adaptive-pixel-ratio";
 import { AsciiCosmos, type CosmosPhase } from "./ascii-cosmos";
 import "./descent-animation.css";
 
+/** The glyphs are small text: draw them crisp up to 2x screens, lowered on slow devices (adaptive-pixel-ratio.ts). */
 const MAX_DPR = 2;
 const STATUS: Record<CosmosPhase, string> = {
   idle: "HOLD ANYWHERE · RELEASE TO LAUNCH A SOLAR SYSTEM",
@@ -39,7 +41,7 @@ export function DescentAnimation() {
 
     const resize = () => {
       const { width, height } = section.getBoundingClientRect();
-      const dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR);
+      const dpr = resolution.current();
       canvas.width = Math.round(width * dpr);
       canvas.height = Math.round(height * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -55,9 +57,12 @@ export function DescentAnimation() {
         cosmos.render(ctx);
       }
     };
+    // Follows screen density and zoom; draws fewer pixels if this device cannot keep up.
+    const resolution = createAdaptivePixelRatio({ maxRatio: MAX_DPR }, resize);
 
     const frame = (nowMs: number) => {
       frameRequest = isVisible ? requestAnimationFrame(frame) : 0;
+      resolution.noteFrame(nowMs);
       const stepS = Math.min((nowMs - lastMs) / 1000, 0.05);
       lastMs = nowMs;
       cosmos.step(stepS);
