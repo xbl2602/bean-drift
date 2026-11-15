@@ -212,6 +212,8 @@ export function Globe3dView({ timeMs, layers, annotations, focus, rightPanel, cu
       const settingsChanged = !rt.drawn || rt.drawn.timeMs !== settings.timeMs || rt.drawn.layers !== settings.layers || rt.drawn.annotations !== settings.annotations;
       const flying = advanceFlight(rt);
       const cameraMoved = controls.update();
+      // 飞行之外的每一帧也要记下相机位置：搜索、选着陆点时的自动飞行要从"最后画出来的那一帧"起飞，没有记录就飞不起来
+      if (!flying) rt.motion.record(camera.position, performance.now());
       const reframed = frameBesidePanel(rt, container, settings.rightPanel, performance.now());
       if (!rt.dirty && !settingsChanged && !flying && !cameraMoved && !reframed) return; // 什么都没变：不画
       rt.dirty = false;
