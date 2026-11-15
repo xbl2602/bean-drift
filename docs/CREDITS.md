@@ -82,6 +82,14 @@
 - 256-pixel JPEG tiles, maximum level 8 (131072 x 65536 equivalent global imagery, approximately 83 m/pixel at the equator). Fetched on demand in the browser with four concurrent requests and a bounded cache; no API key. No AI-generated imagery.
 - These photographs contain acquisition-time shading. They improve visible surface detail only; they do not increase terrain-model resolution or change numerical sun/communication analysis. Existing simulated lighting is still applied. The local NASA global map remains the fallback when tiles are unavailable.
 
+## Product page on-demand imagery (2026-11-15, xbl2602 / Claude)
+No new external sources and no AI-generated content. Everything below is a resize or crop of assets already listed above; see `docs/decisions/2026-11-15_xbl2602_product-on-demand-rendering.md`.
+| Asset | Local file | Derived from | Processing |
+|---|---|---|---|
+| Colour-map tiles, level 3 (8192 px wide) and level 4 (16384 px wide) | `public/product/moon/color-tiles/{3,4}/` (512 px JPEG, quality 86) | `public/product/moon/color-16k.jpg` (NASA SVS CGI Moon Kit, credit NASA's Scientific Visualization Studio / NASA/GSFC/ASU) | Cut and resized offline by `src/ui/product/data-build/build-texture-levels.mjs`; loaded on demand when zoomed in |
+| 2K versions of the LOLA-derived normal, relief, slope and polar-light maps | `public/product/moon/normal-2k.jpg`, `relief-2k.png`, `slope-2k.jpg`, `polar-light-2k.png` | The existing 4K files in the same folder (NASA LRO LOLA, see the LOLA entries above) | Downscaled by the same script; used first, the 4K versions follow in the background |
+| Small Earth and Sun textures for the 3D sky | `public/product/sky/earth-2k.jpg`, `sun-sdo-1k.jpg` | `earth-8k.jpg` (NASA Blue Marble) and `sun-sdo-4k.jpg` (NASA SDO AIA 171 Å, false colour) | Downscaled by the same script |
+
 ## Product page interface translations (2026-11-15, ShanLe1224 / Claude)
 - AI-generated translations: the Simplified Chinese, French and Japanese interface text in `src/ui/product/i18n/messages-zh.ts`, `messages-fr.ts` and `messages-ja.ts` was translated from the English file `messages-en.ts` by Claude (Anthropic) during development. Prompt in short: "translate every interface string, keep the {placeholders}, plain everyday words". **Not yet checked by a native speaker.** Tool tours, AI chat replies and detailed science notes are still in English.
 - Mission simulator equipment presets (`src/ui/product/simulator/mission-presets.ts`) are illustrative, typical-order-of-magnitude values written with AI assistance. They are not the specification of any real mission, and the interface labels them as typical values.
