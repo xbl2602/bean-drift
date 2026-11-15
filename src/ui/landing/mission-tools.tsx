@@ -51,6 +51,8 @@ export function MissionTools() {
   const [presets, setPresets] = useState<Preset[] | null>(null);
   const [presetStatus, setPresetStatus] = useState<"idle" | "loading" | "error">("idle");
 
+  const previewPresets = presets?.slice(0, 3);
+
   async function loadPresets() {
     setPresetStatus("loading");
     try {
@@ -154,15 +156,15 @@ export function MissionTools() {
             </div>
             <div className="lq-api-preview" aria-live="polite">
               {presetStatus === "error" && <p>Couldn’t load the landing sites. Try again.</p>}
-              {presets && (
+              {presets && previewPresets && (
                 <div className="lq-api-result">
-                  <p><code>GET /api/presets</code> <span>{presets.length} landing sites</span></p>
+                  <p><code>GET /api/presets</code> <span>Showing {previewPresets.length} of {presets.length}</span></p>
                   <ul>
-                    {presets.map(({ id, name, position }) => (
+                    {previewPresets.map(({ id, name, position }) => (
                       <li key={id}><span>{name}</span><code>{position.latDeg.toFixed(2)}°, {position.lonDeg.toFixed(2)}°</code></li>
                     ))}
                   </ul>
-                  <a href="/api/presets" target="_blank" rel="noopener noreferrer">Open raw JSON in a new tab ↗</a>
+                  <a href="/api/presets" target="_blank" rel="noopener noreferrer">View all presets as JSON ↗</a>
                 </div>
               )}
             </div>
