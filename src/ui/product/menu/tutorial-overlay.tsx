@@ -1,5 +1,7 @@
 "use client";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { setEmphasis } from "../motion/element-emphasis";
+import { useSmoothNumbers } from "../motion/use-smooth-numbers";
 import { ToolIcon } from "./tool-menu";
 import { TOUR_SEEN_KEY, TOUR_STEPS } from "./tour-steps";
 
@@ -11,10 +13,27 @@ export function useFirstVisitTutorial(open: () => void) {
   }, []);
 }
 interface Box { left: number; top: number; width: number; height: number }
+/** 高亮框、卡片移动和按钮放大都是 C2 平滑的（motion/smooth-value.ts），连续点"下一步"也不会突然加速。 */
+const MOVE_MS = 560;
+const EMPHASIS_SCALE = 1.12;
+/** 元素不放大时的位置，再按 scale 绕中心放大（放大动画进行中量出来的大小会不准）。 */
+function rectAtScale(element: HTMLElement, scale: number): DOMRect {
+  const inline = element.style.transform;
+  element.style.transform = "none";
+  const r = element.getBoundingClientRect();
+  element.style.transform = inline;
+  const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+  return new DOMRect(cx - (r.width * scale) / 2, cy - (r.height * scale) / 2, r.width * scale, r.height * scale);
+}
 export function TutorialOverlay({ onClose }: { onClose: () => void }) {
   const [step, setStep] = useState(0);
   const [box, setBox] = useState<Box | null>(null);
   const [position, setPosition] = useState({ left: 16, top: 160, maxHeight: 600 });
+  const [measured, setMeasured] = useState(false);
+  // 没有要高亮的东西时（最后一步），高亮框缩成屏幕中心的一个点，整个画面变暗
+  const viewport = typeof window === "undefined" ? { w: 0, h: 0 } : { w: window.innerWidth, h: window.innerHeight };
+  const ring = useSmoothNumbers(box ? { ...box, glow: 1 } : { left: viewport.w / 2, top: viewport.h / 2, width: 0, height: 0, glow: 0 }, MOVE_MS);
+  const card = useSmoothNumbers({ left: position.left, top: position.top }, MOVE_MS, !measured);
   const cardRef = useRef<HTMLDivElement>(null);
   const nextRef = useRef<HTMLButtonElement>(null);
   const closeRef = useRef(onClose); closeRef.current = onClose;
@@ -48,13 +67,13 @@ export function TutorialOverlay({ onClose }: { onClose: () => void }) {
   useLayoutEffect(() => {
     const selector = current.target === "analysis" ? '[data-tour="science"], [data-tour="evaluate"]' : current.target ? `[data-tour="${current.target}"]` : null;
     const targets = selector ? [...document.querySelectorAll<HTMLElement>(selector)] : [];
-    const originalTransforms = targets.map((target) => target.style.transform);
+    const scale = current.target === "timeline" ? 1 : EMPHASIS_SCALE;
     targets.forEach((target) => {
       target.scrollIntoView({ block: "nearest", inline: "nearest" });
-      if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches && current.target !== "timeline") target.style.transform = "scale(1.12)";
+      setEmphasis(target, scale);
     });
     const update = () => {
-      const bounds = targets.map((target) => target.getBoundingClientRect());
+      const bounds = targets.map((target) => rectAtScale(target, scale));
       const leftEdge = Math.min(...bounds.map((b) => b.left)), topEdge = Math.min(...bounds.map((b) => b.top));
       const ring = bounds.length ? { left: leftEdge - 7, top: topEdge - 7, width: Math.max(...bounds.map((b) => b.right)) - leftEdge + 14, height: Math.max(...bounds.map((b) => b.bottom)) - topEdge + 14 } : null;
       setBox(ring);
@@ -76,6 +95,7 @@ export function TutorialOverlay({ onClose }: { onClose: () => void }) {
           else { top = viewportH - height - 18; }
         }
       }
+      setMeasured(true);
       setPosition({ left: Math.max(16, Math.min(left, viewportW - width - 16)), top: Math.max(16, Math.min(top, viewportH - Math.min(height, maxHeight) - 16)), maxHeight });
     };
     update();
@@ -85,7 +105,7 @@ export function TutorialOverlay({ onClose }: { onClose: () => void }) {
     window.addEventListener("resize", update);
     window.addEventListener("scroll", update, true);
     return () => {
-      targets.forEach((target, i) => { target.style.transform = originalTransforms[i]; });
+      targets.forEach((target) => setEmphasis(target, 1));
       observer.disconnect(); window.removeEventListener("resize", update); window.removeEventListener("scroll", update, true);
     };
   }, [current]);
@@ -93,8 +113,8 @@ export function TutorialOverlay({ onClose }: { onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50" role="presentation" onClick={finish}>
       <div className="absolute inset-0 bg-black/20" />
-      {box ? <div aria-hidden="true" className="pointer-events-none fixed rounded-2xl border-2 border-lime-200 shadow-[0_0_0_9999px_rgba(0,0,0,0.67),0_0_30px_rgba(190,242,100,0.3)] motion-safe:transition-[left,top,width,height] motion-safe:duration-300" style={box} /> : <div className="absolute inset-0 bg-black/65" />}
-      <div ref={cardRef} onClick={(event) => event.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="tutorial-title" aria-describedby="tutorial-description" className="fixed max-h-[calc(100dvh-2rem)] w-[min(23rem,calc(100vw-2rem))] overflow-y-auto rounded-3xl border border-lime-200/25 lunar-glass bg-[#0b121d] p-5 text-white shadow-2xl shadow-black/70 sm:p-6" style={position}>
+      <div aria-hidden="true" className="pointer-events-none fixed rounded-2xl border-2 shadow-[0_0_0_9999px_rgba(0,0,0,0.67)]" style={{ left: ring.left, top: ring.top, width: ring.width, height: ring.height, borderColor: `rgba(217,249,157,${ring.glow})`, boxShadow: `0 0 0 9999px rgba(0,0,0,0.67), 0 0 30px rgba(190,242,100,${0.3 * ring.glow})` }} />
+      <div ref={cardRef} onClick={(event) => event.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="tutorial-title" aria-describedby="tutorial-description" className="fixed max-h-[calc(100dvh-2rem)] w-[min(23rem,calc(100vw-2rem))] overflow-y-auto rounded-3xl border border-lime-200/25 lunar-glass bg-[#0b121d] p-5 text-white shadow-2xl shadow-black/70 sm:p-6" style={{ left: card.left, top: card.top, maxHeight: position.maxHeight }}>
         <div className="flex items-center justify-between gap-3">
           <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-lime-200">Your lunar guide · {step + 1}/{TOUR_STEPS.length}</p>
           {!last && <button type="button" onClick={finish} className="rounded-lg px-2 py-1 text-xs text-white/60 hover:bg-white/10 hover:text-white">Skip tour</button>}

@@ -17,7 +17,7 @@ export function MeasurePanel({ points, onUndo, onClear, onClose }: MeasurePanelP
   const totalKm = legsKm.reduce((sum, km) => sum + km, 0);
 
   return (
-    <PanelShell title="Measure Distance" onClose={onClose}>
+    <PanelShell title="Measure Distance" onClose={onClose} side="right">
       <p className="text-sm text-white/75">Click two or more places on the map. Each click adds a point to the path.</p>
 
       <div className="mt-3 rounded-xl border border-yellow-200/25 bg-yellow-200/5 p-3 text-center">

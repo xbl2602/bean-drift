@@ -21,10 +21,12 @@ export interface TerrainPatch {
   groundHeightM: number;
   /** 观察点脚下示意细节的高度（米）：眼睛高度要在它之上，否则会站进地里。 */
   footOffsetM: number;
+  /** 网格表面在本地坐标 (east, north) 处的高度 y（米，和网格同一坐标系）。走动时用来让眼睛贴着地面。 */
+  surfaceYAt: (eastM: number, northM: number) => number;
 }
 
 /** 从 origin 出发，沿方位角 bearingRad（正北 0，向东为正）走角距离 deltaRad，到达的经纬度。 */
-function destination(origin: LatLon, bearingRad: number, deltaRad: number): LatLon {
+export function destination(origin: LatLon, bearingRad: number, deltaRad: number): LatLon {
   const lat1 = origin.latDeg * D2R;
   const lat2 = Math.asin(Math.sin(lat1) * Math.cos(deltaRad) + Math.cos(lat1) * Math.sin(deltaRad) * Math.cos(bearingRad));
   const dLon = Math.atan2(Math.sin(bearingRad) * Math.sin(deltaRad) * Math.cos(lat1), Math.cos(deltaRad) - Math.sin(lat1) * Math.sin(lat2));
@@ -95,5 +97,27 @@ export function buildTerrainPatch(center: LatLon, field: HeightField, detail: Te
   geometry.setAttribute("uv", new THREE.BufferAttribute(uvs, 2));
   geometry.setIndex(new THREE.BufferAttribute(indices, 1));
   geometry.computeVertexNormals();
-  return { geometry, groundHeightM, footOffsetM };
+  return { geometry, groundHeightM, footOffsetM, surfaceYAt: (eastM, northM) => surfaceYOnGrid(positions, radii, eastM, northM) };
+}
+
+/**
+ * 在极坐标网格上按 (半径, 方位) 双线性插值取表面高度 y。
+ * 网格顶点的水平位置因为月球曲率会略微偏离理想的同心圆，几公里以内差别不到厘米，可以忽略。
+ */
+function surfaceYOnGrid(positions: Float32Array, radii: number[], eastM: number, northM: number): number {
+  const y = (index: number) => positions[index * 3 + 1];
+  const r = Math.hypot(eastM, northM);
+  const bearing = (Math.atan2(eastM, northM) + 2 * Math.PI) % (2 * Math.PI);
+  const sectorF = (bearing / (2 * Math.PI)) * SECTORS;
+  const s0 = Math.floor(sectorF) % SECTORS;
+  const s1 = (s0 + 1) % SECTORS;
+  const ts = sectorF - Math.floor(sectorF);
+  const onRing = (ring: number) => y(1 + ring * SECTORS + s0) * (1 - ts) + y(1 + ring * SECTORS + s1) * ts;
+  if (r <= radii[0]) return y(0) + (onRing(0) - y(0)) * (r / radii[0]);
+  const last = radii.length - 1;
+  let ring = Math.min(Math.max(Math.floor(Math.log(r / FIRST_RING_M) / Math.log(RING_GROWTH)), 0), last - 1);
+  while (ring > 0 && radii[ring] > r) ring--;
+  while (ring < last - 1 && radii[ring + 1] < r) ring++;
+  const tr = Math.min(Math.max((r - radii[ring]) / (radii[ring + 1] - radii[ring]), 0), 1);
+  return onRing(ring) * (1 - tr) + onRing(ring + 1) * tr;
 }

@@ -37,7 +37,7 @@ const CRITERIA: Array<{ key: keyof SuitabilityWeights; label: string; hint: stri
 export function LayerPanel({ title, layer, weights, onWeightsChange, hover, onClose }: LayerPanelProps) {
   const info = LAYER_INFO[layer];
   return (
-    <PanelShell title={title} onClose={onClose}>
+    <PanelShell title={title} onClose={onClose} side="right">
       <p className="text-sm text-white/80">{info.description}</p>
 
       {info.legend && (

@@ -27,7 +27,7 @@ export function ExportPanel({ input, onAddSites, onClose }: ExportPanelProps) {
   };
 
   return (
-    <PanelShell title="Export Results" onClose={onClose}>
+    <PanelShell title="Export Results" onClose={onClose} side="right">
       {input.sites.length === 0 ? (
         <>
           <p className="text-sm text-white/75">There is nothing to export yet. Save one or more candidate sites first.</p>
