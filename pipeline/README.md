@@ -48,3 +48,9 @@ LRO/LOLA 全月 DEM `LDEM_64`（Smith et al. 2010, Space Sci. Rev. 150, 209–24
 ## 完全卸载
 
 删除 `public/data/v1/` 即可（API 会降级成"地形数据不可用"，不会报错）；`data/raw/` 里的原始文件可随时删。没有安装任何全局东西，没有写 `public/data/v1/` 以外的位置。
+
+## 星历对照数据（不属于整月预计算）
+
+`fetch-horizons-lunar-surface.py`：向 NASA JPL Horizons 抓 8 个月面观测点 × 14 个时刻（2005–2090 年）的太阳和地球方位角/高度角，存成 `src/core/ephemeris/tests/horizons-lunar-surface.json`。自动测试 `ephemeris-vs-horizons.test.cjs` 拿它和我们的星历比，偏差超过 0.02° 就报错（实测最大 0.013°）。
+
+重新抓取：`python pipeline/fetch-horizons-lunar-surface.py src/core/ephemeris/tests/horizons-lunar-surface.json`（需要联网，约 1~2 分钟；Horizons 会按时间顺序返回，脚本会逐行核对时间戳）。平时不用重抓，参考值是固定的。
