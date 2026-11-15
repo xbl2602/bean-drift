@@ -133,21 +133,17 @@ float lqGrid(LqPoint p, vec2 uv) {
 }
 `;
 
-export interface AnalysisTextures {
-  relief: THREE.Texture;
-  slope: THREE.Texture;
-  normal: THREE.Texture;
-  polar: THREE.Texture;
-}
+/** 四张数据贴图的"槽位"（见 imagery/moon-texture-set.ts）：着色器直接用槽位对象当 uniform，贴图从 2K 换成 4K 时只改 slot.value。 */
+export type AnalysisTextureSlots = Record<"relief" | "slope" | "normal" | "polar", { value: THREE.Texture }>;
 
 export type AnalysisUniforms = ReturnType<typeof createAnalysisUniforms>;
 
-export function createAnalysisUniforms(textures: AnalysisTextures) {
+export function createAnalysisUniforms(slots: AnalysisTextureSlots) {
   return {
-    uRelief: { value: textures.relief },
-    uSlope: { value: textures.slope },
-    uNormal: { value: textures.normal },
-    uPolar: { value: textures.polar },
+    uRelief: slots.relief,
+    uSlope: slots.slope,
+    uNormal: slots.normal,
+    uPolar: slots.polar,
     uSunBody: { value: new THREE.Vector3(1, 0, 0) },
     uSunSamples: { value: Array.from({ length: M.monthSamples }, () => new THREE.Vector3(1, 0, 0)) },
     uBase: { value: 0 },

@@ -2,6 +2,7 @@
 // 第一人称：站在点击的位置环顾四周。拖动可水平 360° 转一整圈、上下看；滚轮只做放大/缩小（改视场角，人不动、眼睛高度固定 1.6 m）。
 // 可以打开"悬停转视角"：不按鼠标，只把鼠标移向屏幕边缘，视角就慢慢转过去。
 // 键盘或屏幕方向键可以在着陆点周围 2 km 内前后左右走动（walk-motion.ts、walk-pad.tsx）。
+// 画面按需重绘：位置（转头/走动/视点高度）和时间轴没变就不重画，阴影也只在需要时重算；
 // 画面至少按 2K 渲染（长边 2560 像素），默认 4K（长边 3840）；太阳和阴影跟着底部时间轴走。
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
@@ -82,8 +83,10 @@ export function FirstPersonView({ point, timeMs, onExit, onLoadingChange, onErro
     let frame = 0;
     const renderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: true, powerPreference: "high-performance" });
     configureFirstPersonRenderer(renderer);
+    renderer.shadowMap.autoUpdate = false; // 阴影只在场景说"太阳动了 / 范围变了 / 人走动了"时重画
     renderer.domElement.className = "block h-full w-full";
     container.appendChild(renderer.domElement);
+    let redraw = true; // 窗口大小、画质开关变了 → 下一帧必须画
 
     const resize = () => {
       const width = Math.max(container.clientWidth, 1);
@@ -97,6 +100,7 @@ export function FirstPersonView({ point, timeMs, onExit, onLoadingChange, onErro
       const bufferHeight = Math.floor(height * scale);
       renderer.setSize(bufferWidth, bufferHeight, false);
       setRenderSize(bufferWidth + " × " + bufferHeight);
+      redraw = true;
       const camera = sceneRef.current?.camera;
       if (camera) {
         camera.aspect = container.clientWidth / Math.max(container.clientHeight, 1);
@@ -120,6 +124,7 @@ export function FirstPersonView({ point, timeMs, onExit, onLoadingChange, onErro
         let lastMs = performance.now();
         let lastHudMs = 0;
         let shownHeading = viewRef.current.yawDeg;
+        let drawn = { yawDeg: Number.NaN, pitchDeg: Number.NaN, eyeHeightM: Number.NaN, timeMs: Number.NaN, eastM: Number.NaN, northM: Number.NaN, groundYM: Number.NaN };
         const tick = () => {
           frame = requestAnimationFrame(tick);
           const now = performance.now();
@@ -154,8 +159,13 @@ export function FirstPersonView({ point, timeMs, onExit, onLoadingChange, onErro
             const groundShiftM = feet.groundYM - built.startGroundYM;
             setWalkInfo((prev) => (Math.abs(prev.eastM - feet.eastM) + Math.abs(prev.northM - feet.northM) + Math.abs(prev.groundShiftM - groundShiftM) < 0.3 ? prev : { eastM: feet.eastM, northM: feet.northM, groundShiftM }));
           }
+          const timeMs = timeRef.current;
+          if (!redraw && v.yawDeg === drawn.yawDeg && v.pitchDeg === drawn.pitchDeg && v.eyeHeightM === drawn.eyeHeightM && timeMs === drawn.timeMs && feet.eastM === drawn.eastM && feet.northM === drawn.northM && feet.groundYM === drawn.groundYM) return; // 什么都没变：不画
+          redraw = false;
+          drawn = { yawDeg: v.yawDeg, pitchDeg: v.pitchDeg, eyeHeightM: v.eyeHeightM, timeMs, eastM: feet.eastM, northM: feet.northM, groundYM: feet.groundYM };
           built.setView(v.yawDeg, v.pitchDeg, v.eyeHeightM, feet);
-          built.setTime(timeRef.current);
+          built.setTime(timeMs);
+          if (built.takeShadowDirty()) renderer.shadowMap.needsUpdate = true;
           renderer.render(built.scene, built.camera);
         };
         tick();

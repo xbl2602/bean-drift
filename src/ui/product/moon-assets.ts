@@ -1,8 +1,6 @@
-// 产品页用到的月球贴图地址与常量。贴图由 src/ui/product/data-build/build-moon-textures.mjs 生成，
+// 产品页用到的月球贴图常量（不含 three）。贴图由 src/ui/product/data-build/ 里的脚本生成，
 // 约定写在 public/product/moon/moon-meta.json；这里的数字必须和那份文件一致。
-import * as THREE from "three";
-import { MOON_ASSET_BASE as BASE, MOON_TEXTURES, colorTextureUrlFor } from "./moon-texture-urls";
-import { fetchTextureBlob } from "./preload/texture-blob-cache";
+import { MOON_ASSET_BASE as BASE, MOON_TEXTURES } from "./moon-texture-urls";
 
 // 贴图地址本身在 moon-texture-urls.ts（不依赖 three，首页预载也要用）；这里重新导出，其他文件照旧从这里取。
 export { MOON_TEXTURES };
@@ -36,27 +34,3 @@ export const HEIGHT_TILES = {
 };
 
 export const MOON_RADIUS_M = 1737400;
-
-/**
- * 加载一张贴图；colorData=true 表示它是给人看的颜色（sRGB），false 表示是数据（法线、高度）。
- * 文件走 texture-blob-cache：如果首页已经在后台下了（或正在下），这里直接用，不会再发一次请求。
- */
-export async function loadMoonTexture(url: string, colorData: boolean): Promise<THREE.Texture> {
-  const objectUrl = URL.createObjectURL(await fetchTextureBlob(url));
-  let texture: THREE.Texture;
-  try {
-    texture = await new THREE.TextureLoader().loadAsync(objectUrl);
-  } finally {
-    URL.revokeObjectURL(objectUrl);
-  }
-  texture.colorSpace = colorData ? THREE.SRGBColorSpace : THREE.NoColorSpace;
-  texture.wrapS = THREE.RepeatWrapping;
-  texture.wrapT = THREE.ClampToEdgeWrapping;
-  texture.anisotropy = 8;
-  return texture;
-}
-
-/** 底图用 8K（显卡不支持就退到 4K）。为什么不用 16K，见 moon-texture-urls.ts。 */
-export function pickColorTextureUrl(renderer: THREE.WebGLRenderer): string {
-  return colorTextureUrlFor(renderer.capabilities.maxTextureSize);
-}
