@@ -301,7 +301,6 @@ export function createSurfaceRenderer(canvas: HTMLCanvasElement, camera: Surface
     dispose() {
       // Free our GPU objects but keep the context alive (see space-renderer.ts for why).
       isDisposed = true;
-      resolution.dispose();
       heightTextures.forEach((texture) => gl.deleteTexture(texture));
       gl.deleteTexture(depthTexture);
       gl.deleteTexture(sceneTexture);

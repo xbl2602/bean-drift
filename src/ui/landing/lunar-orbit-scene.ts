@@ -351,7 +351,6 @@ async function buildScene(canvas: HTMLCanvasElement) {
     [moonColor, moonRelief, detailA, detailB, earthMap, foilColor, foilNormal, panelColor, panelNormal, dishColor, dishNormal, linkTextures.glow, linkTextures.ring].forEach((texture) => texture.dispose());
     bases.forEach((base) => base.link.dispose());
     earthLink.dispose();
-    resolution.dispose();
     renderer.dispose();
   };
 

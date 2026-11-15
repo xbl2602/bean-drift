@@ -129,7 +129,6 @@ export function DescentAnimation() {
     window.addEventListener("blur", onBlur);
 
     return () => {
-      resolution.dispose();
       visibility.disconnect();
       resizeObserver.disconnect();
       section.removeEventListener("pointermove", onMove);

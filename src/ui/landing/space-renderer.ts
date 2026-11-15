@@ -134,7 +134,6 @@ export function createSpaceRenderer(canvas: HTMLCanvasElement, options: SpaceRen
     dispose() {
       // Free our GPU objects but keep the context alive: a canvas hands back the same context if
       // the component mounts again (React does this in development), and a lost one cannot be reused.
-      resolution.dispose();
       textures.forEach((texture) => gl.deleteTexture(texture));
       gl.deleteBuffer(quad);
       gl.deleteProgram(program);
