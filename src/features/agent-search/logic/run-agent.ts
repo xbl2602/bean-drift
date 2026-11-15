@@ -7,6 +7,7 @@ export const questionSchema = z.strictObject({ message: z.string().trim().min(1)
 const ALLOWED = new Set([
   "get_point_conditions", "compare_points", "list_presets",
   "get_point_timeline", "compare_dates", "find_sites",
+  "get_solar_energy_estimate",
 ]);
 // compare_points 单点结果约 5~10 KB（南极附近一年里的日照窗口多，全月扫描最大 9.9 KB）。满 10 个点会超过
 // LIMITS.resultBytes，所以对 agent 只开放 6 个点（最坏约 62 KB）；REST API 和 MCP 不受影响，仍是 10 个。
@@ -69,7 +70,7 @@ export async function runAgent(
     "Report yearStats.periodStartUtc and periodEndUtc separately from the query timeUtc. The currently available period is 2030; never relabel it as another requested year or a worst-case year. Use the returned period as authority.",
     "Convert visibleFraction to percent by multiplying by 100. Outage and visible-window durations are hours. Distinguish longestOutageH, meanOutageH and meanVisibleWindowH; do not invent windows.",
     "Read provenance for null nextRiseUtc/nextSetUtc: no transition found within the search window does not mean permanently invisible. Keep answers focused on the user's question and mention relevant data limitations.",
-    "Choose the tool by question: get_point_conditions for one place at one time; compare_points for different places at one time (at most 6 points per call); compare_dates for the same places at several times (up to 5 places, 8 times); get_point_timeline for when Sun and Earth windows occur over up to 31 days at one place; find_sites to search the whole Moon for places that meet conditions.",
+    "Choose the tool by question: get_point_conditions for one place at one time; compare_points for different places at one time (at most 6 points per call); compare_dates for the same places at several times (up to 5 places, 8 times); get_point_timeline for when Sun and Earth windows occur over up to 31 days at one place; find_sites to search the whole Moon for places that meet conditions; get_solar_energy_estimate for how much sunlight energy a place receives over a period (incident sunlight, not generated power).",
     "find_sites returns 0.25-degree map cells for coarse screening, not landing sites. Report slope as a cell mean and shares and outages as one-year values for the period stated in provenance.note, say Earth results have no minimum elevation, quote the limits in provenance.note, and treat matchedCells 0 as no cell meeting the conditions. Offer get_point_conditions or get_point_timeline for a closer look at a returned cell.",
     "get_point_timeline and compare_dates windows are terrain-adjusted and in UTC; report durations in hours as returned and do not extrapolate outside the returned period.",
     ...gazetteerLines,
