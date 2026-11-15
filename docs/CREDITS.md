@@ -102,3 +102,5 @@ No new external sources and no AI-generated content. Everything below is a resiz
 ## README animated mascot (2026-11-15, louis068 / Codex)
 - `docs/assets/bean-drift-mascot.svg`: adapted the user's existing local Argon pixel-art SVG into three rotating scenes (astronaut, lander, satellite/rover). AI-assisted SVG code and short English scene captions; no external imagery added. Prompt: reduce crowding, show a few figures at a time, let them fly away and be replaced. Decorative illustration only, not mission telemetry or measured lunar terrain. Includes reduced-motion fallback.
 - Follow-up: added three staggered decorative meteor trails and linked the banner to the explorer in both README languages. Browser image preview inspected; reduced-motion mode hides meteor motion. No new external assets.
+
+- Bean Drift animated title (`docs/assets/bean-drift-title-*.svg`): AI-assisted original SVG created with Codex. Prompt: moving green shape behind BEAN DRIFT, solid dark background, readable bilingual titles. No external artwork used.
