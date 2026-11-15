@@ -9,9 +9,9 @@
 
 import { disc, fillPoly, rad, rect, shade } from "./pixel-draw";
 
-export const CAR_SCALE = 2;
+export const CAR_SCALE = 1.5;
 export const BEAN_SPRITE = 18;
-const BEAN_SCALE = 2;
+const BEAN_SCALE = 1.5;
 
 export type CarPose = { x: number; y: number; headingDeg: number; wheelTurn: number };
 
@@ -124,7 +124,7 @@ export function drawCar(ctx: CanvasRenderingContext2D, pose: CarPose, bean: HTML
   const ground = (p: V3) => [p[0] * c - p[1] * s, p[0] * s + p[1] * c] as const;
 
   // Shadow on the road.
-  fillPoly(ctx, ([[-25, -13, 0], [25, -13, 0], [25, 13, 0], [-25, 13, 0]] as V3[]).map(project), "rgba(0,0,0,0.28)");
+  fillPoly(ctx, ([[-22, -11, 0], [22, -11, 0], [22, 11, 0], [-22, 11, 0]] as V3[]).map(project), "rgba(0,0,0,0.2)");
 
   const faces: Face[] = [];
   const addFace = (points: readonly V3[], normal: V3, color: string, layer: 0 | 1, glass = false) => {
