@@ -57,7 +57,8 @@ export function configureFirstPersonRenderer(renderer: THREE.WebGLRenderer) {
   renderer.setPixelRatio(1);
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   // 月面没有大气，阳光下的地面比 ACES 默认曝光亮得多；提高曝光，让低太阳角下的地面也看得清
-  renderer.toneMappingExposure = 1.8;
+  // 对照阿波罗 15 号的真实照片：阳光下的月壤是明亮的浅灰色，影子是纯黑，所以曝光要再高一些
+  renderer.toneMappingExposure = 2.4;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 }

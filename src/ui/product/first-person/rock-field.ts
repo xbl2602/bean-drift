@@ -133,7 +133,7 @@ class RockLayer {
           matrix.compose(new THREE.Vector3(east, surfaceYAt(east, north) + heightM * 0.12, -north), quaternion, new THREE.Vector3(lengthM, diameterM, diameterM * (0.7 + 0.3 * shade)));
           this.mesh.setMatrixAt(count, matrix);
           // 灰色略有深浅，少数偏暖（风化的玄武岩 / 角砾岩）
-          const grey = 0.17 + 0.22 * shade;
+          const grey = 0.26 + 0.3 * shade;
           this.mesh.setColorAt(count, color.setRGB(grey * 1.03, grey, grey * 0.94));
           count++;
         }
