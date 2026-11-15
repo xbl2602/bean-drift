@@ -233,6 +233,8 @@ export function Globe3dView({ timeMs, layers, annotations, focus, rightPanel, cu
         rt.atlases.tiles.update(view);
         rt.atlases.detail.update(view);
       }
+      // 记下这一帧画出来的相机位置：用户刚拖完、镜头还在惯性滑动时请求飞行，要靠它接着飞（见 camera-flight.ts）
+      rt.motion.record(camera.position, performance.now());
       renderer.render(scene, camera);
       rt.overlay.draw(settings.annotations, (point) => projectToScreen(camera, container, point), container.clientWidth);
     };
@@ -268,7 +270,7 @@ export function Globe3dView({ timeMs, layers, annotations, focus, rightPanel, cu
 
   useEffect(() => {
     const rt = runtimeRef.current;
-    if (focus && rt) rt.flight = startCameraFlight(cameraPositionFor(focus, rt.camera.fov), performance.now(), rt.flight, rt.motion);
+    if (focus && rt) rt.flight = startCameraFlight(cameraPositionFor(focus, rt.camera.fov), performance.now(), rt.flight, rt.motion, rt.camera.position);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 只在收到新的定位请求时执行
   }, [focus?.seq]);
 
@@ -352,7 +354,6 @@ function advanceFlight(rt: GlobeRuntime): boolean {
   rt.controls.enableDamping = false;
   rt.controls.update();
   const arrived = placeCameraOnFlight(rt.camera, rt.flight, performance.now());
-  rt.motion.record(rt.camera.position, performance.now());
   if (arrived) {
     rt.flight = null;
     rt.controls.enableDamping = true;
