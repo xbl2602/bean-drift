@@ -1,6 +1,7 @@
 "use client";
 // 第一人称：站在点击的位置环顾四周。拖动可水平 360° 转一整圈、上下看；滚轮升降视点（1.6 m 宇航员眼高 ~ 10 km）。
-// 画面按屏幕实际像素渲染（4K 屏就是 4K）；太阳和阴影跟着底部时间轴走。
+// 画面按屏幕实际像素渲染（4K 屏就是 4K），可手动切到"4K render"超采样；画面没变（没转头、没动时间轴）就不重画，阴影也只在需要时重算；
+// 太阳和阴影跟着底部时间轴走。
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { formatLatLon, type LatLon } from "../moon-frames";
@@ -26,7 +27,7 @@ interface FirstPersonViewProps {
 export function FirstPersonView({ point, timeMs, onExit, onLoadingChange, onError }: FirstPersonViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<FirstPersonScene | null>(null);
-  const [render4k, setRender4k] = useState(true);
+  const [render4k, setRender4k] = useState(false);
   const qualityRef = useRef(render4k);
   qualityRef.current = render4k;
   const resizeRef = useRef<(() => void) | null>(null);
@@ -56,8 +57,10 @@ export function FirstPersonView({ point, timeMs, onExit, onLoadingChange, onErro
     renderer.toneMappingExposure = 1.8;
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.shadowMap.autoUpdate = false; // 阴影只在场景说"太阳动了 / 范围变了"时重画
     renderer.domElement.className = "block h-full w-full";
     container.appendChild(renderer.domElement);
+    let redraw = true; // 窗口大小、画质开关变了 → 下一帧必须画
 
     const resize = () => {
       const width = Math.max(container.clientWidth, 1);
@@ -71,6 +74,7 @@ export function FirstPersonView({ point, timeMs, onExit, onLoadingChange, onErro
       const bufferHeight = Math.floor(height * scale);
       renderer.setSize(bufferWidth, bufferHeight, false);
       setRenderSize(bufferWidth + " × " + bufferHeight);
+      redraw = true;
       const camera = sceneRef.current?.camera;
       if (camera) {
         camera.aspect = container.clientWidth / Math.max(container.clientHeight, 1);
@@ -89,11 +93,17 @@ export function FirstPersonView({ point, timeMs, onExit, onLoadingChange, onErro
         setGroundHeightM(built.groundHeightM);
         resize();
         onLoadingChange(false);
+        let drawn = { yawDeg: Number.NaN, pitchDeg: Number.NaN, eyeHeightM: Number.NaN, timeMs: Number.NaN };
         const tick = () => {
           frame = requestAnimationFrame(tick);
           const v = viewRef.current;
+          const timeMs = timeRef.current;
+          if (!redraw && v.yawDeg === drawn.yawDeg && v.pitchDeg === drawn.pitchDeg && v.eyeHeightM === drawn.eyeHeightM && timeMs === drawn.timeMs) return; // 什么都没变：不画
+          redraw = false;
+          drawn = { yawDeg: v.yawDeg, pitchDeg: v.pitchDeg, eyeHeightM: v.eyeHeightM, timeMs };
           built.setView(v.yawDeg, v.pitchDeg, v.eyeHeightM);
-          built.setTime(timeRef.current);
+          built.setTime(timeMs);
+          if (built.takeShadowDirty()) renderer.shadowMap.needsUpdate = true;
           renderer.render(built.scene, built.camera);
         };
         tick();

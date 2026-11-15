@@ -242,7 +242,7 @@ function LoadingVeil({ firstPerson }: { firstPerson: boolean }) {
     <div className="pointer-events-none absolute inset-0 z-20 grid place-items-center bg-black/70">
       <div className="flex flex-col items-center gap-4">
         <span className="h-10 w-10 animate-spin rounded-full border-2 border-white/15 border-t-lime-300" />
-        <p className="text-sm tracking-wide text-white/70">{firstPerson ? "Landing… building the terrain around you" : "Loading 4K lunar maps…"}</p>
+        <p className="text-sm tracking-wide text-white/70">{firstPerson ? "Landing… building the terrain around you" : "Loading lunar maps…"}</p>
       </div>
     </div>
   );
