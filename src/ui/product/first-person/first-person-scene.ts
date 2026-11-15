@@ -18,6 +18,7 @@ import { createSkyPaths } from "./sky-paths";
 import { createSun, placeInSky, SKY_DISTANCE_M } from "./sky-objects";
 import { createTerrainDetail } from "./terrain-detail";
 import { buildTerrainPatch } from "./terrain-patch";
+import { noSlice, type Slice } from "./time-slice";
 import type { FeetPosition } from "./walk-motion";
 
 /** 地形块半径 200 km：站高 10 km 时地平线约在 186 km 处，仍在块内。 */
@@ -113,7 +114,8 @@ const EARTH_LIGHT_FULL = 0.095;
 const D2R_LIGHT = Math.PI / 180;
 const R2D_LIGHT = 180 / Math.PI;
 
-export async function buildFirstPersonScene(center: LatLon, renderer: THREE.WebGLRenderer): Promise<FirstPersonScene> {
+/** slice：在后台悄悄建场景时传进来，建的过程中会一段一段让出主线程（见 time-slice.ts）；实时第一人称不传，照旧一口气建完。 */
+export async function buildFirstPersonScene(center: LatLon, renderer: THREE.WebGLRenderer, slice: Slice = noSlice): Promise<FirstPersonScene> {
   // 地面颜色只用 4K 底图：站在地上，一个像素对应的月面有好几百米，更细的底图在这里看不出区别
   const [field, colorTexture, earthTexture, realCraters] = await Promise.all([
     loadHeightField(center, PATCH_RADIUS_M),
@@ -123,8 +125,10 @@ export async function buildFirstPersonScene(center: LatLon, renderer: THREE.WebG
     // 真实撞击坑拿不到时（网络问题）不拦住整个场景，只是少了真实的坑
     loadNearbyCraters(center, REAL_CRATER_RADIUS_M).catch((): RealCrater[] => []),
   ]);
+  await slice();
   const detail = createTerrainDetail(center.latDeg, center.lonDeg, realCraters, REAL_CRATER_RADIUS_M);
-  const { chunks, groundHeightM, footOffsetM, surfaceYAt } = buildTerrainPatch(center, field, detail, PATCH_RADIUS_M);
+  await slice();
+  const { chunks, groundHeightM, footOffsetM, surfaceYAt } = await buildTerrainPatch(center, field, detail, PATCH_RADIUS_M, slice);
 
   const scene = new THREE.Scene();
   // 站立点周围的平均反照率：给测光用（暗的月海、亮的撞击坑曝光不同）
@@ -133,6 +137,7 @@ export async function buildFirstPersonScene(center: LatLon, renderer: THREE.WebG
   // 地面上的石头：同一个地点每次撒得一样（种子由经纬度决定）
   const rockSeed = (Math.round((center.latDeg + 90) * 1000) * 2654435761) ^ (Math.round((center.lonDeg + 180) * 1000) * 40503);
   const rocks = createRockField(surfaceYAt, rockSeed);
+  await slice();
   scene.add(rocks.group);
   const ground = createGroundMaterial(colorTexture);
   for (const chunk of chunks) {
@@ -153,11 +158,13 @@ export async function buildFirstPersonScene(center: LatLon, renderer: THREE.WebG
   const earthLight = new THREE.DirectionalLight(0xc3d5ff, 0);
   scene.add(sunLight, sunLight.target, ambient, earthLight);
 
+  await slice();
   const sun = createSun();
   const earth = createEarth(earthTexture);
   const stars = createStarfield(SKY_DISTANCE_M * 1.2);
   // 太阳和地球在天上的轨迹（点线），比太阳、地球稍近一点，免得盖住它们
   const skyPaths = createSkyPaths(center, SKY_DISTANCE_M * 0.95);
+  await slice();
   scene.add(sun, earth, stars, skyPaths.group);
 
   const camera = new THREE.PerspectiveCamera(70, 1, 0.3, SKY_DISTANCE_M * 1.5);

@@ -11,6 +11,7 @@
 // three.js is loaded on demand, so visitors who never scroll here do not download it.
 
 import type * as ThreeNamespace from "three";
+import { createAdaptivePixelRatio } from "./adaptive-pixel-ratio";
 import type { CanvasRenderer } from "./gl-utils";
 import { LUNAR_BASES } from "./lunar-bases";
 import { createLinkTextures, RadioLink } from "./lunar-links";
@@ -30,10 +31,10 @@ const SATELLITE_SCREEN = { x: 0.74, y: 0.68 };
 const EARTH_SCREEN = { x: 0.86, y: 0.22 };
 const EARTH_DISTANCE = 420;
 const EARTH_ANGULAR_RADIUS = 0.07;
-// Drawn at 1.5x to 2x the screen size and scaled down: smooth edges even on ordinary screens.
+// Drawn at 1.5x to 2x the screen size and scaled down: smooth edges on thin links even on ordinary
+// screens. On a GPU that cannot keep up this steps down to screen resolution (adaptive-pixel-ratio.ts).
 const MIN_PIXEL_RATIO = 1.5;
 const MAX_PIXEL_RATIO = 2;
-const FLOOR_PIXEL_RATIO = 1.1;
 const LINK_FADE_PER_S = 5;
 /**
  * The part of the picture (fractions of the canvas, y from the top) where radio links are allowed: the area around
@@ -239,7 +240,8 @@ async function buildScene(canvas: HTMLCanvasElement) {
   camera.lookAt(satellitePosition);
 
   const size = { width: 1, height: 1 };
-  let pixelRatio = Math.max(MIN_PIXEL_RATIO, Math.min(window.devicePixelRatio || 1, MAX_PIXEL_RATIO));
+  // Follows screen density and zoom; draws fewer pixels if this GPU cannot keep up.
+  const resolution = createAdaptivePixelRatio({ minRatio: MIN_PIXEL_RATIO, maxRatio: MAX_PIXEL_RATIO }, () => resize(size.width, size.height));
   const placeEarth = () => {
     camera.updateMatrixWorld();
     const ndc = new THREE.Vector3(EARTH_SCREEN.x * 2 - 1, 1 - EARTH_SCREEN.y * 2, 0.5).unproject(camera);
@@ -249,7 +251,7 @@ async function buildScene(canvas: HTMLCanvasElement) {
   const resize = (width: number, height: number) => {
     size.width = Math.max(1, width);
     size.height = Math.max(1, height);
-    renderer.setPixelRatio(pixelRatio);
+    renderer.setPixelRatio(resolution.current());
     renderer.setSize(size.width, size.height, false);
     camera.aspect = size.width / size.height;
     // Shift the picture so the satellite sits at the lower right instead of the centre.
@@ -261,7 +263,6 @@ async function buildScene(canvas: HTMLCanvasElement) {
   // ---- per-frame state ----
   let linked: string[] = [];
   let lastTimeS = 0;
-  let slowFrames = 0;
   const tmpA = new THREE.Vector3();
   const tmpB = new THREE.Vector3();
   const inverse = new THREE.Quaternion();
@@ -336,13 +337,7 @@ async function buildScene(canvas: HTMLCanvasElement) {
     (scene.userData.stars as ThreeNamespace.Points).position.copy(camera.position);
 
     // If this device cannot keep up, quietly draw fewer pixels.
-    if (stepS > 0.034) slowFrames += 1;
-    else slowFrames = Math.max(0, slowFrames - 1);
-    if (slowFrames > 40 && pixelRatio > FLOOR_PIXEL_RATIO) {
-      pixelRatio = Math.max(FLOOR_PIXEL_RATIO, pixelRatio - 0.2);
-      slowFrames = 0;
-      resize(size.width, size.height);
-    }
+    resolution.noteFrame(performance.now());
   };
 
   const dispose = () => {
@@ -377,6 +372,11 @@ export function createLunarOrbitRenderer(canvas: HTMLCanvasElement): CanvasRende
     scene.resize(width, height);
   });
 
+  /** The tools grid's viewport position as of the last scroll; reading it forces a layout, so cache it. */
+  let gridTopScrollY = -1;
+  let gridTop = 0;
+  let lastOpacity = -1;
+
   return {
     ready,
     resize() {
@@ -387,11 +387,20 @@ export function createLunarOrbitRenderer(canvas: HTMLCanvasElement): CanvasRende
     },
     render(timeS) {
       // The whole backdrop fades once the cards below take over the screen, so text never fights it.
+      // Re-measured only on scroll: a per-frame getBoundingClientRect stalled the main thread.
       const wrapper = canvas.parentElement;
       const grid = canvas.closest("section")?.querySelector(".lq-tools-grid");
       if (wrapper && grid) {
-        const gridTop = grid.getBoundingClientRect().top;
-        wrapper.style.opacity = (0.82 + 0.18 * smooth(window.innerHeight * 0.1, window.innerHeight * 0.75, gridTop)).toFixed(3);
+        const scrollY = window.scrollY;
+        if (scrollY !== gridTopScrollY) {
+          gridTop = grid.getBoundingClientRect().top;
+          gridTopScrollY = scrollY;
+        }
+        const opacity = 0.82 + 0.18 * smooth(window.innerHeight * 0.1, window.innerHeight * 0.75, gridTop);
+        if (Math.abs(opacity - lastOpacity) > 0.004) {
+          lastOpacity = opacity;
+          wrapper.style.opacity = opacity.toFixed(3);
+        }
       }
       if (!built) return;
       built.update(timeS);
@@ -414,6 +423,11 @@ export function prefetchLunarOrbitAssets(): void {
   void import("three/examples/jsm/geometries/RoundedBoxGeometry.js");
   for (const [key, url] of Object.entries(TEXTURES)) {
     if (key === "ao") void fetch(url);
-    else new Image().src = url;
+    else {
+      // The scene is decoration: these downloads must never outrank what the visitor is looking at.
+      const image = new Image();
+      (image as HTMLImageElement & { fetchPriority?: "low" | "high" | "auto" }).fetchPriority = "low";
+      image.src = url;
+    }
   }
 }

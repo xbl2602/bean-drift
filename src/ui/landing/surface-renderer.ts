@@ -2,7 +2,9 @@
 // the sky. Directions use compass terms (azimuth: 0 = north, 90 = east; elevation: up from level),
 // the same convention as the rest of the project.
 
+import { createAdaptivePixelRatio } from "./adaptive-pixel-ratio";
 import { buildFullscreenProgram, type CanvasRenderer, createFullscreenQuad, loadGlobeTexture } from "./gl-utils";
+import { markLandingFirstScreenReady } from "./landing-readiness";
 import { EARTH_TEXTURE_URL } from "./space-renderer";
 import { FXAA_FRAGMENT_SHADER, SURFACE_MARCH_FRAGMENT_SHADER, SURFACE_SHADE_FRAGMENT_SHADER } from "./surface-shaders";
 import { loadSurfaceTerrain, type SurfaceTerrain } from "./surface-terrain";
@@ -33,7 +35,7 @@ export type SurfaceScene = {
 };
 
 const TERRAIN_URL = "/landing/lola-south-pole-640.bin";
-/** The ground is costly to draw, so the hero uses at most 1.5 device pixels per CSS pixel. */
+/** The ground is costly to draw: at most 1.5 device pixels per CSS pixel, lowered further on slow GPUs (adaptive-pixel-ratio.ts). */
 const MAX_PIXEL_RATIO = 1.5;
 const DEG = Math.PI / 180;
 
@@ -211,38 +213,47 @@ export function createSurfaceRenderer(canvas: HTMLCanvasElement, camera: Surface
     return { direction, x, y, radius };
   };
 
-  return {
-    ready: Promise.all([terrainReady, earth.loaded]).then(() => undefined),
+  /** Sizes the drawing buffers to the canvas at the current pixel ratio. */
+  const resizeBuffers = () => {
+    pixelRatio = resolution.current();
+    const widthPx = canvas.clientWidth;
+    const heightPx = canvas.clientHeight;
+    const bufferWidth = Math.max(1, Math.round(widthPx * pixelRatio));
+    const bufferHeight = Math.max(1, Math.round(heightPx * pixelRatio));
+    if (canvas.width !== bufferWidth) canvas.width = bufferWidth;
+    if (canvas.height !== bufferHeight) canvas.height = bufferHeight;
+    // Compare with the size of OUR depth image, not the canvas: if this component mounts twice on
+    // the same canvas (React does that in development), the canvas is already the right size.
+    if (depthWidth !== bufferWidth || depthHeight !== bufferHeight) {
+      depthWidth = bufferWidth;
+      depthHeight = bufferHeight;
+      gl.activeTexture(gl.TEXTURE0 + UNIT_DEPTH);
+      gl.bindTexture(gl.TEXTURE_2D, depthTexture);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, bufferWidth, bufferHeight, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+      gl.activeTexture(gl.TEXTURE0 + UNIT_SCENE);
+      gl.bindTexture(gl.TEXTURE_2D, sceneTexture);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, bufferWidth, bufferHeight, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, sceneTarget);
+      gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, sceneTexture, 0);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      depthIsStale = true;
+    }
+    return { widthPx, heightPx };
+  };
+  // Follows screen density and zoom; draws fewer pixels if this GPU cannot keep up.
+  const resolution = createAdaptivePixelRatio({ maxRatio: MAX_PIXEL_RATIO }, () => resizeBuffers());
 
-    resize() {
-      pixelRatio = Math.min(window.devicePixelRatio || 1, MAX_PIXEL_RATIO);
-      const widthPx = canvas.clientWidth;
-      const heightPx = canvas.clientHeight;
-      const bufferWidth = Math.max(1, Math.round(widthPx * pixelRatio));
-      const bufferHeight = Math.max(1, Math.round(heightPx * pixelRatio));
-      if (canvas.width !== bufferWidth) canvas.width = bufferWidth;
-      if (canvas.height !== bufferHeight) canvas.height = bufferHeight;
-      // Compare with the size of OUR depth image, not the canvas: if this component mounts twice on
-      // the same canvas (React does that in development), the canvas is already the right size.
-      if (depthWidth !== bufferWidth || depthHeight !== bufferHeight) {
-        depthWidth = bufferWidth;
-        depthHeight = bufferHeight;
-        gl.activeTexture(gl.TEXTURE0 + UNIT_DEPTH);
-        gl.bindTexture(gl.TEXTURE_2D, depthTexture);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, bufferWidth, bufferHeight, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
-        gl.activeTexture(gl.TEXTURE0 + UNIT_SCENE);
-        gl.bindTexture(gl.TEXTURE_2D, sceneTexture);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, bufferWidth, bufferHeight, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
-        gl.bindFramebuffer(gl.FRAMEBUFFER, sceneTarget);
-        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, sceneTexture, 0);
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-        depthIsStale = true;
-      }
-      return { widthPx, heightPx };
-    },
+  return {
+    ready: Promise.all([terrainReady, earth.loaded]).then(() => {
+      // The first screen is complete: tell speculative preloaders they may start now.
+      markLandingFirstScreenReady();
+    }),
+
+    resize: resizeBuffers,
 
     render(scene) {
       if (!terrain || gl.isContextLost()) return;
+      resolution.noteFrame(performance.now());
 
       if (depthIsStale) {
         // The one-off expensive pass; it only runs again if the canvas changes size.
