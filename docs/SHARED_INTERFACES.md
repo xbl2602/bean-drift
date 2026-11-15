@@ -159,7 +159,7 @@ pipeline 把上面的统计对**整个月面每个 0.25° 格子**算好，放�
 | `GET /api/health` | — | `{ "status": "ok", "service": "bean-drift" }` |
 | `GET /api/point` | query：`latDeg`（-90~90）、`lonDeg`（-180~360）、`time`（可选，默认现在）、`minEarthElevationDeg`（可选，见 2.5.2）、`statsStart`（可选，见 2.5.3） | `PointConditions` |
 | `POST /api/compare` | JSON：`{ "points": [{ "latDeg", "lonDeg" }, ...1~10 个], "time"?: "...", "minEarthElevationDeg"?: n, "statsStart"?: "...Z" }` | `{ "timeUtc", "results": PointConditions[] }`，顺序与输入一致 |
-| `GET /api/presets` | — | `{ "presets": Preset[] }`（`Preset` 见 `src/core/types.ts`） |
+| `GET /api/presets` | — | `{ "presets": Preset[] }`（`Preset` 见 `src/core/types.ts`）。`Preset.kind`（2026-11-15 新增）：`"landing-site"` = 真实着陆过的任务（含着陆失败后躺在原地的，描述里写明）；`"place"` = 地名中心点或原型观察点，**不是任何任务的着陆目标**。产品页 Landing Sites 模式读这个接口，按 `kind` 分两组显示 |
 | `GET /api/timeline` | query：`latDeg`、`lonDeg`（必填）；`time`（起点，默认现在）、`durationH`（1~744，默认 720）、`stepMin`（曲线间隔，10~1440 分钟，默认约 144 个点）、`minEarthElevationDeg` | `PointTimeline`，见 3.1 |
 | `POST /api/compare-dates` | JSON：`{ "points": [{ "latDeg", "lonDeg" }, ...1~5 个], "times": ["...Z", ...1~8 个], "minEarthElevationDeg"?: n }` | `{ "timesUtc", "points": PointAcrossTimes[], "provenance" }`，见 3.2 |
 | `GET /api/energy` | query：`latDeg`、`lonDeg`（必填）；`time`（起点，默认现在）、`durationH`（1~8760，默认 720） | `SolarEnergyEstimate`，见 3.4 |

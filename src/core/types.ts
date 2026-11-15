@@ -165,9 +165,17 @@ export interface PointConditions {
   };
 }
 
-/** 预设点位（著名着陆点）。坐标必须有出处（TODO Q3）。 */
+/**
+ * 预设点位的种类：
+ * - `landing-site`：真实着陆过的任务（登月舱、着陆器的位置）；
+ * - `place`：地名中心点或原型观察点，只说明"这个地名在哪"，不是任何任务的着陆目标。
+ */
+export type PresetKind = "landing-site" | "place";
+
+/** 预设点位（著名着陆点和南极地名）。坐标必须有出处（TODO Q3）。 */
 export interface Preset {
   id: string;
+  kind: PresetKind;
   name: string;
   nameZh: string;
   position: LunarPosition;
