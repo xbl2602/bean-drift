@@ -2,6 +2,7 @@
 // 顶部的模式条（样式参照一条简洁的胶囊导航）：
 //   [Lunar Quest 标志 + 名字（名字宽屏才显示）] · 三个模式（当前的那个是浅色小胶囊 + 绿点）| Ask AI（快捷键 /）· 教程（?）· 设置（齿轮）
 // 鼠标停在任何一个按钮上，下面会弹出一张小卡片，一句话说明它是干什么的；手机没有悬停，靠底部的提示条说明。
+import Link from "next/link";
 import { useEffect, type ReactNode } from "react";
 import { useT } from "../i18n/use-t";
 import { LunarQuestMark, ToolIcon } from "../menu/tool-menu";
@@ -30,10 +31,10 @@ export function ModeSwitch({ mode, onChange, tutorialOpen, aiOpen, settingsOpen,
     <div className="absolute left-21 top-4 z-30 sm:left-24 sm:top-6 lg:left-1/2 lg:-translate-x-1/2">
       <div className="flex items-center gap-0.5 rounded-full border border-white/10 bg-[#0b1018]/85 p-1 shadow-2xl shadow-black/50 lunar-glass backdrop-blur-xl sm:gap-1 sm:p-1.5">
         {/* 网站标志和名字：标志一直显示，名字在宽屏（lg 以上）才显示，手机上放不下 */}
-        <div className="flex shrink-0 items-center gap-2.5 pl-1 pr-1 sm:pl-2 sm:pr-2.5 lg:pr-3">
+        <Link href="/" aria-label="Lunar Quest — return to landing page" title="Return to landing page" className="flex shrink-0 items-center gap-2.5 rounded-full pl-1 pr-1 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-lime-200 sm:pl-2 sm:pr-2.5 lg:pr-3">
           <LunarQuestMark className="h-5 w-5 sm:h-6 sm:w-6" />
           <span className="hidden whitespace-nowrap text-[13px] font-light uppercase tracking-[0.32em] text-white/90 lg:inline">Lunar Quest</span>
-        </div>
+        </Link>
         <div role="radiogroup" aria-label="Lunar Quest" data-tour="modes" className="flex items-center gap-0.5 sm:gap-1">
           {APP_MODES.map((item) => {
             const active = mode === item.id;

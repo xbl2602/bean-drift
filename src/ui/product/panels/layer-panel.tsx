@@ -2,6 +2,7 @@
 // 分析图层的面板（地形高度、光照、温度、水冰、坡度、选址评分共用）：说明、图例、数据来源提醒。
 // 选址评分额外有一组"选哪些标准、各占多重"的控件。
 import type { PointAnalysis } from "../analysis/point-analysis";
+import { formatLatLon } from "../moon-frames";
 import { LAYER_INFO, RAMPS, type BaseLayer, type SuitabilityWeights } from "../map-layers";
 import { Caveat, PanelShell } from "./panel-shell";
 
@@ -50,9 +51,12 @@ export function LayerPanel({ title, layer, weights, onWeightsChange, hover, onCl
         </div>
       )}
 
+      {layer === "illumination" && <p className="mt-2 text-[11px] leading-relaxed text-white/65">Blue/purple means less time in sunlight; warm colours mean more. These are data colours, not overlapping images or the shadow at this instant.</p>}
+      {layer === "temperature" && <p className="mt-2 text-[11px] leading-relaxed text-white/65">Blue is colder ground. Recently dark ground retains warmth and cools toward dawn; the transition follows the Sun and terrain slopes. Model estimate, not measured thermal imagery.</p>}
       <div className="mt-3 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2">
         <p className="text-[10px] uppercase tracking-wide text-white/45">Under the cursor</p>
-        <p className="font-mono text-base text-white">{hover ? HOVER_VALUE[layer](hover) : "Hover over the map"}</p>
+        <p className="font-mono text-base text-white">{hover ? HOVER_VALUE[layer](hover) : "Move over the Moon"}</p>
+        <p className="mt-1 min-h-4 font-mono text-[10px] text-white/50">{hover ? formatLatLon(hover) : "Readings follow the cursor"}</p>
       </div>
 
       {layer === "suitability" && (

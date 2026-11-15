@@ -1,15 +1,15 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { useT } from "../i18n/use-t";
-import { TOOLS, type ToolCategory, type ToolId } from "./tools";
+import { TOOLS, type ToolCategory, type ToolId, type ToolInfo } from "./tools";
 
 interface ToolMenuProps {
   activeTool: ToolId | null;
   onSelect: (tool: ToolId) => void;
   onHome: () => void;
-  onGroupOpen: () => void;
 }
 type GroupId = Exclude<ToolCategory, "top">;
+type MenuTool = ToolInfo & { id: Exclude<ToolId, "site" | "inspect"> };
 /** Home 按钮：一个小房子（网站标志放在顶部模式条的最左边）。 */
 const HOME_ICON = "M3 11.5 12 4l9 7.5M5.5 9.5V20h5v-5.5h3V20h5V9.5";
 const GROUPS: Array<{ id: GroupId; icon: string }> = [
@@ -21,7 +21,7 @@ export function ToolIcon({ path, className = "h-5 w-5" }: { path: string; classN
   return <svg viewBox="0 0 24 24" className={`shrink-0 ${className}`} fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={path} /></svg>;
 }
 
-export function ToolMenu({ activeTool, onSelect, onHome, onGroupOpen }: ToolMenuProps) {
+export function ToolMenu({ activeTool, onSelect, onHome }: ToolMenuProps) {
   const t = useT();
   const [open, setOpen] = useState<GroupId | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -44,7 +44,8 @@ export function ToolMenu({ activeTool, onSelect, onHome, onGroupOpen }: ToolMenu
     return () => { window.removeEventListener("pointermove", leave); window.removeEventListener("pointerdown", close); window.removeEventListener("keydown", close); };
   }, [open]);
   useEffect(() => { if (activeTool) setOpen(null); }, [activeTool]);
-  const openGroup = (group: GroupId) => { if (open !== group) onGroupOpen(); setOpen(group); };
+  // Previewing a group leaves the active tool and its data untouched.
+  const openGroup = (group: GroupId) => setOpen(group);
   const choose = (tool: ToolId) => { onSelect(tool); setOpen(null); };
   const buttonStyle = (selected: boolean) => `flex min-h-14 w-14 flex-col items-center justify-center gap-1 rounded-xl transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-lime-200 ${selected ? "bg-lime-300 text-[#11180a] shadow-lg shadow-lime-300/10" : "text-slate-300 hover:bg-white/10 hover:text-white"}`;
   return (
@@ -64,7 +65,7 @@ export function ToolMenu({ activeTool, onSelect, onHome, onGroupOpen }: ToolMenu
           <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-lime-200">{t(`category.${open}`)}</h2>
           <button type="button" aria-label="Close tool group" onClick={() => setOpen(null)} className="rounded-lg p-1 text-white/60 hover:bg-white/10"><ToolIcon path="m6 6 12 12M18 6 6 18" className="h-4 w-4" /></button>
         </div>
-        {TOOLS.filter((tool) => tool.category === open).map((tool) => <button key={tool.id} type="button" onClick={() => choose(tool.id)} className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition hover:bg-white/10 focus-visible:outline focus-visible:outline-lime-200 ${activeTool === tool.id ? "bg-lime-300/10" : ""}`}>
+        {TOOLS.filter((tool): tool is MenuTool => tool.category === open && tool.id !== "site" && tool.id !== "inspect").map((tool) => <button key={tool.id} type="button" onClick={() => choose(tool.id)} className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition hover:bg-white/10 focus-visible:outline focus-visible:outline-lime-200 ${activeTool === tool.id ? "bg-lime-300/10" : ""}`}>
           <span className="text-lime-300"><ToolIcon path={tool.icon} /></span>
           <span className="min-w-0"><span className="block text-xs font-semibold text-white/95">{t(`tool.${tool.id}.label`)}</span><span className="mt-1 block text-[10px] leading-snug text-slate-400">{t(`tool.${tool.id}.hint`)}</span></span>
         </button>)}

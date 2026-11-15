@@ -20,14 +20,14 @@ interface FindDataModeProps {
   onTimeChange: (timeMs: number) => void;
   weights: SuitabilityWeights;
   onStandHere: (point: LatLon) => void;
-  onSaveSite: (point: LatLon, name: string) => void;
+  onCompareLocation: (point: LatLon, name: string) => void;
   /** 右边被别的面板（AI、设置）占着时，结果先藏起来。 */
   resultsHidden: boolean;
   /** 结果面板显示 / 收起时告诉外面（3D 球往左让开）。 */
   onResultsOpenChange: (open: boolean) => void;
 }
 
-export function FindDataMode({ target, onGoTo, onClear, timeMs, onTimeChange, weights, onStandHere, onSaveSite, resultsHidden, onResultsOpenChange }: FindDataModeProps) {
+export function FindDataMode({ target, onGoTo, onClear, timeMs, onTimeChange, weights, onStandHere, onCompareLocation, resultsHidden, onResultsOpenChange }: FindDataModeProps) {
   const t = useT();
   const [config, setConfig] = useState<MissionConfig>(() => defaultConfig("lander", timeMs));
   const { state, start, cancel, reset } = useMissionRun();
@@ -47,7 +47,7 @@ export function FindDataMode({ target, onGoTo, onClear, timeMs, onTimeChange, we
     <>
       <section aria-label={t("sim.title")} className={`absolute left-4 right-4 top-32 z-20 max-h-[calc(100dvh-16.5rem)] flex-col gap-2 sm:right-auto sm:top-24 sm:w-[24rem] ${resultsShown ? "hidden lg:flex" : "flex"}`}>
         {!target && (
-          <SearchPanel selected={target} onGoTo={onGoTo} onStandHere={onStandHere} onSaveSite={onSaveSite} onClose={onClear} hideResult placeholder="Shackleton, or -89.9, 0" placementClassName="relative z-10 shrink-0" />
+          <SearchPanel selected={target} onGoTo={onGoTo} onStandHere={onStandHere} onCompareLocation={onCompareLocation} onClose={onClear} hideResult placeholder="Shackleton, or -89.9, 0" placementClassName="relative z-10 shrink-0" />
         )}
         <div className="min-h-0 overflow-y-auto rounded-2xl border border-white/10 bg-[#0b0f17]/90 p-4 text-white shadow-2xl shadow-black/60 lunar-glass backdrop-blur-xl [scrollbar-color:rgba(255,255,255,0.25)_transparent] [scrollbar-width:thin]">
           <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-lime-300">{t("sim.title")}</p>

@@ -67,13 +67,13 @@ export const LAYER_INFO: Record<BaseLayer, LayerInfo> = {
   illumination: {
     label: "Solar illumination",
     description: "Share of time the ground is in sunlight over the lunar month that starts at the selected time.",
-    caveat: `Model. Slope-aware Sun angle from our ephemeris. Poleward of ${m.polarStartDeg}° it switches to a year-long terrain-horizon calculation from LOLA; elsewhere shadows cast by distant terrain are not included.`,
+    caveat: `Model. Slope-aware Sun angle with interpolated monthly visibility (not a measured illumination image). Poleward of ${m.polarStartDeg}° it switches to a year-long terrain-horizon calculation from LOLA; elsewhere shadows cast by distant terrain are not included.`,
     legend: { left: "0% (never lit)", right: "100%" },
   },
   temperature: {
     label: "Surface temperature",
     description: "Estimated surface temperature at the selected time. Move the timeline to watch the day–night cycle.",
-    caveat: `Model, not measured: instant radiative balance with the Sun (peak ${m.subsolarTempK} K), ${m.nightTempK} K at night, ${m.shadowTempK} K in permanent shadow. Ignores heat stored in the soil. Real values: LRO Diviner.`,
+    caveat: `Model, not measured: Diviner-based empirical day/night cycle (Hurley et al., 2014), adapted to match dawn and dusk continuously. Nighttime cooling and unresolved facet roughness replace a fixed night temperature; LOLA normals orient the facets. Permanent shadow uses ${m.shadowTempK} K. Not a measured map or full soil heat-conduction calculation; local rocks, composition and terrain-cast shadows are not resolved. Least reliable near the terminator and poles.`,
     legend: { left: `${m.tempScaleMinK} K (${m.tempScaleMinK - 273}°C)`, right: `${m.tempScaleMaxK} K (+${m.tempScaleMaxK - 273}°C)` },
   },
   ice: {

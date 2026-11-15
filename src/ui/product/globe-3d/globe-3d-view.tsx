@@ -12,7 +12,7 @@
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import { applyAnalysisUniforms, type AnalysisUniforms } from "../analysis/analysis-glsl";
+import { applyAnalysisUniforms, applyGridScale, type AnalysisUniforms } from "../analysis/analysis-glsl";
 import { monthSunSamples, sunBodyAt } from "../analysis/sun-samples";
 import { MoonTextureSet, fineMapsForLayer } from "../imagery/moon-texture-set";
 import { TileAtlas } from "../imagery/tile-atlas";
@@ -20,6 +20,7 @@ import { COLOR_PYRAMID_SOURCE, MOON_TREK_SOURCE, type MoonAtlases } from "../ima
 import type { LayerSettings } from "../map-layers";
 import type { FocusRequest, MapViewProps } from "../map-view-props";
 import { bodyToLatLon, bodyToThree, latLonToBody, sunDirectionBody, threeToBody, type LatLon } from "../moon-frames";
+import { LunarFeatureLayer } from "../overlay/lunar-feature-layer";
 import { AnnotationLayer, type MapAnnotations } from "../overlay/annotations";
 import { SmoothValue, prefersReducedMotion } from "../motion/smooth-value";
 import { rightPanelCoverPx, type RightPanelSize } from "../panels/panel-shell";
@@ -60,6 +61,7 @@ interface GlobeRuntime {
   patches: GlobePatches | null;
   analysisUniforms: AnalysisUniforms | null;
   atlases: MoonAtlases | null;
+  features: LunarFeatureLayer;
   overlay: AnnotationLayer;
   flight: CameraFlight | null;
   motion: CameraMotionTracker;
@@ -150,6 +152,7 @@ export function Globe3dView({ timeMs, layers, annotations, focus, rightPanel, cu
       patches: null,
       analysisUniforms: null,
       atlases: null,
+      features: new LunarFeatureLayer(container, invalidate),
       overlay: new AnnotationLayer(container),
       flight: null,
       motion: new CameraMotionTracker(),
@@ -218,6 +221,8 @@ export function Globe3dView({ timeMs, layers, annotations, focus, rightPanel, cu
       rt.drawn = { timeMs: settings.timeMs, layers: settings.layers, annotations: settings.annotations };
 
       const sunDirection = applySettings(rt, settings.timeMs, settings.layers);
+      const pixelsPerDegree = Math.abs(camera.projectionMatrix.elements[5]) * container.clientHeight * 0.5 * MOON_RADIUS_KM / Math.max(camera.position.length() - MOON_RADIUS_KM, 1) * Math.PI / 180;
+      if (rt.analysisUniforms) applyGridScale(rt.analysisUniforms, pixelsPerDegree, renderer.getPixelRatio());
       const patchesChanged = rt.patches?.update(camera, container.clientHeight) ?? false; // 背面和一定看不见的块不画，网格疏密跟着屏幕走
       // 日照关着时阴影图不更新，再打开时必须重画一次（期间转过视角、露出过新的块）
       if (!rt.sun.visible) rt.shadowDirty = true;
@@ -236,6 +241,7 @@ export function Globe3dView({ timeMs, layers, annotations, focus, rightPanel, cu
       // 记下这一帧画出来的相机位置：用户刚拖完、镜头还在惯性滑动时请求飞行，要靠它接着飞（见 camera-flight.ts）
       rt.motion.record(camera.position, performance.now());
       renderer.render(scene, camera);
+      rt.features.draw(settings.annotations, (point) => projectToScreen(camera, container, point), { widthPx: container.clientWidth, heightPx: container.clientHeight, pixelsPerDegree });
       rt.overlay.draw(settings.annotations, (point) => projectToScreen(camera, container, point), container.clientWidth);
     };
     tick();
@@ -249,6 +255,7 @@ export function Globe3dView({ timeMs, layers, annotations, focus, rightPanel, cu
       sky.dispose();
       rt.atlases?.tiles.dispose();
       rt.atlases?.detail.dispose();
+      rt.features.dispose();
       rt.overlay.dispose();
       scene.traverse((obj) => {
         if (obj instanceof THREE.Mesh || obj instanceof THREE.Points || obj instanceof THREE.Sprite) {
@@ -274,6 +281,7 @@ export function Globe3dView({ timeMs, layers, annotations, focus, rightPanel, cu
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 只在收到新的定位请求时执行
   }, [focus?.seq]);
 
+  const tappedPointRef = useRef<LatLon | null>(null);
   const latLonAt = (xPx: number, yPx: number): LatLon | null => {
     const rt = runtimeRef.current;
     const container = containerRef.current;
@@ -288,11 +296,12 @@ export function Globe3dView({ timeMs, layers, annotations, focus, rightPanel, cu
   usePointerGestures(containerRef, {
     capturePointer: false,
     onDoubleTap: onDoublePick ? (x, y) => {
-      const point = latLonAt(x, y);
+      const point = tappedPointRef.current ?? latLonAt(x, y);
       if (point) onDoublePick(point);
     } : undefined,
     onTap: (x, y) => {
       const point = latLonAt(x, y);
+      tappedPointRef.current = point;
       if (point) onPick(point);
     },
     onHover: (x, y) => onHover(x === null || y === null ? null : latLonAt(x, y)),

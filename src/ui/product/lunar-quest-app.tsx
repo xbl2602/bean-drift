@@ -95,6 +95,7 @@ export function LunarQuestApp() {
   const requestFocus = useCallback((point: LatLon, spanDeg: number) => setFocus((previous) => ({ seq: (previous?.seq ?? 0) + 1, point, spanDeg })), []);
 
   const focusComparisonSite = useCallback((site: SavedSite) => {
+    setDraftSite(null);
     setSelectedSiteId(site.id);
     setMapMode("3d");
     requestFocus(site, 110);
@@ -110,8 +111,8 @@ export function LunarQuestApp() {
 
   const selectTool = (tool: ToolId) => {
     setActiveTool(tool);
-    // 未保存的标记只属于 Select Landing Site：换到别的工具就收起
-    if (tool !== "site") setDraftSite(null);
+    // Inspection can pass its unsaved point to the comparison picker; other tools dismiss it.
+    if (tool !== "site" && tool !== "inspect") setDraftSite(null);
     if (tool === "compare") setMapMode("3d");
     const layer = toolInfo(tool).layer;
     if (layer) setLayers((current) => ({ ...current, base: layer }));
@@ -120,11 +121,8 @@ export function LunarQuestApp() {
     if (standingAt) leaveFirstPerson();
   };
   const selectMenuTool = (tool: ToolId) => {
-    if (tool !== "compare") return selectTool(tool);
-    setDraftSite(null);
-    setSelectedSiteId(null);
-    selectTool("site");
-    setNotice("Pick a location on the Moon, then choose Add to comparison.");
+    // The toolbar always starts with the picker; only its Compare button opens results.
+    selectTool(tool === "compare" ? "site" : tool);
   };
   const closeTool = () => {
     // 关掉图层工具的面板 = 不再看这个图层，回到月面影像
@@ -143,8 +141,12 @@ export function LunarQuestApp() {
     setError(null);
     setStandingAt(null);
   };
-  const saveSite = (point: LatLon, name?: string) => {
-    setNotice(addSite(point, name) ? `Added ${name ?? "site"} to comparison` : `The site list is full (${MAX_SITES}). Remove one first.`);
+  const chooseSiteForComparison = (point: LatLon, name?: string) => {
+    changeAppMode("explore");
+    selectTool("site");
+    setSearchTarget(null);
+    setDraftSite({ latDeg: point.latDeg, lonDeg: normalizeLonDeg(point.lonDeg), name: name || nextSiteName(sites) });
+    setSelectedSiteId(null);
   };
   const changeAppMode = (mode: AppMode) => {
     if (mode === appMode) return;
@@ -193,6 +195,11 @@ export function LunarQuestApp() {
       setFindTarget({ ...picked, label: t("sim.picked"), detail: formatLatLon(picked), spanDeg: 25 });
       return;
     }
+    if (activeTool === "search") {
+      const picked = { latDeg: point.latDeg, lonDeg: normalizeLonDeg(point.lonDeg) };
+      setSearchTarget({ ...picked, label: t("sim.picked"), detail: formatLatLon(picked), spanDeg: 25 });
+      return;
+    }
     if (activeTool === "compare") {
       const picked = sites.find(site => Math.abs(site.latDeg - point.latDeg) < 6 && Math.abs(normalizeLonDeg(site.lonDeg - point.lonDeg)) < 6);
       if (picked) focusComparisonSite(picked);
@@ -205,8 +212,10 @@ export function LunarQuestApp() {
     }
     else if (clickMode === "measure") setMeasurePoints((points) => [...points, { latDeg: point.latDeg, lonDeg: normalizeLonDeg(point.lonDeg) }]);
     else {
-      const picked = { latDeg: point.latDeg, lonDeg: normalizeLonDeg(point.lonDeg) };
-      setSearchTarget({ ...picked, label: t("sim.picked"), detail: formatLatLon(picked), spanDeg: 25 });
+      setSearchTarget(null);
+      setDraftSite({ latDeg: point.latDeg, lonDeg: normalizeLonDeg(point.lonDeg), name: nextSiteName(sites) });
+      setSelectedSiteId(null);
+      setActiveTool("inspect");
     }
   };
   const saveDraft = () => {
@@ -260,7 +269,7 @@ export function LunarQuestApp() {
       )}
 
       </div>
-      {exploring && <ToolMenu activeTool={activeTool} onSelect={selectMenuTool} onHome={resetExplorer} onGroupOpen={closeTool} />}
+      {exploring && <ToolMenu activeTool={activeTool} onSelect={selectMenuTool} onHome={resetExplorer} />}
       {!standingAt && <ModeSwitch mode={appMode} onChange={changeAppMode} tutorialOpen={activeTool === "tutorial"} aiOpen={activeTool === "ai"} settingsOpen={activeTool === "settings"} onTutorial={openTutorial} onAi={toggleAi} onSettings={toggleSettings} />}
       {!standingAt && <ViewControls mode={mapMode} onModeChange={changeMode} layers={layers} onLayersChange={setLayers} />}
 
@@ -268,7 +277,7 @@ export function LunarQuestApp() {
         <LandingSitesMode state={landingState} selectedId={rightToolOpen ? null : landingSiteId} onSelect={selectLandingSite} onCloseDetail={() => setLandingSiteId(null)} timeMs={timeMs} weights={layers.weights} onStandHere={enterFirstPerson} />
       )}
       {appMode === "find-data" && !standingAt && (
-        <FindDataMode target={findTarget} onGoTo={lookUpPoint} onClear={() => setFindTarget(null)} timeMs={timeMs} onTimeChange={setTimeMs} weights={layers.weights} onStandHere={enterFirstPerson} onSaveSite={saveSite} resultsHidden={rightToolOpen} onResultsOpenChange={setSimResultsOpen} />
+        <FindDataMode target={findTarget} onGoTo={lookUpPoint} onClear={() => setFindTarget(null)} timeMs={timeMs} onTimeChange={setTimeMs} weights={layers.weights} onStandHere={enterFirstPerson} onCompareLocation={chooseSiteForComparison} resultsHidden={rightToolOpen} onResultsOpenChange={setSimResultsOpen} />
       )}
 
       {activeTool && (exploring || rightToolOpen) && (activeTool === "tutorial" || !standingAt) && (
@@ -293,9 +302,10 @@ export function LunarQuestApp() {
           onSaveDraft={saveDraft}
           selectedSiteId={selectedSiteId}
           onStandHere={enterFirstPerson}
-          onSaveSite={saveSite}
+          onCompareLocation={chooseSiteForComparison}
           onRenameSite={renameSite}
-          onRemoveSite={removeSite}
+          onRemoveSite={(id) => { removeSite(id); setSelectedSiteId(current => current === id ? null : current); }}
+          onFindNewSite={() => { setDraftSite(null); setSelectedSiteId(null); selectTool("site"); }}
           onSelectTool={selectTool}
           onClose={closeTool}
         />
