@@ -8,6 +8,7 @@ import { MOON_RADIUS_M } from "../moon-assets";
 import { latLonToBody, localBasis, type LatLon } from "../moon-frames";
 import type { HeightField } from "./height-tiles";
 import type { TerrainDetail } from "./terrain-detail";
+import { noSlice, type Slice } from "./time-slice";
 
 const D2R = Math.PI / 180;
 const R2D = 180 / Math.PI;
@@ -45,7 +46,8 @@ function ringRadii(maxRadiusM: number): number[] {
   return radii;
 }
 
-export function buildTerrainPatch(center: LatLon, field: HeightField, detail: TerrainDetail, radiusM: number): TerrainPatch {
+/** slice：长循环里每圈调用一次，让调用方有机会把主线程让出去（不传就是一口气算完）。 */
+export async function buildTerrainPatch(center: LatLon, field: HeightField, detail: TerrainDetail, radiusM: number, slice: Slice = noSlice): Promise<TerrainPatch> {
   const radii = ringRadii(radiusM);
   const vertexCount = 1 + radii.length * SECTORS;
   const groundHeightM = field.heightAtM(center.latDeg, center.lonDeg);
@@ -69,7 +71,8 @@ export function buildTerrainPatch(center: LatLon, field: HeightField, detail: Te
   };
 
   writeVertex(0, center, center.lonDeg, footOffsetM);
-  radii.forEach((ringM, ring) => {
+  for (let ring = 0; ring < radii.length; ring++) {
+    const ringM = radii[ring];
     const cellM = ringM * (RING_GROWTH - 1);
     for (let s = 0; s < SECTORS; s++) {
       const bearingRad = (s / SECTORS) * 2 * Math.PI;
@@ -84,7 +87,8 @@ export function buildTerrainPatch(center: LatLon, field: HeightField, detail: Te
       tones[at + 1] = tone;
       tones[at + 2] = tone * 0.985;
     }
-  });
+    await slice();
+  }
 
   // 中心一圈扇形 + 相邻两环之间的四边形（各拆成两个三角形）。绕向：从上往下看逆时针，法线朝上。
   const indices = new Uint32Array(SECTORS * 3 + (radii.length - 1) * SECTORS * 6);
@@ -109,15 +113,17 @@ export function buildTerrainPatch(center: LatLon, field: HeightField, detail: Te
   geometry.setAttribute("uv", new THREE.BufferAttribute(uvs, 2));
   geometry.setAttribute("color", new THREE.BufferAttribute(tones, 3));
   geometry.setIndex(new THREE.BufferAttribute(indices, 1));
+  await slice();
   geometry.computeVertexNormals();
-  return { chunks: splitIntoChunks(geometry, radii.length), groundHeightM, footOffsetM, surfaceYAt: (eastM, northM) => surfaceYOnGrid(positions, radii, eastM, northM) };
+  await slice();
+  return { chunks: await splitIntoChunks(geometry, radii.length, slice), groundHeightM, footOffsetM, surfaceYAt: (eastM, northM) => surfaceYOnGrid(positions, radii, eastM, northM) };
 }
 
 /**
  * 把整块地形按"扇形 × 环带"切成小块。每块有自己的三角形索引和包围球，three 会对每块单独做视锥体剔除：
  * 背后、视野外的块不进绘制；阴影相机只有几公里宽，远处的块也不进阴影图。顶点数据共用，不多占内存。
  */
-function splitIntoChunks(full: THREE.BufferGeometry, ringCount: number): THREE.BufferGeometry[] {
+async function splitIntoChunks(full: THREE.BufferGeometry, ringCount: number, slice: Slice): Promise<THREE.BufferGeometry[]> {
   const position = full.getAttribute("position") as THREE.BufferAttribute;
   const normal = full.getAttribute("normal");
   const uv = full.getAttribute("uv");
@@ -147,6 +153,7 @@ function splitIntoChunks(full: THREE.BufferGeometry, ringCount: number): THREE.B
       chunk.setIndex(new THREE.BufferAttribute(new Uint32Array(indexList), 1));
       chunk.boundingSphere = boundingSphereOfIndexed(position, indexList);
       chunks.push(chunk);
+      await slice();
     }
   }
   return chunks;
