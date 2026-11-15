@@ -33,6 +33,9 @@ export interface ToolPanelProps {
   onMeasureChange: (points: LatLon[]) => void;
   searchTarget: SearchTarget | null;
   onGoTo: (target: SearchTarget) => void;
+  compareHeight: number;
+  onCompareHeightChange: (height: number) => void;
+  onFocusComparisonSite: (site: SavedSite) => void;
   onShowSite: (site: SavedSite) => void;
   onStandHere: (point: LatLon) => void;
   onSaveSite: (point: LatLon, name?: string) => void;
@@ -73,7 +76,7 @@ export function ToolPanel(props: ToolPanelProps) {
     return <MeasurePanel points={props.measurePoints} onUndo={() => props.onMeasureChange(props.measurePoints.slice(0, -1))} onClear={() => props.onMeasureChange([])} onClose={onClose} />;
   }
   if (tool === "compare") {
-    return <ComparePanel sites={props.sites} analyses={props.analyses} timeMs={props.timeMs} onAddSites={() => onSelectTool("site")} onExport={() => onSelectTool("export")} onClose={onClose} />;
+    return <ComparePanel height={props.compareHeight} onHeightChange={props.onCompareHeightChange} onFocusSite={props.onFocusComparisonSite} sites={props.sites} analyses={props.analyses} timeMs={props.timeMs} onAddSites={() => onSelectTool("site")} onExport={() => onSelectTool("export")} onClose={onClose} />;
   }
   if (tool === "export") {
     const input = { sites: props.sites, analyses: props.analyses, timeMs: props.timeMs, weights: props.layers.weights, measurePoints: props.measurePoints };

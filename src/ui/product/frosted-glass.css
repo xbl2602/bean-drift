@@ -1,0 +1,37 @@
+/* One material for the explorer's floating bars and windows. */
+.lunar-glass {
+  background: linear-gradient(135deg, rgba(224,238,255,.16) 0%, rgba(128,155,184,.07) 34%, rgba(24,37,54,.56) 68%, rgba(8,15,27,.78) 100%), rgba(15,23,36,.57) !important;
+  border-color: rgba(220,235,255,.29) !important;
+  -webkit-backdrop-filter: blur(26px) saturate(125%);
+  backdrop-filter: blur(26px) saturate(125%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.22), inset 1px 0 0 rgba(255,255,255,.07), inset 0 -1px 0 rgba(0,0,0,.22), 0 12px 32px rgba(0,0,0,.30) !important;
+}
+.lunar-glass:focus-within { border-color: rgba(220,245,193,.54) !important; }
+.lunar-glass [class~="text-slate-400"] { color: #b2c1d1; }
+.lunar-glass header { border-bottom-color: rgba(221,235,255,.18); }
+.lunar-glass article {
+  background: linear-gradient(145deg,rgba(210,229,250,.09),rgba(13,24,39,.48)) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.10);
+}
+.lunar-glass { scrollbar-color: rgba(208,226,247,.46) transparent; scrollbar-width: thin; }
+@supports not (backdrop-filter: blur(1px)) {
+  .lunar-glass { background: linear-gradient(135deg,#293746,#101b2a) !important; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .lunar-glass { background: linear-gradient(135deg,#263341,#101925) !important; -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+
+/* Quiet typography throughout the explorer; numeric data stays tabular. */
+.lunar-explorer { font-family: ui-rounded, "SF Pro Rounded", "Segoe UI", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+.lunar-explorer .lunar-glass { color: #e5ebf2; }
+.lunar-explorer .lunar-glass h2 { letter-spacing: .10em; font-weight: 600; }
+.lunar-explorer .lunar-glass p { line-height: 1.5; }
+.lunar-explorer .lunar-glass button { text-rendering: optimizeLegibility; }
+
+/* Compress navigation spacing first; never shrink targets below 44px. */
+.lunar-rail { --rail-item-height: clamp(44px, calc((var(--rail-space, 100dvh) - 76px) / 6), 56px); }
+.lunar-rail > button { min-height: var(--rail-item-height); height: var(--rail-item-height); gap: 2px; }
+.lunar-rail > div { margin-block: clamp(3px, calc((var(--rail-space, 100dvh) - 340px) / 8), 8px); }
+.time-wheel { color-scheme: dark; scrollbar-width: thin; scrollbar-color: #748799 transparent; }
+.time-wheel option:checked { background: linear-gradient(#405143,#405143); color: #edf5dc; }
+.time-wheel:focus-visible { outline: 2px solid #c8d8ad; outline-offset: 2px; }

@@ -1,4 +1,5 @@
 "use client";
+import "./frosted-glass.css";
 // Lunar Quest 产品页的总装：全屏地图（默认 2D，可切 3D）、左上角工具菜单、底部时间轴、点击任意点进入第一人称。
 // 这里只管"状态和谁连谁"；地图、第一人称、各个面板都在各自的文件里。
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -27,6 +28,8 @@ const PIN_CURSOR = `url("data:image/svg+xml,${encodeURIComponent('<svg xmlns="ht
 const CLICK_HINT = { "drop-site": "Click to place a site marker", measure: "Click to add a measuring point", stand: "Click to stand here" } as const;
 
 export function LunarQuestApp() {
+  const [compareHeight, setCompareHeight] = useState(34);
+  const [viewRevision, setViewRevision] = useState(0);
   const [mapMode, setMapMode] = useState<MapMode>("2d");
   const [standingAt, setStandingAt] = useState<LatLon | null>(null);
   const [layers, setLayers] = useState<LayerSettings>(DEFAULT_LAYERS);
@@ -59,12 +62,28 @@ export function LunarQuestApp() {
 
   const requestFocus = useCallback((point: LatLon, spanDeg: number) => setFocus((previous) => ({ seq: (previous?.seq ?? 0) + 1, point, spanDeg })), []);
 
+  const focusComparisonSite = useCallback((site: SavedSite) => {
+    setSelectedSiteId(site.id);
+    setMapMode("3d");
+    requestFocus(site, 110);
+  }, [requestFocus]);
+  const comparing = activeTool === "compare" && !standingAt;
+
+  const resetExplorer = () => {
+    setStandingAt(null); setMapMode("2d"); setLayers(DEFAULT_LAYERS); setTimeMs(Date.now());
+    setActiveTool(null); setHover(null); setFocus(null); setMeasurePoints([]); setSearchTarget(null);
+    setDraftSite(null); setSelectedSiteId(null); setError(null); setNotice(null); setLoading(true);
+    setViewRevision((current) => current + 1);
+  };
+
   const selectTool = (tool: ToolId) => {
     setActiveTool(tool);
+    if (tool === "compare") setMapMode("3d");
     const layer = toolInfo(tool).layer;
     if (layer) setLayers((current) => ({ ...current, base: layer }));
+    else if (activeInfo?.layer) setLayers((current) => ({ ...current, base: "color" }));
     // 除了教程，其它工具都是在地图上用的：从第一人称回到地图
-    if (tool !== "tutorial" && standingAt) leaveFirstPerson();
+    if (standingAt) leaveFirstPerson();
   };
   const closeTool = () => {
     // 关掉图层工具的面板 = 不再看这个图层，回到月面影像
@@ -86,6 +105,11 @@ export function LunarQuestApp() {
     setNotice(addSite(point, name) ? `Saved ${name ?? "site"} at ${formatLatLon(point)}` : `The site list is full (${MAX_SITES}). Remove one first.`);
   };
   const handlePick = (point: LatLon) => {
+    if (activeTool === "compare") {
+      const picked = sites.find(site => Math.abs(site.latDeg - point.latDeg) < 6 && Math.abs(normalizeLonDeg(site.lonDeg - point.lonDeg)) < 6);
+      if (picked) focusComparisonSite(picked);
+      return;
+    }
     if (clickMode === "drop-site") {
       // 先放一个未保存的标记，在面板里起名后再保存
       setDraftSite({ latDeg: point.latDeg, lonDeg: normalizeLonDeg(point.lonDeg), name: nextSiteName(sites) });
@@ -128,16 +152,18 @@ export function LunarQuestApp() {
   const viewProps = { timeMs, layers, annotations, focus, cursor: clickMode === "drop-site" ? PIN_CURSOR : undefined, onPick: handlePick, onHover: setHover, onLoadingChange: setLoading, onError: setError };
 
   return (
-    <main className="fixed inset-0 overflow-hidden bg-black text-white">
+    <main className="lunar-explorer fixed inset-0 overflow-hidden bg-black text-white" style={{ "--compare-height": `${compareHeight}dvh`, "--rail-space": comparing ? `calc(100dvh - ${compareHeight}dvh)` : "100dvh" } as React.CSSProperties}>
+      <div className={`absolute inset-x-0 top-0 ${comparing ? "bottom-[var(--compare-height)]" : "bottom-0"}`}>
       {standingAt ? (
         <FirstPersonView key={`${standingAt.latDeg},${standingAt.lonDeg}`} point={standingAt} timeMs={timeMs} onExit={leaveFirstPerson} onLoadingChange={setLoading} onError={setError} />
       ) : mapMode === "2d" ? (
-        <Map2dView {...viewProps} />
+        <Map2dView key={`map-${viewRevision}`} {...viewProps} />
       ) : (
-        <Globe3dView {...viewProps} />
+        <Globe3dView key={`map-${viewRevision}`} {...viewProps} />
       )}
 
-      <ToolMenu activeTool={activeTool} onSelect={selectTool} />
+      </div>
+      <ToolMenu activeTool={activeTool} onSelect={selectTool} onHome={resetExplorer} onGroupOpen={closeTool} />
       {!standingAt && <ViewControls mode={mapMode} onModeChange={changeMode} layers={layers} onLayersChange={setLayers} />}
 
       {activeTool && (activeTool === "tutorial" || !standingAt) && (
@@ -154,6 +180,9 @@ export function LunarQuestApp() {
           searchTarget={searchTarget}
           onGoTo={goTo}
           onShowSite={selectSite}
+          compareHeight={compareHeight}
+          onCompareHeightChange={setCompareHeight}
+          onFocusComparisonSite={focusComparisonSite}
           draftSite={draftSite}
           draftAnalysis={draftAnalysis}
           onDraftName={(name) => setDraftSite((current) => (current ? { ...current, name } : current))}
@@ -169,8 +198,8 @@ export function LunarQuestApp() {
         />
       )}
 
-      {!standingAt && (
-        <div className="pointer-events-none absolute bottom-24 left-4 z-10 rounded-full border border-white/10 bg-black/55 px-4 py-2 font-mono text-xs text-white/80 backdrop-blur-md sm:left-6">
+      {!standingAt && !comparing && (
+        <div className="pointer-events-none absolute bottom-24 left-4 z-10 rounded-full border border-white/10 bg-black/55 px-4 py-2 font-mono text-xs text-white/80 lunar-glass backdrop-blur-md sm:left-6">
           {hover ? (
             <>
               {formatLatLon(hover)} <span className="ml-2 font-sans text-lime-300/90">{CLICK_HINT[clickMode]}</span>
@@ -180,13 +209,15 @@ export function LunarQuestApp() {
           )}
         </div>
       )}
-      <TimelineBar timeMs={timeMs} onTimeChange={setTimeMs} />
-      <p className="pointer-events-none absolute bottom-0.5 right-3 z-10 hidden text-[10px] text-white/35 xl:block">
+      <div className={`pointer-events-none absolute inset-x-0 top-0 ${comparing ? "bottom-[var(--compare-height)]" : "bottom-0"}`}><div className="pointer-events-auto contents">
+      <TimelineBar key={`timeline-${viewRevision}`} timeMs={timeMs} onTimeChange={setTimeMs} />
+      </div></div>
+      <p className={`pointer-events-none absolute ${comparing ? "hidden" : "xl:block"} bottom-0.5 right-3 z-10 hidden text-[10px] text-white/35 hidden`}>
         NASA SVS CGI Moon Kit · NASA Moon Trek / LROC Team / ASU · LRO LOLA · IAU/USGS names · Earth: NASA Blue Marble · Sun: NASA/SDO AIA (false colour)
       </p>
 
       {notice && (
-        <p role="status" className="absolute left-1/2 top-20 z-40 -translate-x-1/2 rounded-full border border-white/15 bg-black/75 px-4 py-2 text-xs text-white backdrop-blur-md">
+        <p role="status" className="absolute left-1/2 top-20 z-40 -translate-x-1/2 rounded-full border border-white/15 bg-black/75 px-4 py-2 text-xs text-white lunar-glass backdrop-blur-md">
           {notice}
         </p>
       )}

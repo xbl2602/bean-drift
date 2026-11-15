@@ -33,7 +33,13 @@
 .answerHeader h3 { margin: 0; font-size: 16px; font-weight: 500; }
 .answerHeader span { color: #a0b6c5; font-size: 11px; }
 .question { color: #b1c1ce; font-size: 13px; border-left: 2px solid #71a99e; padding-left: 12px; }
-.answerText { white-space: pre-wrap; }
+.answerText { line-height: 1.75; }
+.answerText p { margin: 10px 0; }
+.answerText h4 { color: #c7e3aa; margin: 18px 0 8px; font-size: 14px; }
+.answerText ul { padding-left: 20px; }
+.answerText li { margin: 7px 0; }
+.answerText strong { color: #eef5e9; }
+.quickQuestions > summary { cursor: pointer; color: #b8c9d2; font-size: 12px; padding: 4px 0 12px; }
 .sources { margin-top: 20px; }
 .sources h4 { font-size: 12px; margin: 0; }
 .sources p { font-size: 12px; color: #9aaebd; margin: 4px 0 12px; }

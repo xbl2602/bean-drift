@@ -76,14 +76,14 @@ export function SearchPanel({ selected, onGoTo, onStandHere, onSaveSite, onClose
   };
 
   return (
-    <div className="absolute left-1/2 top-24 z-20 w-[min(34rem,calc(100vw-2rem))] -translate-x-1/2 xl:top-6">
+    <div className="absolute left-24 right-4 top-36 z-20 sm:left-1/2 sm:right-auto sm:top-24 sm:w-[min(34rem,calc(100vw-13rem))] sm:-translate-x-1/2">
       <form
         role="search"
         onSubmit={(e) => {
           e.preventDefault();
           void submit();
         }}
-        className="flex items-center gap-2 rounded-2xl border border-white/15 bg-[#0b0f17]/90 py-1.5 pl-4 pr-1.5 shadow-2xl shadow-black/60 backdrop-blur-xl focus-within:border-lime-300/50"
+        className="flex items-center gap-2 rounded-2xl border border-white/15 bg-[#0b0f17]/90 py-1.5 pl-4 pr-1.5 shadow-2xl shadow-black/60 lunar-glass backdrop-blur-xl focus-within:border-lime-300/50"
       >
         <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0 text-lime-300" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14Zm9 16-4.3-4.3" /></svg>
         <input
@@ -109,13 +109,13 @@ export function SearchPanel({ selected, onGoTo, onStandHere, onSaveSite, onClose
       </form>
 
       {notFound && (
-        <p role="alert" className="mt-2 rounded-xl border border-red-300/35 bg-[#1a0b0e]/92 px-4 py-2.5 text-sm text-red-100 shadow-xl shadow-black/50 backdrop-blur-xl">
+        <p role="alert" className="mt-2 rounded-xl border border-red-300/35 bg-[#1a0b0e]/92 px-4 py-2.5 text-sm text-red-100 shadow-xl shadow-black/50 lunar-glass backdrop-blur-xl">
           {notFound}
         </p>
       )}
 
       {showSuggestions && !notFound && (coordinates || matches.length > 0) && (
-        <ul className="mt-2 max-h-[min(22rem,calc(100dvh-16rem))] overflow-y-auto rounded-2xl border border-white/10 bg-[#0b0f17]/92 p-1.5 shadow-2xl shadow-black/60 backdrop-blur-xl [scrollbar-color:rgba(255,255,255,0.25)_transparent] [scrollbar-width:thin]">
+        <ul className="mt-2 max-h-[min(22rem,calc(100dvh-16rem))] overflow-y-auto rounded-2xl border border-white/10 bg-[#0b0f17]/92 p-1.5 shadow-2xl shadow-black/60 lunar-glass backdrop-blur-xl [scrollbar-color:rgba(255,255,255,0.25)_transparent] [scrollbar-width:thin]">
           {coordinates && (
             <li>
               <button type="button" onClick={() => go(targetForCoordinates(coordinates))} className="flex w-full items-baseline justify-between gap-3 rounded-xl px-3 py-2 text-left hover:bg-white/10">
@@ -142,7 +142,7 @@ export function SearchPanel({ selected, onGoTo, onStandHere, onSaveSite, onClose
       )}
 
       {selected && !showSuggestions && !notFound && (
-        <div className="mt-2 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-fuchsia-300/30 bg-[#0b0f17]/92 px-4 py-2.5 shadow-xl shadow-black/50 backdrop-blur-xl">
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-fuchsia-300/30 bg-[#0b0f17]/92 px-4 py-2.5 shadow-xl shadow-black/50 lunar-glass backdrop-blur-xl">
           <span className="min-w-0">
             <span className="block truncate text-sm font-semibold">{selected.label}</span>
             <span className="block font-mono text-xs text-white/60">{formatLatLon(selected)}</span>
