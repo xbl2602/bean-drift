@@ -16,7 +16,7 @@ export function createGroundMaterial(colorTexture: THREE.Texture) {
 
   // 颗粒感只在"人附近"3 km 内显示：走动时跟着人走（图案本身固定在地上，不会跟着滑）
   const walker = { value: new THREE.Vector2(0, 0) };
-  const material = new THREE.MeshStandardMaterial({ map: colorTexture, color: 0xc8c8c8, roughness: 1, metalness: 0 });
+  const material = new THREE.MeshStandardMaterial({ map: colorTexture, color: 0xe4e2de, roughness: 1, metalness: 0, vertexColors: true });
   material.onBeforeCompile = (shader) => {
     shader.uniforms.uGrain = { value: grain };
     shader.uniforms.uWalker = walker;

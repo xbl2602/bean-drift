@@ -15,8 +15,13 @@ const SECTORS = 256;
 const FIRST_RING_M = 0.75;
 const RING_GROWTH = 1.026;
 
+/** 地形按方向切成这么多个扇形、按距离切成这么多条环带，每块单独判断"看不看得见"：背后和视野外的块不画。 */
+const CHUNK_SECTORS = 16;
+const CHUNK_BANDS = 4;
+
 export interface TerrainPatch {
-  geometry: THREE.BufferGeometry;
+  /** 地形网格，已切成若干块（共用同一份顶点数据，各自只有自己的三角形索引和包围球）。 */
+  chunks: THREE.BufferGeometry[];
   /** 观察点脚下的 LOLA 地面高度（米，相对参考球）。实测值，不含示意细节。 */
   groundHeightM: number;
   /** 观察点脚下示意细节的高度（米）：眼睛高度要在它之上，否则会站进地里。 */
@@ -50,6 +55,8 @@ export function buildTerrainPatch(center: LatLon, field: HeightField, detail: Te
 
   const positions = new Float32Array(vertexCount * 3);
   const uvs = new Float32Array(vertexCount * 2);
+  // 顶点颜色：只有明暗（新坑的亮溅射物、老坑的暗坑底），乘在底图颜色上
+  const tones = new Float32Array(vertexCount * 3).fill(1);
   const p = new THREE.Vector3();
   const writeVertex = (index: number, point: LatLon, lonDeg: number, detailM: number) => {
     const heightM = field.heightAtM(point.latDeg, lonDeg) + detailM;
@@ -71,6 +78,11 @@ export function buildTerrainPatch(center: LatLon, field: HeightField, detail: Te
       const lonDeg = center.lonDeg + (((point.lonDeg - center.lonDeg + 540) % 360) - 180);
       const detailM = detail.heightM(Math.sin(bearingRad) * ringM, Math.cos(bearingRad) * ringM, cellM);
       writeVertex(1 + ring * SECTORS + s, point, lonDeg, detailM);
+      const tone = detail.albedoAt(Math.sin(bearingRad) * ringM, Math.cos(bearingRad) * ringM, cellM);
+      const at = (1 + ring * SECTORS + s) * 3;
+      tones[at] = tone;
+      tones[at + 1] = tone;
+      tones[at + 2] = tone * 0.985;
     }
   });
 
@@ -95,9 +107,58 @@ export function buildTerrainPatch(center: LatLon, field: HeightField, detail: Te
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
   geometry.setAttribute("uv", new THREE.BufferAttribute(uvs, 2));
+  geometry.setAttribute("color", new THREE.BufferAttribute(tones, 3));
   geometry.setIndex(new THREE.BufferAttribute(indices, 1));
   geometry.computeVertexNormals();
-  return { geometry, groundHeightM, footOffsetM, surfaceYAt: (eastM, northM) => surfaceYOnGrid(positions, radii, eastM, northM) };
+  return { chunks: splitIntoChunks(geometry, radii.length), groundHeightM, footOffsetM, surfaceYAt: (eastM, northM) => surfaceYOnGrid(positions, radii, eastM, northM) };
+}
+
+/**
+ * 把整块地形按"扇形 × 环带"切成小块。每块有自己的三角形索引和包围球，three 会对每块单独做视锥体剔除：
+ * 背后、视野外的块不进绘制；阴影相机只有几公里宽，远处的块也不进阴影图。顶点数据共用，不多占内存。
+ */
+function splitIntoChunks(full: THREE.BufferGeometry, ringCount: number): THREE.BufferGeometry[] {
+  const position = full.getAttribute("position") as THREE.BufferAttribute;
+  const normal = full.getAttribute("normal");
+  const uv = full.getAttribute("uv");
+  const color = full.getAttribute("color");
+  const fullIndex = full.getIndex()!.array as Uint32Array;
+  const quadRings = ringCount - 1;
+  const chunks: THREE.BufferGeometry[] = [];
+  for (let band = 0; band < CHUNK_BANDS; band++) {
+    const ringStart = Math.floor((band * quadRings) / CHUNK_BANDS);
+    const ringEnd = Math.floor(((band + 1) * quadRings) / CHUNK_BANDS); // 不含
+    for (let sector = 0; sector < CHUNK_SECTORS; sector++) {
+      const s0 = (sector * SECTORS) / CHUNK_SECTORS;
+      const s1 = ((sector + 1) * SECTORS) / CHUNK_SECTORS; // 不含
+      const indexList: number[] = [];
+      if (band === 0) {
+        for (let s = s0; s < s1; s++) indexList.push(...fullIndex.subarray(s * 3, s * 3 + 3)); // 中心一圈扇形只属于第一条环带
+      }
+      for (let ring = ringStart; ring < ringEnd; ring++) {
+        const base = SECTORS * 3 + ring * SECTORS * 6;
+        for (let s = s0; s < s1; s++) indexList.push(...fullIndex.subarray(base + s * 6, base + s * 6 + 6));
+      }
+      const chunk = new THREE.BufferGeometry();
+      chunk.setAttribute("position", position);
+      chunk.setAttribute("normal", normal);
+      chunk.setAttribute("uv", uv);
+      chunk.setAttribute("color", color);
+      chunk.setIndex(new THREE.BufferAttribute(new Uint32Array(indexList), 1));
+      chunk.boundingSphere = boundingSphereOfIndexed(position, indexList);
+      chunks.push(chunk);
+    }
+  }
+  return chunks;
+}
+
+/** 只按这块用到的顶点算包围球（BufferGeometry 自带的会把整张顶点表都算进去）。 */
+function boundingSphereOfIndexed(position: THREE.BufferAttribute, indexList: number[]): THREE.Sphere {
+  const box = new THREE.Box3();
+  const p = new THREE.Vector3();
+  const used = new Set(indexList);
+  used.forEach((index) => box.expandByPoint(p.fromBufferAttribute(position, index)));
+  return box.getBoundingSphere(new THREE.Sphere());
 }
 
 /**

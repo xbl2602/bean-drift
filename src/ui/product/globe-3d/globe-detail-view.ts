@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { bodyToLatLon, threeToBody } from "../moon-frames";
-import type { DetailView } from "../imagery/lunar-detail-atlas";
+import type { DetailView } from "../imagery/tile-atlas";
 
 export function globeDetailView(camera: THREE.PerspectiveCamera, widthPx: number, radiusKm: number): DetailView | null {
   if (camera.position.length() > radiusKm * 2.2) return null;

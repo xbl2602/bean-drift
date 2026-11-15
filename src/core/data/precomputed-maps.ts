@@ -125,6 +125,21 @@ export function readTerrainAt(maps: PrecomputedMaps, latDeg: number, lonDeg: num
   };
 }
 
+/**
+ * 把整张全月高度图（约 2 MB）一次读进内存，返回取样函数（米，相邻四个格子双线性插值）。
+ * 给"要连续取很多个点"的计算用（极区地平线的射线走出极区后改用它）；单点查询请用 readTerrainAt，不必读整张图。
+ * 取样函数只用在这一次调用里，不缓存。
+ */
+export function loadGlobalHeightSampler(maps: PrecomputedMaps): (latDeg: number, lonDeg: number) => number {
+  const { grid, terrain } = maps.manifest;
+  const raw = readFileSync(path.join(maps.dir, terrain.files.height));
+  const cellCount = grid.width * grid.height;
+  if (raw.length !== cellCount * 2) throw new Error("global height map has an unexpected size");
+  const heights = new Int16Array(cellCount);
+  for (let i = 0; i < cellCount; i++) heights[i] = raw.readInt16LE(i * 2);
+  return (latDeg, lonDeg) => bilinear(locateCells(grid, latDeg, lonDeg), (row, col) => heights[row * grid.width + col]) * terrain.heightUnitM;
+}
+
 /** 某点的地平线剖面：manifest.horizon.azimuths 个等间隔方位（从正北起，向东增加）上的遮挡仰角，度。 */
 export function readHorizonProfileAt(maps: PrecomputedMaps, latDeg: number, lonDeg: number): number[] {
   const { grid, horizon } = maps.manifest;

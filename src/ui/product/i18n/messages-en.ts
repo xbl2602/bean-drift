@@ -17,9 +17,9 @@ export const en = {
   "hint.find-data": "Click anywhere on the Moon to pick your landing spot",
   "hint.drop-site": "Click to place a site marker",
   "hint.measure": "Click to add a measuring point",
-  "hint.stand": "Click to stand here",
-  "hint.explore3d": "Drag to orbit · slide time to move the Sun and shadows · click to stand",
-  "hint.explore2d": "Click anywhere on the Moon to stand there",
+  "hint.stand": "Click to pick · double-click for first-person view",
+  "hint.explore3d": "Drag to orbit · click to pick · double-click for first-person view",
+  "hint.explore2d": "Click to pick a location · double-click for first-person view",
 
   // 左边工具栏
   "rail.home": "Home",
@@ -38,7 +38,7 @@ export const en = {
   "tool.search.label": "Search Location",
   "tool.search.hint": "Jump to a crater, landing site or coordinates",
   "tool.site.label": "Select Landing Site",
-  "tool.site.hint": "Drop a pin, see its data and save it as a candidate",
+  "tool.site.hint": "Drop a pin, see its data and add it to comparison",
   "tool.measure.label": "Measure Distance",
   "tool.measure.hint": "Click points to see how far apart they are",
   "tool.elevation.label": "Terrain & Elevation",
@@ -54,7 +54,7 @@ export const en = {
   "tool.suitability.label": "Site Suitability",
   "tool.suitability.hint": "Score every place by the things you care about",
   "tool.compare.label": "Compare Landing Sites",
-  "tool.compare.hint": "Put your saved sites side by side",
+  "tool.compare.hint": "Pick a location, then compare selected sites",
   "tool.export.label": "Export Results",
   "tool.export.hint": "Download your sites and results as a file",
 

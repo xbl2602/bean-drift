@@ -30,22 +30,32 @@ export function ToolMenu({ activeTool, onSelect, onHome, onGroupOpen }: ToolMenu
     const close = (event: PointerEvent | KeyboardEvent) => {
       if (event instanceof KeyboardEvent ? event.key === "Escape" : !rootRef.current?.contains(event.target as Node)) setOpen(null);
     };
+    const leave = (event: PointerEvent) => {
+      if (event.pointerType !== "mouse" || rootRef.current?.contains(event.target as Node)) return;
+      const rail = rootRef.current?.querySelector("nav")?.getBoundingClientRect();
+      const menu = rootRef.current?.querySelector("#explorer-tool-group")?.getBoundingClientRect();
+      // Keep the small gap between the rail and flyout traversable without a close delay.
+      if (rail && menu && event.clientX >= rail.right && event.clientX <= menu.left && event.clientY >= Math.min(rail.top, menu.top) && event.clientY <= Math.max(rail.bottom, menu.bottom)) return;
+      setOpen(null);
+    };
+    window.addEventListener("pointermove", leave);
     window.addEventListener("pointerdown", close);
     window.addEventListener("keydown", close);
-    return () => { window.removeEventListener("pointerdown", close); window.removeEventListener("keydown", close); };
+    return () => { window.removeEventListener("pointermove", leave); window.removeEventListener("pointerdown", close); window.removeEventListener("keydown", close); };
   }, [open]);
   useEffect(() => { if (activeTool) setOpen(null); }, [activeTool]);
+  const openGroup = (group: GroupId) => { if (open !== group) onGroupOpen(); setOpen(group); };
   const choose = (tool: ToolId) => { onSelect(tool); setOpen(null); };
   const buttonStyle = (selected: boolean) => `flex min-h-14 w-14 flex-col items-center justify-center gap-1 rounded-xl transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-lime-200 ${selected ? "bg-lime-300 text-[#11180a] shadow-lg shadow-lime-300/10" : "text-slate-300 hover:bg-white/10 hover:text-white"}`;
   return (
     <div ref={rootRef}>
       <nav aria-label="Explorer navigation" className="lunar-rail absolute left-3 top-4 z-30 max-h-[calc(100dvh-8rem)] overflow-y-auto rounded-2xl border border-white/10 bg-[#090e15]/90 p-1.5 shadow-2xl shadow-black/40 lunar-glass backdrop-blur-xl sm:left-5 sm:top-6">
-        <button type="button" data-tour="home" aria-label={t("rail.home")} title={t("rail.home")} onClick={() => { setOpen(null); onHome(); }} className={buttonStyle(activeTool === null && open === null)}>
+        <button type="button" data-tour="home" onPointerEnter={(event) => { if (event.pointerType === "mouse") setOpen(null); }} aria-label={t("rail.home")} title={t("rail.home")} onClick={() => { setOpen(null); onHome(); }} className={buttonStyle(activeTool === null && open === null)}>
           <ToolIcon path={HOME_ICON} /><span className="max-w-full truncate px-0.5 text-[9px] font-semibold">{t("rail.home")}</span>
         </button>
         {/* Tutorial 和 AI Tools 在顶部模式条里（modes/mode-switch.tsx） */}
         <div className="my-2 h-px bg-white/10" />
-        {GROUPS.map((group) => <button key={group.id} type="button" data-tour={group.id} aria-label={t(`category.${group.id}`)} title={t(`category.${group.id}`)} aria-expanded={open === group.id} aria-controls="explorer-tool-group" onClick={() => { if (open !== group.id) onGroupOpen(); setOpen((current) => current === group.id ? null : group.id); }} className={buttonStyle(open === group.id || Boolean(activeTool && TOOLS.find((tool) => tool.id === activeTool)?.category === group.id))}>
+        {GROUPS.map((group) => <button key={group.id} type="button" data-tour={group.id} aria-label={t(`category.${group.id}`)} title={t(`category.${group.id}`)} aria-expanded={open === group.id} aria-controls="explorer-tool-group" onPointerEnter={(event) => { if (event.pointerType === "mouse") openGroup(group.id); }} onClick={() => openGroup(group.id)} className={buttonStyle(open === group.id || Boolean(activeTool && TOOLS.find((tool) => tool.id === activeTool)?.category === group.id))}>
           <ToolIcon path={group.icon} /><span className="max-w-full truncate px-0.5 text-[9px] font-medium">{t(`rail.${group.id}`)}</span>
         </button>)}
       </nav>

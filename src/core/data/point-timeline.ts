@@ -5,7 +5,7 @@ import { findVisibleIntervals, intersectIntervals, summarizeIntervals, type Inte
 import type { LunarPosition, PointQueryOptions, Provenance, TimeWindow } from "../types";
 import { canonicalLonDeg } from "./point-conditions";
 import { bodiesVisibleAt, visibleFromSky } from "./point-visibility";
-import { readPointHorizonProfile } from "./terrain-source-routing";
+import { readPointHorizonData, type TerrainSource } from "./terrain-source-routing";
 
 const MINUTE_MS = 60_000;
 const HOUR_MS = 3_600_000;
@@ -72,14 +72,17 @@ function summarize(intervals: readonly Interval[], startMs: number, endMs: numbe
   return { visibleFraction: round(visibleFraction, 4), longestOutageH: round(longestGapMs / HOUR_MS, 2), windows: toWindows(intervals) };
 }
 
-const TIMELINE_PROVENANCE: Provenance = {
-  status: "ok",
-  source: "Sun/Earth ephemeris + terrain horizon profile from NASA LRO LOLA LDEM_64 (0.25 degree map cells, public/data/v1/manifest.json)",
-  note:
-    "A disk counts as visible when its upper limb is above the terrain horizon at the azimuth of the disk centre (same rule as get_point_conditions). " +
-    "Window start and end times are refined to about 2 seconds; a window shorter than 10 minutes (rising and setting between two checks) can be missed. " +
-    "Sun and Earth positions are accurate to about 0.02 degrees, not mission-grade. Horizon is the map cell horizon (about 7.6 km cells), not the exact point.",
-};
+/** 来源说明：数据集和地平线精度那两句由数据源给（全月 0.25° 格子 / 南极 160 m），其余是时间线自己的口径。 */
+function timelineProvenance(terrain: TerrainSource["timelineTerrain"]): Provenance {
+  return {
+    status: "ok",
+    source: `Sun/Earth ephemeris + terrain horizon profile from ${terrain.source}`,
+    note:
+      "A disk counts as visible when its upper limb is above the terrain horizon at the azimuth of the disk centre (same rule as get_point_conditions). " +
+      "Window start and end times are refined to about 2 seconds; a window shorter than 10 minutes (rising and setting between two checks) can be missed. " +
+      `Sun and Earth positions are accurate to about 0.02 degrees, not mission-grade. ${terrain.horizonNote}`,
+  };
+}
 
 /**
  * 从 startMs 起、持续 durationH 小时的时间序列。
@@ -101,7 +104,7 @@ export function getPointTimeline(
   const latDeg = position.latDeg;
   const lonDeg = canonicalLonDeg(position.lonDeg);
   const floorDeg = options.minEarthElevationDeg;
-  const profileDeg = readPointHorizonProfile(latDeg, lonDeg);
+  const { source, horizonProfileDeg: profileDeg } = readPointHorizonData(latDeg, lonDeg);
 
   const sunIntervals = findVisibleIntervals((t) => bodiesVisibleAt(profileDeg, latDeg, lonDeg, t, floorDeg).sun, startMs, endMs, SCAN_STEP_MS);
   const earthIntervals = findVisibleIntervals((t) => bodiesVisibleAt(profileDeg, latDeg, lonDeg, t, floorDeg).earth, startMs, endMs, SCAN_STEP_MS);
@@ -129,6 +132,6 @@ export function getPointTimeline(
     earth: summarize(earthIntervals, startMs, endMs),
     both: summarize(intersectIntervals(sunIntervals, earthIntervals), startMs, endMs),
     samples,
-    provenance: TIMELINE_PROVENANCE,
+    provenance: timelineProvenance(source.timelineTerrain),
   };
 }

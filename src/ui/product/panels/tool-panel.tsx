@@ -77,7 +77,7 @@ export function ToolPanel(props: ToolPanelProps) {
         onRename={props.onRenameSite}
         onRemove={props.onRemoveSite}
         onStandHere={props.onStandHere}
-        onCompare={() => onSelectTool("compare")}
+        onCompare={() => { if (props.draftSite) props.onSaveDraft(); onSelectTool("compare"); }}
         timeMs={props.timeMs}
         onClose={onClose}
       />

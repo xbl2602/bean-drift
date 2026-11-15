@@ -55,15 +55,24 @@
 
 ### 2.3 地形（`terrain`）✅
 
-数据来自 LOLA 全月 DEM（473.8 m/像素），pipeline 平均到 0.25° 的地图格子（约 7.6 km），见 [decisions/2026-11-14_xbl2602_precomputed-terrain-and-year-stats.md](decisions/2026-11-14_xbl2602_precomputed-terrain-and-year-stats.md)。对应 FEATURE_SPEC 第 4 节参数卡的"高度、坡度、坡向、地平线剖面"和第 6 节"返回里说明来自多少米/像素的数据"。**这个分辨率是"整月概览"级别，不是着陆点尺度**——接口返回的 `provenance.terrain.note` 会如实写明。
+**有两份数据，按位置自动选**（2026-11-15 起，规则在 `src/core/data/terrain-source-routing.ts`，调用方不用管）：
+
+| 位置 | 数据 | 格子 | 地平线 | `resolutionM` |
+|---|---|---|---|---|
+| 南纬 **80° 以南（含 80°）** 到极点 | LOLA 南极 DEM `LDEM_80S_40M`（40 m/像素）平均成 160 m 格子，`public/data/polar-v1/` | 160 m（极射赤面图上的米数；贴地实际长度在 80°S 处短约 0.8%） | **每个点现算**，90 个方位（间隔 4°），射线最远 300 km，走出 80°S 圈后接着用全月 0.25° 数据 | 160 |
+| 其余所有位置 | LOLA 全月 DEM（473.8 m/像素），pipeline 平均成 0.25° 格子（约 7.6 km），`public/data/v1/` | 0.25° | 预计算，32 个方位（间隔 11.25°） | 7581 |
+
+两份数据在 80°S 交界处不连续（格子大小不同，同一处读数会有差别）；返回的 `terrain.resolutionM` 和 `provenance.terrain` 写明这个点用了哪一份。**整月预计算地图（L4~L7）和 `find_sites` 仍然只用 0.25° 数据**，不受极区数据影响。决定和取舍见 [decisions/2026-11-15_xbl2602_polar-highres-data-and-routing.md](decisions/2026-11-15_xbl2602_polar-highres-data-and-routing.md)。
+
+全月数据来自 LOLA 全月 DEM（473.8 m/像素），pipeline 平均到 0.25° 的地图格子（约 7.6 km），见 [decisions/2026-11-14_xbl2602_precomputed-terrain-and-year-stats.md](decisions/2026-11-14_xbl2602_precomputed-terrain-and-year-stats.md)。对应 FEATURE_SPEC 第 4 节参数卡的"高度、坡度、坡向、地平线剖面"和第 6 节"返回里说明来自多少米/像素的数据"。**0.25° 的分辨率是"整月概览"级别，不是着陆点尺度**；160 m 也不是——接口返回的 `provenance.terrain.note` 会如实写明。
 
 | 字段 | 含义 | 单位 | 状态 |
 |---|---|---|---|
-| `terrain.heightM` | 海拔，相对 1737.4 km 参考球。在相邻 4 个格子间双线性插值 | 米 | ✅ |
-| `terrain.slopeDeg` | 坡度：格子内逐像素坡度（约 474 m 基线）的平均，再在相邻格子间插值。**不是这个点本身的坡度，不能当着陆安全坡度用** | 度 | ✅ |
-| `terrain.aspectDeg` | 坡向：下坡方向的方位角（正北 0°，向东增加），取最近格子；格子平均是平地时为 `null` | 度 | ✅ |
-| `terrain.horizonProfile` | 地平线剖面：`[{ azimuthDeg, elevationDeg }]`，32 个方位（间隔 11.25°，从正北起），每个方位上地形挡住的仰角，在相邻格子间插值；范围 −8°~32° | 度 | ✅ |
-| `terrain.resolutionM` | 上面这些值的格子边长（南北向，约 7581 m；东西向随纬度缩小） | 米 | ✅ |
+| `terrain.heightM` | 海拔，相对 1737.4 km 参考球。在相邻 4 个格子间双线性插值（南极：160 m 格子的平均高度，源数据逐位核对过：随机 3156 个格子与 40 m 原始数据的 4×4 平均完全一致） | 米 | ✅ |
+| `terrain.slopeDeg` | 坡度：格子内逐像素坡度的平均（全月：约 474 m 基线；南极：80 m 基线，以 0.25° 为单位存储），再在相邻格子间插值。**不是这个点本身的坡度，不能当着陆安全坡度用** | 度 | ✅ |
+| `terrain.aspectDeg` | 坡向：下坡方向的方位角（正北 0°，向东增加），全月取最近格子；南极由该点两侧各 1 格（320 m 基线）的高度差现算。平地时为 `null`。极点上"北"没有意义，坡向仅作参考 | 度 | ✅ |
+| `terrain.horizonProfile` | 地平线剖面：`[{ azimuthDeg, elevationDeg }]`，从正北起等间隔的方位，每个方位上地形挡住的仰角。**方位数不固定：全月 32 个（插值自 0.25° 格子，范围 −8°~32°），南极 90 个（该点现算，不限范围）**，用 `horizonProfile.length` 算间隔，不要写死 32。南极 160 m 取平均会抹掉很小的起伏：与直接用 40 m 数据现算相比，13 个典型点的地平线平均相差 0.45°，个别方位最多 5.6°（极点附近微地形） | 度 | ✅ |
+| `terrain.resolutionM` | 上面这些值的格子边长：全月 7581 m（南北向；东西向随纬度缩小），南极 160 m。**用它判断这个点用了哪份数据** | 米 | ✅ |
 
 ### 2.4 地形遮挡后的可见性（`visibility`）✅
 
@@ -153,6 +162,7 @@ pipeline 把上面的统计对**整个月面每个 0.25° 格子**算好，放�
 | `GET /api/presets` | — | `{ "presets": Preset[] }`（`Preset` 见 `src/core/types.ts`） |
 | `GET /api/timeline` | query：`latDeg`、`lonDeg`（必填）；`time`（起点，默认现在）、`durationH`（1~744，默认 720）、`stepMin`（曲线间隔，10~1440 分钟，默认约 144 个点）、`minEarthElevationDeg` | `PointTimeline`，见 3.1 |
 | `POST /api/compare-dates` | JSON：`{ "points": [{ "latDeg", "lonDeg" }, ...1~5 个], "times": ["...Z", ...1~8 个], "minEarthElevationDeg"?: n }` | `{ "timesUtc", "points": PointAcrossTimes[], "provenance" }`，见 3.2 |
+| `GET /api/energy` | query：`latDeg`、`lonDeg`（必填）；`time`（起点，默认现在）、`durationH`（1~8760，默认 720） | `SolarEnergyEstimate`，见 3.4 |
 | `POST /api/find-sites` | JSON，条件都选填：`maxSlopeDeg`、`minSunVisibleFraction`、`minEarthVisibleFraction`、`minBothVisibleFraction`、`maxLongestSunOutageH`、`maxLongestEarthOutageH`、`latMinDeg`/`latMaxDeg`/`lonMinDeg`/`lonMaxDeg`（框，不能跨 180° 经线）、`rankBy`、`limit`（1~20，默认 10）、`minSeparationKm`（默认 50） | `FindSitesResult`，见 3.3 |
 
 示例：
@@ -189,6 +199,23 @@ POST /api/find-sites   { "maxSlopeDeg": 15, "maxLongestSunOutageH": 300, "latMax
 | `points[i].snapshots[j]` | 第 j 个时刻（与 `timesUtc[j]` 对应）：`{ timeUtc, sun, earth }`，`sun`/`earth` 都是 `{ azimuthDeg, elevationDeg, diskVisibleFraction, nextRiseUtc, nextSetUtc }`，含义同 2.2、2.4 |
 | `points[i].assumptions` | 同 2.5.2 |
 
+### 3.4 太阳能量估算（`SolarEnergyEstimate`）✅（2026-11-15）
+
+类型在 `src/core/data/solar-energy.ts`。一个点、一段时间（最长 8760 小时 = 一年）里，**直射阳光**落在每平方米板子上的能量，以及最长黑夜要多少电池。可见规则和 3.1 一致（圆盘上缘高于地形地平线；圆盘只露出一部分时按露出的面积比例算）。
+
+| 字段 | 含义 | 单位 |
+|---|---|---|
+| `position`、`startUtc`、`endUtc`、`durationH`、`sampleStepMin` | 查询的点和时间范围；≤744 小时用 10 分钟一步，更长用 30 分钟一步（实际步长为了整除时间段会有微小调整，以 `sampleStepMin` 为准） | 度、UTC、小时、分钟 |
+| `energyWhPerM2` | 这段时间每平方米板子收到的能量，三种朝向：`sunTracking`（始终正对太阳）、`verticalTracking`（竖直放置、绕竖直轴转向太阳方位，南北极低太阳角时常见）、`horizontal`（水平放平；脚下视为水平地面，局部坡度忽略） | Wh/m² |
+| `meanPowerWPerM2`、`peakPowerWPerM2` | 上面的能量除以时间长度；采样点里的最大瞬时功率 | W/m² |
+| `sunVisibleFraction` | 太阳圆盘露出任何一部分的时间占比 | 比例 0~1 |
+| `longestSunOutageH` | 最长一次连续看不到太阳 | 小时 |
+| `batteryWhPerWForLongestOutage` | 靠电池撑过最长黑夜，每 1 W 恒定负载要多少 Wh（= 最长黑夜小时数；**不含**放电深度、电池效率、保温） | Wh/W |
+| `assumptions` | `solarConstantWPerM2At1Au` = 1360.8（SORCE/TIM，Kopp & Lean 2011，按日地距离平方反比修正）；`panelEfficiency`、`dust` 为 `null` | — |
+| `provenance` | 来源与口径，地形数据集跟着这个点用的数据走（0.25° 或南极 160 m） | — |
+
+**这是"入射能量"，不是"发电量"**：不含板子效率、灰尘、衰减、温度、地形反射光。想知道发电量，自己乘上板子效率和面积。验证：赤道阿波罗 11 号点一个朔望月水平板的能量与"半个月白天、sin 形状"的理论值 307 kWh/m² 相差 3%（测试 `src/features/solar-energy/tests/`）。**这个功能已经加进 agent 窗口的白名单**（名单在 `src/features/agent-search/logic/run-agent.ts`，归 louis068），MCP 也可用。
+
 ### 3.3 按条件找位置（`FindSitesResult`）
 
 类型在 `src/core/terrain/site-search.ts`、`src/core/data/site-search.ts`。在 2.5.1 的整月预计算地图里筛选，**每次请求读一遍文件（约 19 MB）现筛，约 0.2~0.4 秒**。
@@ -216,6 +243,7 @@ POST /api/find-sites   { "maxSlopeDeg": 15, "maxLongestSunOutageH": 300, "latMax
 | `get_point_timeline` | 一个点一段时间里太阳/地球的曲线和可见时间段（参数同 `GET /api/timeline`），见 3.1 | 读 |
 | `compare_dates` | 同一批点在几个时刻的对比（参数同 `POST /api/compare-dates`），见 3.2 | 读 |
 | `find_sites` | 按条件在整个月面找位置（参数同 `POST /api/find-sites`），见 3.3 | 读 |
+| `get_solar_energy_estimate` | 一个点一段时间能晒到多少太阳、最长黑夜要多少电池（参数同 `GET /api/energy`），见 3.4 | 读 |
 
 **还没做的候选能力**：查询整月图层在某点/某区域的值（图层目前只作为静态文件给网页用）。
 
@@ -227,16 +255,25 @@ POST /api/find-sites   { "maxSlopeDeg": 15, "maxLongestSunOutageH": 300, "latMax
 
 ## 6. agent 窗口：`POST /api/agent`
 
-实现在 `src/features/agent-search/`（负责人 `louis068`），路由接线在 `app/api/agent/route.ts`。它是 `/mcp` 同一套只读工具的自然语言入口：模型想查数据，只能调用下面列出的只读工具（共 6 个），结果原样放进 `sources`。
+实现在 `src/features/agent-search/`（负责人 `louis068`），路由接线在 `app/api/agent/route.ts`。它是 `/mcp` 同一套只读工具的自然语言入口：模型想查数据，只能调用下面列出的只读工具（共 7 个），结果原样放进 `sources`。
 
 - **请求**：`Content-Type: application/json`，只允许 `{ "message": "..." }`，去掉首尾空白后 1~2000 字符，请求体不超过 8192 字节，未知字段直接拒绝。**没有对话历史**，每次要带齐地点和日期。
 - **成功（200）**：`{ "answer": string, "sources": [{ "tool", "input", "result" }], "mode": "live", "model": "deepseek-flash" }`。`answer` 是纯文本，前端**不能**当 HTML 渲染。`sources` 是真正执行过的工具结果，外加可能出现的一条地名查找来源 `lunar_gazetteer`（见下面"地名来源"）；`sources` 为空表示这个回答没有经过数据验证，界面不能把它标成"已计算"；**只有 `lunar_gazetteer` 一条也不算"已计算"**，它只是 IAU 地名表的查找结果，没有算过任何光照或通信数据。
 - **错误**：和其他接口一样是 `{ "error": { "code", "message" } }`。400 输入不对、405 不是 POST、413 请求太大、422 问题要的步骤太多、429 **限速**（有两个来源，前端只看状态码 429 就行，见下面"频率限制"）、502 模型或工具返回无效、503 没配置密钥或服务不可用、504 超时或被取消。前端显示错误，让用户**手动**重试，不要自动重发（每次重发都花钱）。
 - **单次上限**：最多 4 次模型调用、8 次工具执行（回答带 `lunar_gazetteer` 来源时是 7 次，因为它占了"最多 8 条来源"里的 1 条）；模型每次输出最多 2400 tokens（2026-11-15 起，PR #22 从 1200 提高，为了多地点比较不被截断；每次调用花 `xbl2602` 的钱，最坏情况输出费用是原来的两倍，系统提示要求最终回答控制在 250 词以内（PR #26 起，原来是 400））；总超时 25 秒。
 - **地名来源 `lunar_gazetteer`**（PR #26，`louis068`）：只有问题里写了**明确标注**的坐标（N/S E/W，或 lat / lon 字样）时才会有；它不是模型能调用的工具，是服务端自己用 IAU 地名表查的。结构沿用 `{ tool, input, result }`：`tool` 恒为 `"lunar_gazetteer"`，`input` 是 `{ coordinates: [{ latDeg, lonDeg }] }`，`result` 是 `{ locations: [{ queryCoord, nearbyFeatures }] }`，`nearbyFeatures` 每项有 `name`、`featureType`、`latDeg`、`lonDeg`、`diameterKm`、`distanceKm`、`withinFeatureRadius`。最多 4 个不重复的有效坐标，每个坐标最多 5 个附近地名；位置是 IAU 目录的中心点，不是撞击坑边缘，距离是月面球面距离；不含地形高度、地平线遮挡，也不是着陆安全判断。决定记录：`docs/decisions/2026-11-15_louis068_agent-nearby-map.md`。
-- **可用工具**（代码里写死的只读白名单，`logic/run-agent.ts` 里的 `ALLOWED`）：`get_point_conditions`、`compare_points`、`list_presets`、`get_point_timeline`、`compare_dates`、`find_sites`，即 `registry.ts` 里的全部 6 个。**agent 专用的两条限制**（REST API 和 MCP 不受影响）：①`compare_points` 一次最多 **6 个点**（API/MCP 仍是 10 个）。原因：全月网格扫描里单个点的结果最大 9.9 KB（南纬 89.9°，一年有 40 个日照窗口），而 agent 单个工具结果上限是 65,536 字节；满 10 个点实测约 68.5 KB，按最大单点估算 8 个点也有约 79 KB，都会超限；6 个最大的点带 `minEarthElevationDeg` 实测 61,754 字节，在上限内。其余新工具都远低于上限（时间曲线最大实测约 26 KB，找位置 20 个结果约 6 KB，跨日期对比 5 点 × 8 时刻按最大单点估算约 20 KB）。②工具结果超过 65,536 字节时，不再让整个回答失败（原来是 502 `tool_error`），而是把 `result_too_large` 作为工具结果回给模型，让它用更少的点或更短的时段重问。决定记录：`docs/decisions/2026-11-14_xbl2602_agent-new-tools-and-compare-cap.md`。
+- **可用工具**（代码里写死的只读白名单，`logic/run-agent.ts` 里的 `ALLOWED`）：`get_point_conditions`、`compare_points`、`list_presets`、`get_point_timeline`、`compare_dates`、`find_sites`、`get_solar_energy_estimate`，即 `registry.ts` 里的全部 7 个。**agent 专用的两条限制**（REST API 和 MCP 不受影响）：①`compare_points` 一次最多 **6 个点**（API/MCP 仍是 10 个）。原因：全月网格扫描里单个点的结果最大 9.9 KB（南纬 89.9°，一年有 40 个日照窗口），而 agent 单个工具结果上限是 65,536 字节；满 10 个点实测约 68.5 KB，按最大单点估算 8 个点也有约 79 KB，都会超限；6 个最大的点带 `minEarthElevationDeg` 实测 61,754 字节，在上限内。其余新工具都远低于上限（时间曲线最大实测约 26 KB，找位置 20 个结果约 6 KB，跨日期对比 5 点 × 8 时刻按最大单点估算约 20 KB）。②工具结果超过 65,536 字节时，不再让整个回答失败（原来是 502 `tool_error`），而是把 `result_too_large` 作为工具结果回给模型，让它用更少的点或更短的时段重问。决定记录：`docs/decisions/2026-11-14_xbl2602_agent-new-tools-and-compare-cap.md`。
 - **密钥**：`DEEPSEEK_API_KEY`，仅服务端、每次请求时读取。网址和模型名（`deepseek-flash`）写死在代码里，不读环境变量。
 - **频率限制**：每个访问者 IP 每分钟最多 20 次请求（固定窗口），在 Vercel 防火墙里执行，不在代码里。超出时**还没进到我们的代码**就被拦下，返回 `429`，body 形如 `{"error":{"code":"429","message":"Too Many Requests","id":"..."}}`（`code` 是字符串 `"429"`）。DeepSeek 自己限速时是我们的代码返回 429，`code` 为 `rate_limited`。**前端不要按 `code` 区分，统一按状态码 429 提示"请求太频繁，稍后再试"，不要自动重发。** 注意：同一个 IP（例如同一个展位的 Wi-Fi）的所有人共用这 20 次。它限的是速度不是总花费，细节和重建办法见 `docs/decisions/2026-11-14_xbl2602_agent-rate-limit.md`。
+
+## 7. 首页过场动画 ↔ 产品页：地图就绪信号（浏览器里的 window 事件）
+
+用途：从首页点进产品页时，像素漂移动画盖在最上面，产品页在它**后面**同时加载；动画要等产品页的第一幅地图真的画出来，才开走并揭幕，用户就不会在动画结束后又看到一次"Loading lunar maps…"遮罩。决定记录：`docs/decisions/2026-11-15_xbl2602_landing-to-product-handoff.md`。
+
+- **事件名**：`lunar-quest:map-ready`，发在 `window` 上，不带数据。常量和两个小函数在 `src/lib/handoff/map-ready-signal.ts`（`announceMapReady()`、`onceMapReady(callback)`），两边都从那里取，**不要互相 import 对方目录**。
+- **谁发**：产品页（`src/ui/product/use-announce-map-ready.ts`，在 `lunar-quest-app.tsx` 里调用一次）。第一次"加载完"（遮罩撤掉）**或出错**之后，再等两帧发一次（两帧是为了让第一幅月球画面已经画出去）。**出错也必须发**，否则车会一直停着等，直到用户点一下跳过。
+- **谁收**：过场动画（`src/ui/landing/product-transition.tsx`，挂在根布局 `app/layout.tsx`，所以换路由时它不会被卸载）。时间安排在 `src/ui/landing/handoff-timing.ts`，**没有任何写死的秒数**：车停稳时打开产品页；车要离场时如果事件还没来，车就停在原地等（多久都等，用户可以点一下跳过）；事件来了才开走；车开走后揭幕。
+- **改产品页启动流程的人要知道**：以后如果"第一幅地图画好"的时刻变了（比如换成别的加载方式），只要保证上面这个事件在合适的时刻发出，首页动画不用改。没有这个事件，车会一直停着等，直到用户点一下跳过。
 
 
 ### Steep-slope search extension (2026-11-15)

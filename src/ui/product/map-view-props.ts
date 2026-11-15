@@ -21,6 +21,7 @@ export interface MapViewProps {
   rightPanel?: RightPanelSize | null;
   /** 鼠标在地图上的光标样式（CSS cursor 值）；不写就是十字。 */
   cursor?: string;
+  onDoublePick?: (point: LatLon) => void;
   onPick: (point: LatLon) => void;
   onHover: (point: LatLon | null) => void;
   onLoadingChange: (loading: boolean) => void;

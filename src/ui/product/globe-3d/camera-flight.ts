@@ -23,6 +23,9 @@ interface PoseSample { tS: number; phi: number; theta: number; logRadius: number
 
 const SAFE_PHI = 1e-4;
 const MAX_SAMPLE_GAP_S = 0.1;
+const MIN_FLIGHT_S = 1;
+/** 一次自动飞行最长这么久。别的界面要"等镜头飞完再干重活"时用它算等多久（见 panels/site-photo.tsx）。 */
+export const MAX_FLIGHT_S = 1.9;
 
 /** 记录最近三帧的相机位置，用来估算惯性滑动时的速度和加速度。 */
 export class CameraMotionTracker {
@@ -49,16 +52,25 @@ export class CameraMotionTracker {
   }
 }
 
-/** 从此刻的运动状态出发，飞到 target（相机的目标位置）。current 为空表示当前没有在飞。 */
-export function startCameraFlight(target: THREE.Vector3, nowMs: number, current: CameraFlight | null, tracker: CameraMotionTracker): CameraFlight | null {
+/**
+ * 从此刻的运动状态出发，飞到 target（相机的目标位置）。current 为空表示当前没有在飞。
+ * cameraPosition 是相机此刻在画面上的位置：镜头是静止的时候，就从这里起飞。
+ */
+export function startCameraFlight(target: THREE.Vector3, nowMs: number, current: CameraFlight | null, tracker: CameraMotionTracker, cameraPosition: THREE.Vector3): CameraFlight {
   let startS = nowMs / 1000;
   let state = current ? flightStateAt(current, startS) : null;
   if (!state) {
     const observed = tracker.latest();
-    if (!observed) return null;
-    // 从最后画出来的那一帧接着飞，起点和画面上的位置完全一致
-    startS = observed.tS;
-    state = observed;
+    if (observed && startS - observed.tS <= MAX_SAMPLE_GAP_S) {
+      // 镜头刚刚还在动（比如用户刚拖完，还在惯性滑动）：从最后画出来的那一帧接着飞，起点和画面上的位置完全一致
+      startS = observed.tS;
+      state = observed;
+    } else {
+      // 记录是空的（页面刚打开），或最后一帧已经是很久以前（镜头静止了）：从相机现在的位置起飞，速度和加速度都是 0。
+      // 不能照用旧记录：旧记录的时刻早就过了，飞行会在第一帧就被判成"已到达"，镜头直接瞬移、没有动画。
+      const here = poseOf(cameraPosition, startS);
+      state = { phi: stillAt(here.phi), theta: stillAt(here.theta), logRadius: stillAt(here.logRadius) };
+    }
   }
   const goal = poseOf(target, startS);
   const thetaTo = state.theta.value + wrapAngle(goal.theta - state.theta.value);
@@ -69,7 +81,7 @@ export function startCameraFlight(target: THREE.Vector3, nowMs: number, current:
     theta: { from: state.theta, to: thetaTo },
     logRadius: { from: state.logRadius, to: goal.logRadius },
     startS,
-    durationS: THREE.MathUtils.clamp(0.9 + 0.35 * angularDistance + 0.25 * zoomDistance, 1, 1.9),
+    durationS: THREE.MathUtils.clamp(0.9 + 0.35 * angularDistance + 0.25 * zoomDistance, MIN_FLIGHT_S, MAX_FLIGHT_S),
   };
 }
 
@@ -91,6 +103,10 @@ function flightStateAt(flight: CameraFlight, tS: number) {
     theta: axisAt(flight.theta, elapsed, flight.durationS),
     logRadius: axisAt(flight.logRadius, elapsed, flight.durationS),
   };
+}
+
+function stillAt(value: number): AxisState {
+  return { value, rate: 0, accel: 0 };
 }
 
 function axisAt(axis: Axis, elapsedS: number, durationS: number): AxisState {

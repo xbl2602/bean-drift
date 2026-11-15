@@ -2,17 +2,20 @@
 // 2D 全月展开图：铺满整个屏幕，拖动平移、滚轮/双指缩放，单击某点交给上层处理（默认进入第一人称）。
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
-import { LunarDetailAtlas } from "../imagery/lunar-detail-atlas";
+import { MoonTextureSet, fineMapsForLayer } from "../imagery/moon-texture-set";
+import { TileAtlas } from "../imagery/tile-atlas";
+import { COLOR_PYRAMID_SOURCE, MOON_TREK_SOURCE, type MoonAtlases } from "../imagery/tile-sources";
 import { applyAnalysisUniforms, type AnalysisUniforms } from "../analysis/analysis-glsl";
 import { monthSunSamples, sunBodyAt } from "../analysis/sun-samples";
 import type { LayerSettings } from "../map-layers";
 import type { FocusRequest, MapViewProps } from "../map-view-props";
-import { MOON_TEXTURES, loadMoonTexture, pickColorTextureUrl } from "../moon-assets";
 import { bodyToLatLon, sunDirectionBody, type LatLon } from "../moon-frames";
+import { prefersReducedMotion } from "../motion/smooth-value";
 import { AnnotationLayer } from "../overlay/annotations";
 import { usePointerGestures } from "../use-pointer-gestures";
 import { createMap2dMaterial } from "./map-2d-material";
 import { clampCamera, initialCamera, latLonToScreen, panCamera, screenToUv, uvToLatLon, zoomCameraAt, type MapCamera, type ScreenSize } from "./map-2d-camera";
+import { mapCameraOnFlight, startMapFlight, type MapFlight } from "./map-2d-flight";
 
 interface Map2dRuntime {
   renderer: THREE.WebGLRenderer;
@@ -21,13 +24,18 @@ interface Map2dRuntime {
   material: THREE.ShaderMaterial;
   analysisUniforms: AnalysisUniforms;
   overlay: AnnotationLayer;
-  detail: LunarDetailAtlas;
+  atlases: MoonAtlases;
+  textures: MoonTextureSet;
+  /** 上一次为哪个底图图层请求过细版本数据贴图（只在图层变了时再请求）。 */
+  fineRequestedFor: LayerSettings["base"] | null;
   mapCamera: MapCamera;
+  /** 正在进行的自动飞行（点着陆点、搜索定位）；用户一拖一缩就取消。 */
+  flight: MapFlight | null;
   screen: ScreenSize;
   frame: number;
 }
 
-export function Map2dView({ timeMs, layers, annotations, focus, cursor, onPick, onHover, onLoadingChange, onError }: MapViewProps) {
+export function Map2dView({ timeMs, layers, annotations, focus, cursor, onPick, onDoublePick, onHover, onLoadingChange, onError }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const runtimeRef = useRef<Map2dRuntime | null>(null);
   const settingsRef = useRef({ timeMs, layers, annotations });
@@ -40,10 +48,12 @@ export function Map2dView({ timeMs, layers, annotations, focus, cursor, onPick, 
     if (!rt || rt.frame) return;
     rt.frame = requestAnimationFrame(() => {
       rt.frame = 0;
+      const stillFlying = advanceFlight(rt);
       const { timeMs: t, layers: l, annotations: a } = settingsRef.current;
       applyUniforms(rt, t, l);
       rt.renderer.render(rt.scene, rt.camera3);
       rt.overlay.draw(a, (point) => latLonToScreen(rt.mapCamera, rt.screen, point), rt.screen.widthPx);
+      if (stillFlying) requestRender();
     });
   };
 
@@ -57,17 +67,16 @@ export function Map2dView({ timeMs, layers, annotations, focus, cursor, onPick, 
     renderer.domElement.className = "block h-full w-full";
 
     onLoadingChange(true);
-    Promise.all([
-      loadMoonTexture(pickColorTextureUrl(renderer), false),
-      loadMoonTexture(MOON_TEXTURES.relief, false),
-      loadMoonTexture(MOON_TEXTURES.slope, false),
-      loadMoonTexture(MOON_TEXTURES.normal, false),
-      loadMoonTexture(MOON_TEXTURES.polar, false),
-    ])
-      .then(([color, relief, slope, normal, polar]) => {
-        if (disposed) return;
-        const detail = new LunarDetailAtlas(container, false, requestRender);
-        const { material, analysisUniforms } = createMap2dMaterial(color, { relief, slope, normal, polar }, detail.uniforms);
+    // 进场只等"4K 底图 + 2K 法线"（约 2 MB，默认视图只用得到它们）；高度、坡度、极区光照的 2K 版和 4K 法线在后台接着补
+    const textures = new MoonTextureSet(() => requestRender());
+    Promise.all([textures.loadColor(false, 8), textures.load(["normal"], "coarse")])
+      .then(([color]) => {
+        if (disposed) return textures.dispose();
+        const atlases: MoonAtlases = {
+          tiles: new TileAtlas(COLOR_PYRAMID_SOURCE, renderer, container, false, requestRender),
+          detail: new TileAtlas(MOON_TREK_SOURCE, renderer, container, false, requestRender),
+        };
+        const { material, analysisUniforms } = createMap2dMaterial(color, textures.slots, atlases);
         const scene = new THREE.Scene();
         scene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), material));
         const screen = { widthPx: container.clientWidth, heightPx: container.clientHeight };
@@ -76,12 +85,14 @@ export function Map2dView({ timeMs, layers, annotations, focus, cursor, onPick, 
         const subSolar = bodyToLatLon(sunDirectionBody(settingsRef.current.timeMs));
         const pending = focusRef.current;
         const mapCamera = pending ? cameraForFocus(pending, screen) : initialCamera(screen, subSolar.lonDeg - 45);
-        runtimeRef.current = { detail, renderer, scene, camera3: new THREE.Camera(), material, analysisUniforms, overlay: new AnnotationLayer(container), mapCamera, screen, frame: 0 };
+        runtimeRef.current = { atlases, textures, fineRequestedFor: null, renderer, scene, camera3: new THREE.Camera(), material, analysisUniforms, overlay: new AnnotationLayer(container), mapCamera, flight: null, screen, frame: 0 };
         resize();
         onLoadingChange(false);
+        textures.request(["relief", "slope", "polar"], "coarse");
       })
       .catch(() => {
-        if (!disposed) onError("The 4K Moon maps could not be loaded. Check your connection and reload the page.");
+        textures.dispose();
+        if (!disposed) onError("The Moon maps could not be loaded. Check your connection and reload the page.");
       });
 
     function resize() {
@@ -104,9 +115,13 @@ export function Map2dView({ timeMs, layers, annotations, focus, cursor, onPick, 
       if (rt) {
         cancelAnimationFrame(rt.frame);
         rt.overlay.dispose();
-        rt.detail.dispose();
+        rt.atlases.tiles.dispose();
+        rt.atlases.detail.dispose();
         rt.material.dispose();
-        Object.values(rt.material.uniforms).forEach((u) => u.value instanceof THREE.Texture && u.value.dispose());
+        rt.textures.dispose();
+        (rt.material.uniforms.uColor.value as THREE.Texture).dispose();
+      } else {
+        textures.dispose(); // 还没建好就被关掉：只有贴图集需要释放
       }
       runtimeRef.current = null;
       renderer.dispose();
@@ -120,7 +135,13 @@ export function Map2dView({ timeMs, layers, annotations, focus, cursor, onPick, 
   useEffect(() => {
     const rt = runtimeRef.current;
     if (!focus || !rt) return;
-    rt.mapCamera = cameraForFocus(focus, rt.screen);
+    const target = cameraForFocus(focus, rt.screen);
+    if (prefersReducedMotion()) {
+      rt.flight = null;
+      rt.mapCamera = target;
+    } else {
+      rt.flight = startMapFlight(target, performance.now(), rt.flight, rt.mapCamera);
+    }
     requestRender();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 只在收到新的定位请求时执行
   }, [focus?.seq]);
@@ -136,15 +157,21 @@ export function Map2dView({ timeMs, layers, annotations, focus, cursor, onPick, 
     onPan: (dx, dy) => {
       const rt = runtimeRef.current;
       if (!rt) return;
+      rt.flight = null;
       rt.mapCamera = panCamera(rt.mapCamera, rt.screen, dx, dy);
       requestRender();
     },
     onZoom: (factor, x, y) => {
       const rt = runtimeRef.current;
       if (!rt) return;
+      rt.flight = null;
       rt.mapCamera = zoomCameraAt(rt.mapCamera, rt.screen, factor, x, y);
       requestRender();
     },
+    onDoubleTap: onDoublePick ? (x, y) => {
+      const point = latLonAt(x, y);
+      if (point) onDoublePick(point);
+    } : undefined,
     onTap: (x, y) => {
       const point = latLonAt(x, y);
       if (point) onPick(point);
@@ -153,6 +180,15 @@ export function Map2dView({ timeMs, layers, annotations, focus, cursor, onPick, 
   });
 
   return <div ref={containerRef} className="absolute inset-0 cursor-crosshair touch-none select-none" style={cursor ? { cursor } : undefined} />;
+}
+
+/** 飞行中：把视野推进到此刻的位置，飞完就收起飞行。返回 true 表示还没飞完，要再画下一帧。 */
+function advanceFlight(rt: Map2dRuntime): boolean {
+  if (!rt.flight) return false;
+  const { camera, arrived } = mapCameraOnFlight(rt.flight, performance.now(), rt.screen);
+  rt.mapCamera = camera;
+  if (arrived) rt.flight = null;
+  return !arrived;
 }
 
 /** 把请求的位置放到屏幕中央，横向大约显示 spanDeg 度。 */
@@ -171,7 +207,13 @@ function applyUniforms(rt: Map2dRuntime, timeMs: number, layers: LayerSettings) 
   const c = rt.mapCamera;
   const halfU = rt.screen.widthPx / (2 * c.mapWidthPx);
   const halfV = rt.screen.heightPx / c.mapWidthPx;
-  rt.detail.update(layers.base === "color" ? { west: c.centerU - halfU, east: c.centerU + halfU, south: Math.max(0, c.centerV - halfV), north: Math.min(1, c.centerV + halfV), worldWidthPx: c.mapWidthPx * dpr } : null);
+  const view = layers.base === "color" ? { west: c.centerU - halfU, east: c.centerU + halfU, south: Math.max(0, c.centerV - halfV), north: Math.min(1, c.centerV + halfV), worldWidthPx: c.mapWidthPx * dpr } : null;
+  rt.atlases.tiles.update(view);
+  rt.atlases.detail.update(view);
+  if (rt.fineRequestedFor !== layers.base) {
+    rt.fineRequestedFor = layers.base;
+    rt.textures.request(fineMapsForLayer(layers.base), "fine");
+  }
   u.uResolutionPx.value.copy(buffer);
   u.uCenterUv.value.set(rt.mapCamera.centerU, rt.mapCamera.centerV);
   u.uMapWidthPx.value = rt.mapCamera.mapWidthPx * dpr;

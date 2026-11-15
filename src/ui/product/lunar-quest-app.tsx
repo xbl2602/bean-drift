@@ -23,6 +23,7 @@ import type { DraftSite } from "./panels/sites-panel";
 import { MAX_SITES, nextSiteName, useSavedSites } from "./sites/use-saved-sites";
 import { TimelineBar } from "./timeline/timeline-bar";
 import { ViewControls, type MapMode } from "./view-controls";
+import { useAnnounceMapReady } from "./use-announce-map-ready";
 import { DEFAULT_APP_MODE, rememberAppMode, rememberedAppMode, type AppMode } from "./modes/app-modes";
 import { FindDataMode } from "./modes/find-data-mode";
 import type { HistoricLandingSite } from "./modes/historic-landing-sites";
@@ -84,6 +85,7 @@ export function LunarQuestApp() {
   const hoverAnalysis = useHoverAnalysis(layerPanelOpen && !standingAt ? hover : null, timeMs, layers.weights);
 
   useFirstVisitTutorial(() => setActiveTool("tutorial"));
+  useAnnounceMapReady(loading, error); // 首页过场动画等这个信号才揭幕
   useEffect(() => {
     if (!notice) return;
     const timer = setTimeout(() => setNotice(null), 3500);
@@ -117,6 +119,13 @@ export function LunarQuestApp() {
     // 除了教程，其它工具都是在地图上用的：从第一人称回到地图
     if (standingAt) leaveFirstPerson();
   };
+  const selectMenuTool = (tool: ToolId) => {
+    if (tool !== "compare") return selectTool(tool);
+    setDraftSite(null);
+    setSelectedSiteId(null);
+    selectTool("site");
+    setNotice("Pick a location on the Moon, then choose Add to comparison.");
+  };
   const closeTool = () => {
     // 关掉图层工具的面板 = 不再看这个图层，回到月面影像
     if (activeInfo?.layer) setLayers((current) => ({ ...current, base: "color" }));
@@ -135,21 +144,20 @@ export function LunarQuestApp() {
     setStandingAt(null);
   };
   const saveSite = (point: LatLon, name?: string) => {
-    setNotice(addSite(point, name) ? `Saved ${name ?? "site"} at ${formatLatLon(point)}` : `The site list is full (${MAX_SITES}). Remove one first.`);
+    setNotice(addSite(point, name) ? `Added ${name ?? "site"} to comparison` : `The site list is full (${MAX_SITES}). Remove one first.`);
   };
   const changeAppMode = (mode: AppMode) => {
     if (mode === appMode) return;
     setAppMode(mode);
     rememberAppMode(mode);
     if (mode === "landing-sites") setLandingVisited(true);
-    // 换模式时收起 Explore 的工具和未保存标记（AI Tools 和设置三个模式通用，保持打开），离开第一人称；三个模式进来都先看 3D 地球仪
+    // 换模式时收起 Explore 的工具和未保存标记（AI Tools 和设置三个模式通用，保持打开），离开第一人称；视图（3D 球 / 2D 平面图）保持用户当前在看的那个，不强制切回 3D
     setActiveTool((current) => (current === "ai" || current === "settings" ? current : null));
     setDraftSite(null);
     setStandingAt(null);
     setError(null);
     setFocus(null);
     setLayers((current) => ({ ...current, base: "color" }));
-    setMapMode("3d");
   };
   /** 导览讲的是 Explore 里的工具：先切到 Explore 再开始。 */
   const openTutorial = () => {
@@ -167,7 +175,7 @@ export function LunarQuestApp() {
   const selectLandingSite = (site: HistoricLandingSite) => {
     if (rightToolOpen) setActiveTool(null); // 讲解面板和 AI / 设置面板都在右边，点了着陆点就看讲解
     setLandingSiteId(site.id);
-    setMapMode("3d");
+    // 不强制切 3D：用户在 2D 平面图里点着陆点，就留在 2D，平面图自己会居中到这个点（3D 球则飞过去）
     requestFocus(site, 45);
   };
   const lookUpPoint = (target: SearchTarget) => {
@@ -196,7 +204,10 @@ export function LunarQuestApp() {
       setSelectedSiteId(null);
     }
     else if (clickMode === "measure") setMeasurePoints((points) => [...points, { latDeg: point.latDeg, lonDeg: normalizeLonDeg(point.lonDeg) }]);
-    else enterFirstPerson(point);
+    else {
+      const picked = { latDeg: point.latDeg, lonDeg: normalizeLonDeg(point.lonDeg) };
+      setSearchTarget({ ...picked, label: t("sim.picked"), detail: formatLatLon(picked), spanDeg: 25 });
+    }
   };
   const saveDraft = () => {
     if (!draftSite) return;
@@ -204,7 +215,7 @@ export function LunarQuestApp() {
     if (!site) return setNotice(`The site list is full (${MAX_SITES}). Delete one first.`);
     setDraftSite(null);
     setSelectedSiteId(site.id);
-    setNotice(`Saved ${site.name} at ${formatLatLon(site)}`);
+    setNotice(`Added ${site.name} to comparison`);
   };
   const goTo = (target: SearchTarget) => {
     setSearchTarget(target);
@@ -235,7 +246,7 @@ export function LunarQuestApp() {
     ? rightPanelFor(activeTool)
     : appMode === "landing-sites" && landingSiteId ? "standard"
     : appMode === "find-data" && simResultsOpen ? "wide" : null;
-  const viewProps = { timeMs, layers, annotations, focus, rightPanel, cursor, onPick: handlePick, onHover: setHover, onLoadingChange: setLoading, onError: setError };
+  const viewProps = { timeMs, layers, annotations, focus, rightPanel, cursor, onPick: handlePick, onDoublePick: exploring && clickMode !== "measure" ? enterFirstPerson : undefined, onHover: setHover, onLoadingChange: setLoading, onError: setError };
 
   return (
     <main lang={locale} data-theme={theme} className="lunar-explorer fixed inset-0 overflow-hidden bg-black text-white" style={{ "--compare-height": `${compareHeight}dvh`, "--rail-space": comparing ? `calc(100dvh - ${compareHeight}dvh)` : "100dvh" } as React.CSSProperties}>
@@ -249,7 +260,7 @@ export function LunarQuestApp() {
       )}
 
       </div>
-      {exploring && <ToolMenu activeTool={activeTool} onSelect={selectTool} onHome={resetExplorer} onGroupOpen={closeTool} />}
+      {exploring && <ToolMenu activeTool={activeTool} onSelect={selectMenuTool} onHome={resetExplorer} onGroupOpen={closeTool} />}
       {!standingAt && <ModeSwitch mode={appMode} onChange={changeAppMode} tutorialOpen={activeTool === "tutorial"} aiOpen={activeTool === "ai"} settingsOpen={activeTool === "settings"} onTutorial={openTutorial} onAi={toggleAi} onSettings={toggleSettings} />}
       {!standingAt && <ViewControls mode={mapMode} onModeChange={changeMode} layers={layers} onLayersChange={setLayers} />}
 
@@ -338,7 +349,7 @@ function LoadingVeil({ firstPerson }: { firstPerson: boolean }) {
     <div className="pointer-events-none absolute inset-0 z-20 grid place-items-center bg-black/70">
       <div className="flex flex-col items-center gap-4">
         <span className="h-10 w-10 animate-spin rounded-full border-2 border-white/15 border-t-lime-300" />
-        <p className="text-sm tracking-wide text-white/70">{firstPerson ? "Landing… building the terrain around you" : "Loading 4K lunar maps…"}</p>
+        <p className="text-sm tracking-wide text-white/70">{firstPerson ? "Landing… building the terrain around you" : "Loading lunar maps…"}</p>
       </div>
     </div>
   );

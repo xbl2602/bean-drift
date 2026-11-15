@@ -7,7 +7,6 @@ import { HeroSection } from "@/ui/landing/hero-section";
 import { LandingSites } from "@/ui/landing/landing-sites";
 import { MissionTools } from "@/ui/landing/mission-tools";
 import { PovGallery } from "@/ui/landing/pov-gallery";
-import { ProductTransition } from "@/ui/landing/product-transition";
 import { ScrollStory } from "@/ui/landing/scroll-story";
 import { ProductPreload } from "@/ui/product/preload/product-preload";
 import "@/ui/landing/landing.css";
@@ -23,8 +22,6 @@ export default function LandingPage() {
     <div className="lq">
       {/* 首页加载完、空闲时，悄悄把产品页进地图要用的贴图下好（组件在产品页目录，见 docs/decisions 里的记录） */}
       <ProductPreload />
-      {/* 点任何通往产品页的链接，都先播一段像素风的漂移动画再跳转 */}
-      <ProductTransition />
       <HeroSection />
       <main>
         <ScrollStory />

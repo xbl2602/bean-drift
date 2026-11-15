@@ -2,8 +2,8 @@
 // 好处：经度方向无缝循环、缩放到多大都不会出现贴图接缝，图层切换只是改一个 uniform。
 // 分析图层的公式在 analysis/analysis-glsl.ts（和 3D 球共用）。
 import * as THREE from "three";
-import { DETAIL_GLSL, type LunarDetailAtlas } from "../imagery/lunar-detail-atlas";
-import { ANALYSIS_GLSL, createAnalysisUniforms, type AnalysisTextures } from "../analysis/analysis-glsl";
+import { DETAIL_GLSL, TILES_GLSL, atlasUniforms, type MoonAtlases } from "../imagery/tile-sources";
+import { ANALYSIS_GLSL, createAnalysisUniforms, type AnalysisTextureSlots } from "../analysis/analysis-glsl";
 
 const vertexShader = /* glsl */ `
 void main() {
@@ -18,6 +18,7 @@ uniform vec2 uResolutionPx;   // 画布大小（设备像素）
 uniform vec2 uCenterUv;       // 屏幕中心对应的贴图坐标，u 可以超出 0..1（循环）
 uniform float uMapWidthPx;    // 整张展开图的宽度（设备像素），高度是它的一半
 uniform bool uSunlight;
+${TILES_GLSL}
 ${DETAIL_GLSL}
 
 // 用未取 fract 的坐标求导数，避免经度接缝处 mipmap 选错出现一条线
@@ -37,8 +38,12 @@ void main() {
   vec3 color;
   if (uBase == 0) {
     color = LQ_TEX(uColor, uv).rgb;
-    vec4 detail = lunarDetail(vec2(fract(uv.x), uv.y));
-    color = mix(color, detail.rgb, detail.a);
+    // 4K 底图上先盖我们自己的 8K / 16K 瓦片，再盖 NASA Moon Trek 的近景瓦片（都是预乘透明度，没下好的地方透出下面一层）
+    vec2 atlasUv = vec2(fract(uv.x), uv.y);
+    vec4 tiles = lunarTiles(atlasUv);
+    color = color * (1.0 - tiles.a) + tiles.rgb;
+    vec4 detail = lunarDetail(atlasUv);
+    color = color * (1.0 - detail.a) + detail.rgb;
     if (uSunlight) {
       vec3 n = lqNormal(p, 3.0 * lqPoleFade(p));
       float lit = max(dot(n, uSunBody), 0.0);
@@ -54,7 +59,7 @@ void main() {
   outColor = vec4(color, 1.0);
 }`;
 
-export function createMap2dMaterial(color: THREE.Texture, analysis: AnalysisTextures, detail: LunarDetailAtlas["uniforms"]) {
+export function createMap2dMaterial(color: THREE.Texture, analysis: AnalysisTextureSlots, atlases: MoonAtlases) {
   const analysisUniforms = createAnalysisUniforms(analysis);
   const material = new THREE.ShaderMaterial({
     glslVersion: THREE.GLSL3,
@@ -64,7 +69,7 @@ export function createMap2dMaterial(color: THREE.Texture, analysis: AnalysisText
     depthWrite: false,
     uniforms: {
       ...analysisUniforms,
-      ...detail,
+      ...atlasUniforms(atlases),
       uColor: { value: color },
       uResolutionPx: { value: new THREE.Vector2(1, 1) },
       uCenterUv: { value: new THREE.Vector2(0.5, 0.5) },

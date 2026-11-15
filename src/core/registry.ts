@@ -7,6 +7,7 @@ import { findSitesTool } from "@/features/find-sites/mcp/find-sites-tool";
 import { getPointConditionsTool } from "@/features/point-conditions/mcp/get-point-conditions-tool";
 import { getPointTimelineTool } from "@/features/point-timeline/mcp/get-point-timeline-tool";
 import { listPresetsTool } from "@/features/presets/mcp/list-presets-tool";
+import { getSolarEnergyTool } from "@/features/solar-energy/mcp/get-solar-energy-tool";
 import type { ReadTool } from "./tool";
 
 export const TOOLS: readonly ReadTool[] = [
@@ -16,4 +17,5 @@ export const TOOLS: readonly ReadTool[] = [
   getPointTimelineTool,
   compareDatesTool,
   findSitesTool,
+  getSolarEnergyTool,
 ];

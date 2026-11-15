@@ -1,0 +1,5 @@
+const {test}=require('node:test');const assert=require('node:assert/strict');const {pathToFileURL}=require('node:url');const path=require('node:path');const source=import(pathToFileURL(path.join(__dirname,'map-tap.ts')).href);
+const tap=(changes={})=>({x:100,y:100,timeMs:1000,pointerType:'mouse',...changes});
+test('nearby rapid taps activate double-click with inclusive bounds',async()=>{const {isDoubleMapTap}=await source;assert.equal(isDoubleMapTap(tap(),tap({x:112,y:116,timeMs:1450})),true);});
+test('single taps, far-apart clicks and delayed clicks do not activate double-click',async()=>{const {isDoubleMapTap}=await source;for(const [a,b] of [[null,tap()],[tap(),tap({x:121,timeMs:1100})],[tap(),tap({timeMs:1451})],[tap(),tap({timeMs:999})]])assert.equal(isDoubleMapTap(a,b),false);});
+test('different pointer devices cannot complete the same double-tap',async()=>{const {isDoubleMapTap}=await source;assert.equal(isDoubleMapTap(tap(),tap({timeMs:1100,pointerType:'touch'})),false);assert.equal(isDoubleMapTap(tap({pointerType:'touch'}),tap({timeMs:1100,pointerType:'touch'})),true);});

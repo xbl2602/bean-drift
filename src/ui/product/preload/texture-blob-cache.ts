@@ -1,6 +1,6 @@
 // 贴图下载缓存：同一个地址只下载一次。
 // 首页"提前下"和产品页"真正要用"共用同一次下载：哪怕提前下的还没下完，产品页也是接着等它，不会再发第二个请求。
-// 只放在浏览器内存里（约 17 MB），刷新页面就没了；跨刷新靠 next.config.ts 里给 /product/moon、/product/sky 设的 HTTP 缓存。
+// 只放在浏览器内存里（预载的几张加起来约 8 MB），刷新页面就没了；跨刷新靠 next.config.ts 里给 /product/moon、/product/sky 设的 HTTP 缓存。
 // 不 import three：首页也要用这个文件。
 
 const downloads = new Map<string, Promise<Blob>>();
@@ -19,18 +19,4 @@ export function fetchTextureBlob(url: string, lowPriority = false): Promise<Blob
     if (downloads.get(url) === download) downloads.delete(url);
   });
   return download;
-}
-
-/** 这块显卡能用的最大贴图边长。拿不到时按手机常见的 4096 算（保守：多下一张小图也不下大图）。 */
-export function probeMaxTextureSize(): number {
-  try {
-    const canvas = document.createElement("canvas");
-    const gl = canvas.getContext("webgl2") ?? canvas.getContext("webgl");
-    if (!gl) return 4096;
-    const size = gl.getParameter(gl.MAX_TEXTURE_SIZE) as number;
-    gl.getExtension("WEBGL_lose_context")?.loseContext();
-    return size;
-  } catch {
-    return 4096;
-  }
 }

@@ -78,7 +78,8 @@ test('real point tool returns unchanged data with real terrain data and its prov
       // (docs/SHARED_INTERFACES.md section 2). If the data files cannot be read, the group degrades to
       // all-null fields with provenance 'unavailable' instead of failing the request.
       assert.equal(typeof data.terrain.heightM, 'number');
-      assert.equal(data.terrain.horizonProfile.length, 32);
+      // 32 方位 = 全月 0.25° 格子；90 方位 = 南极 160 m 数据（这个点在 80°S 以南）
+      assert.ok([32, 90].includes(data.terrain.horizonProfile.length));
       assert.equal(data.provenance.terrain.status, 'ok');
       return answer;
     },
@@ -161,7 +162,7 @@ test('DeepSeek request uses Flash, tool schemas, disabled thinking and bounded t
     assert.equal(body.model, 'deepseek-flash');
     assert.deepEqual(body.thinking, { type: 'disabled' });
     assert.equal(body.max_tokens, 2400);
-    assert.equal(body.tools.length, 6);
+    assert.equal(body.tools.length, 7);
     return Response.json({ choices: [{ finish_reason: 'stop', message: { content: 'Hello' } }] });
   });
   const handler = createAgentHandler({ tools: TOOLS, getComplete: () => provider });
@@ -236,13 +237,13 @@ test('stalled request body is cancelled on timeout before any provider call', as
   assert.equal(calls, 0);
 });
 
-test('the model is offered exactly the six read-only data tools', async () => {
+test('the model is offered exactly the seven read-only data tools', async () => {
   let offered = [];
   await runAgent({ message: 'Which tools?' }, { tools: TOOLS, signal: signal(), complete: async ({ tools }) => {
     offered = tools.map(tool => tool.name).sort();
     return answer;
   } });
-  assert.deepEqual(offered, ['compare_dates', 'compare_points', 'find_sites', 'get_point_conditions', 'get_point_timeline', 'list_presets']);
+  assert.deepEqual(offered, ['compare_dates', 'compare_points', 'find_sites', 'get_point_conditions', 'get_point_timeline', 'get_solar_energy_estimate', 'list_presets']);
 });
 
 test('tool-choice and coarse-screening guidance is passed to the model', async () => {
