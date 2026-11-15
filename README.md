@@ -1,4 +1,4 @@
-<div align="center">
+﻿<div align="center">
 
 ![Bean Drift Banner](https://capsule-render.vercel.app/api?type=venom&color=0:0b0f17,55:1a2b30,100:a3e635&height=210&section=header&text=BEAN%20DRIFT&fontSize=62&fontColor=eef4ee&desc=Lunar%20Landing%20Site%20Navigator%20%C2%B7%203D%2F2D%20%C2%B7%20Visual%20AI%20%C2%B7%20MCP&descSize=17&descAlignY=73)
 
@@ -213,17 +213,18 @@ npm test
 
 ---
 
-## Project document and technical notes
+## 📄 Project Document, Historic Missions & Technical Notes
 
-[Open our project document on Google Docs](https://docs.google.com/document/d/1oGul3ofiNASOeoQNFWHs3nDmCb4unRww-JEW6Azwnso/edit?usp=drive_link) · [Deployment guide](docs/DEPLOYMENT.md) · [API and MCP reference](docs/SHARED_INTERFACES.md) · [Data pipeline](pipeline/README.md)
+[Open our Project Document on Google Docs](https://docs.google.com/document/d/1oGul3ofiNASOeoQNFWHs3nDmCb4unRww-JEW6Azwnso/edit?usp=drive_link) · [Watch Pitch & Demo Video (YouTube)](https://youtu.be/D_FPYEtqtFA) · [Deployment guide](docs/DEPLOYMENT.md) · [API and MCP reference](docs/SHARED_INTERFACES.md) · [Data pipeline](pipeline/README.md)
 
-### More capabilities
-- **Solar-energy estimates**: `/api/energy` and `get_solar_energy_estimate` estimate incident solar energy and battery needs for darkness. Incident energy is not panel electricity output; efficiency, dust and temperature losses are not included.
-- **South-pole terrain**: the bundled polar dataset provides 160 m terrain where supported; the global overview remains 0.25°. Read each result’s provenance for its actual resolution.
+### More capabilities & mission presets
+- **Historic & Modern Lunar Landing Site Presets**: Browse and compare verified coordinates across human and robotic missions—including **Apollo 11, 12, 14, 15, 16, and 17**, **Chang'e 4** (far-side Von Kármán crater), **Chandrayaan-3**, **Intuitive Machines IM-1 (Odysseus) & IM-2**, **Firefly Blue Ghost**, **JAXA SLIM**, **Surveyor**, and **Luna 9 & 13**—alongside polar candidate viewpoints such as **Shackleton Crater** and South Pole ridges (e.g., Site A `89.71°S, 62.50°E` vs. Site B `89.61°S, 75.80°E`).
+- **Solar-energy estimates**: `/api/energy` and `get_solar_energy_estimate` estimate incident solar energy (using 1360.8 W/m² TSI) and battery needs for darkness. Incident energy is not panel electricity output; efficiency, dust and temperature losses are not included.
+- **South-pole terrain & JPL Horizons validation**: the bundled polar dataset provides 160 m terrain where supported (with 10 m/pixel LOLA South Pole and 2 m/pixel LROC NAC Apollo 11 terrain in the first-person prototype scenes); the global overview remains 0.25° (~474 m/pixel LDEM_64). Analytical ephemeris positions were cross-checked against **JPL Horizons** across six epochs with a maximum angular difference of **0.010°**.
 
 ### Data limitations
 - Ephemerides are analytical approximations, not SPICE or mission-grade landing predictions.
-- Precomputed whole-Moon annual statistics cover **2030**; changing the query date does not change that dataset’s year.
+- Precomputed whole-Moon annual statistics cover **2030**; changing the query date does not change that dataset's year.
 - Cell-average slope does not establish landing safety. Nearby-landmark maps are schematics, not surface photographs.
 - AI comparisons accept up to **6 points per call**. Responses use supplied tools; each question is independent even when chat history remains visible.
 
@@ -236,7 +237,35 @@ npm test
 npm run build
 ```
 
-For deployment configuration and Docker instructions, follow the [deployment guide](docs/DEPLOYMENT.md). The Google document may require access from its owner; repository access does not grant document access.
+For deployment configuration and Docker instructions, follow the [deployment guide](docs/DEPLOYMENT.md). The Google document and reference PDF may require access from their owner; repository access does not grant document access.
+
+---
+
+## 📚 Scientific Literature, NASA Datasets & APA 7th Reference List
+
+Every scientific model, elevation grid, crater catalog, and spacecraft coordinate used in **Bean Drift** is backed by peer-reviewed planetary science literature and official NASA Planetary Data System (PDS) archives (compiled in our `REFERENCES_APA7_BeanDrift.pdf` on Google Drive and itemized in [docs/CREDITS.md](docs/CREDITS.md)).
+
+<details>
+<summary><strong>📖 Click to expand the complete APA 7th Edition Reference List (Peer-Reviewed Literature, NASA PDS Datasets & Agency Sources)</strong></summary>
+
+### 1. Peer-Reviewed Literature
+- **Hurley, D. M., et al. (2015).** An analytic function of lunar surface temperature for exospheric modeling. *Icarus*, *255*, 159–163. https://doi.org/10.1016/j.icarus.2014.08.043 — *Empirical surface-temperature model.*
+- **Kopp, G., & Lean, J. L. (2011).** A new, lower value of total solar irradiance: Evidence and climate significance. *Geophysical Research Letters*, *38*(1), L01706. https://doi.org/10.1029/2010GL045777 — *Solar constant (1360.8 W/m²).*
+- **Mazarico, E., et al. (2011).** Illumination conditions of the lunar polar regions using LOLA topography. *Icarus*, *211*(2), 1066–1081. https://doi.org/10.1016/j.icarus.2010.10.030 — *Cross-check for polar illumination & Earth visibility.*
+- **Meeus, J. (1998).** *Astronomical algorithms* (2nd ed.). Willmann-Bell. — *Lunar and solar position algorithms.*
+- **Pike, R. J. (1977).** Size–depth relationships in complex impact craters. *Proc. 8th Lunar Science Conf.* — *Complex-crater depth–diameter scaling.*
+- **Robbins, S. J. (2019).** A new global database of lunar impact craters >1–2 km. *JGR: Planets*, *124*(4), 871–892. https://doi.org/10.1029/2018JE005592 — *Crater catalogue behind 2D/3D crater detail.*
+- **Smith, D. E., et al. (2010).** The Lunar Orbiter Laser Altimeter investigation on the LRO mission. *Space Science Reviews*, *150*(1–4), 209–241. https://doi.org/10.1007/s11214-010-9658-5 — *Instrument reference for LOLA elevation data.*
+- **Wagner, R. V., et al. (2017).** Coordinates of anthropogenic features on the Moon. *Icarus*, *283*, 92–103. https://doi.org/10.1016/j.icarus.2016.05.011 — *Apollo landing-site coordinates.*
+
+### 2. NASA Data Products & Agency Coordinates
+- **Goddard Space Flight Center, LOLA Science Team.** *LOLA GDR (`LDEM_64`, `LDEM_80S_40M`, `LDEM_875S_10M`)* & *`AVGVISIB_65S` polar visibility tables*. https://imbrium.mit.edu/DATA/LOLA_GDR/
+- **ASU LROC Science Team.** *`NAC_DTM_APOLLO11` (2 m/pixel)*, *Robotic Spacecraft Coordinates (Surveyor, Luna)*, *Chang'e 4 (Post 1087)*, and *Featured Landing Sites (IM-2, Blue Ghost)*. https://www.lroc.asu.edu/
+- **IAU & USGS Astrogeology Science Center.** *Gazetteer of planetary nomenclature: Moon centre points* & *Robbins Moon crater database v1*. https://planetarynames.wr.usgs.gov/GIS_Downloads
+- **JPL Solar System Dynamics Group.** *JPL Horizons on-line ephemeris system* (CI ephemeris validation). https://ssd.jpl.nasa.gov/horizons/
+- **NASA SVS, Moon Trek, Earth Observatory & SDO.** *CGI Moon Kit (4720)*, *LRO WAC Global Mosaic 303ppd*, *Blue Marble Next Generation*, *AIA 171 Å solar disk*, and *LRO press releases for IM-1 Odysseus & JAXA SLIM*.
+
+</details>
 
 ---
 
@@ -244,10 +273,10 @@ For deployment configuration and Docker instructions, follow the [deployment gui
 
 | Pilot | GitHub | Mission Role |
 | :---: | :--- | :--- |
-| <a href="https://github.com/xbl2602"><img src="https://github.com/xbl2602.png?size=120" width="56" style="border-radius:50%" alt="xbl2602" /></a> | [**@xbl2602**](https://github.com/xbl2602) | **Architecture, Data & Integration Lead** — Lunar calculations and NASA terrain pipelines; polar terrain, solar-energy estimates and landing presets; REST/MCP services and demo; deployment, performance fixes and cross-team integration. |
-| <a href="https://github.com/louis068"><img src="https://github.com/louis068.png?size=120" width="56" style="border-radius:50%" alt="louis068" /></a> | [**@louis068**](https://github.com/louis068) | **AI Search, Backend & Documentation** — Natural-language search, multi-step tools and steep-slope search; IAU landmark lookup, visual answers and map-navigation integration; input validation and untrusted-context safeguards; bilingual README, architecture diagrams and animated banners. |
-| <a href="https://github.com/chanjy0806"><img src="https://github.com/chanjy0806.png?size=120" width="56" style="border-radius:50%" alt="chanjy0806" /></a> | [**@chanjy0806**](https://github.com/chanjy0806) | **Landing Experience & First-Person Visuals** — Orbital landing-page scenes, scroll storytelling, gallery and navigation polish; first-person crater and rock detail, lunar-surface appearance and Apollo-reference colour tuning. |
-| <a href="https://github.com/ShanLe1224"><img src="https://github.com/ShanLe1224.png?size=120" width="56" style="border-radius:50%" alt="ShanLe1224" /></a> | [**@ShanLe1224**](https://github.com/ShanLe1224) | **Product Interface & Comparison Experience** — Lunar workspace, 2D/3D map controls and mission panels; site selection and comparison flow, timeline interactions, panel layouts and adaptive lunar map detail. |
-| <a href="https://github.com/leeziqi0531-debug"><img src="https://github.com/leeziqi0531-debug.png?size=120" width="56" style="border-radius:50%" alt="leeziqi0531-debug" /></a> | [**@leeziqi0531-debug**](https://github.com/leeziqi0531-debug) | **Video Editing & Project Documentation** — Demo and pitch-video editing; end-to-end project documentation, including Google Drive materials and voice-recording documentation. |
+| <a href='https://github.com/xbl2602'><img src='https://github.com/xbl2602.png?size=120' width='56' style='border-radius:50%' alt='xbl2602' /></a> | [**@xbl2602**](https://github.com/xbl2602) | **Lead Backend Architect & Project Manager** — Core ephemeris, LOLA data pipeline, REST & MCP server |
+| <a href='https://github.com/louis068'><img src='https://github.com/louis068.png?size=120' width='56' style='border-radius:50%' alt='louis068' /></a> | [**@louis068**](https://github.com/louis068) | **AI Search, Backend, PR QA & Documentation** — Natural-language search and multi-step lunar tools; IAU landmark lookup, visual answer cards and click-to-fly integration; tool-input validation and untrusted-context safeguards; full-repository PR auditing and cross-branch verification with Codex; bilingual README, architecture diagrams and animated showcase |
+| <a href='https://github.com/chanjy0806'><img src='https://github.com/chanjy0806.png?size=120' width='56' style='border-radius:50%' alt='chanjy0806' /></a> | [**@chanjy0806**](https://github.com/chanjy0806) | **Frontend Engineer (Landing)** — Interactive low-lunar-orbit satellite scene & onboarding storytelling |
+| <a href='https://github.com/ShanLe1224'><img src='https://github.com/ShanLe1224.png?size=120' width='56' style='border-radius:50%' alt='ShanLe1224' /></a> | [**@ShanLe1224**](https://github.com/ShanLe1224) | **Frontend Engineer (Product)** — 3D Globe, 2D Map, First-Person surface view & mission analysis panels |
+| <a href='https://github.com/leeziqi0531-debug'><img src='https://github.com/leeziqi0531-debug.png?size=120' width='56' style='border-radius:50%' alt='leeziqi0531-debug' /></a> | [**@leeziqi0531-debug**](https://github.com/leeziqi0531-debug) | **Pitch, Documentation & Mission Operations** — Demo production, mission storytelling, project documentation and QA verification |
 
-Built with public lunar datasets from **NASA LRO LOLA**, **LROC NAC**, **NASA SVS CGI Moon Kit**, and the **IAU/USGS Planetary Gazetteer**. Full attribution in [docs/CREDITS.md](docs/CREDITS.md).
+Built with public lunar datasets from **NASA LRO LOLA**, **LROC NAC**, **NASA SVS CGI Moon Kit**, **NASA Moon Trek**, **JPL Horizons**, and the **IAU/USGS Planetary Gazetteer**. Full attribution in [docs/CREDITS.md](docs/CREDITS.md).
