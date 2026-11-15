@@ -263,6 +263,9 @@ const MISSION_NOTES: Record<string, MissionNotes> = {
   "im-2-athena": { crew: "robotic", agency: "Intuitive Machines · United States", landedUtc: "2025-03-06" },
 };
 
+/** 写了介绍的任务 id（给测试用：id 写错的话，对应介绍会悄悄不显示）。 */
+export const MISSION_NOTE_IDS: readonly string[] = Object.keys(MISSION_NOTES);
+
 function toSiteEntry(preset: Preset): SiteEntry {
   const notes = MISSION_NOTES[preset.id];
   return {

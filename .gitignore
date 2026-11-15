@@ -25,6 +25,9 @@ IDENTITY.md
 .codex/
 .cursor/
 
+# ---- internal research notes (competitor analysis): kept on the owner's machine only, NEVER published ----
+docs/research/*competitor*
+
 # ---- OS / editor noise ----
 .DS_Store
 Thumbs.db
