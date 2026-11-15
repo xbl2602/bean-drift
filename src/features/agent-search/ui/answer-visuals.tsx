@@ -1,6 +1,8 @@
 import type { SearchResult } from "./search-client";
 import { comparisonPoints, coordinates, percent, pointVisualSchema, presetsVisualSchema, timeLabel, timelineVisualSchema, type PointVisual, type TimelineVisual } from "./visual-data";
 import styles from "./answer-visuals.module.css";
+import { nearbyMapSchema } from "../logic/nearby-map";
+import { NearbyMap } from "./nearby-map";
 
 function Meter({ label, value }: { label: string; value: number | null }) {
   return <div className={styles.metric}><div><span>{label}</span><strong>{percent(value)}</strong></div>
@@ -68,7 +70,10 @@ function TimelineCard({ data }: { data: TimelineVisual }) {
 export function AnswerVisuals({ sources, onQuestion }: { sources: SearchResult["sources"]; onQuestion: (question: string) => void }) {
   return <div className={styles.visuals}>{sources.map((source, index) => {
     let content;
-    if (source.tool === "get_point_conditions") {
+    if (source.tool === "lunar_gazetteer") {
+      const parsed = nearbyMapSchema.safeParse(source.result);
+      if (parsed.success) content = <div className={styles.comparison}>{parsed.data.locations.map((location, i) => <NearbyMap key={i} location={location} />)}</div>;
+    } else if (source.tool === "get_point_conditions") {
       const parsed = pointVisualSchema.safeParse(source.result);
       if (parsed.success) content = <PointCard point={parsed.data} number={1} />;
     } else if (source.tool === "compare_points") {
@@ -81,6 +86,6 @@ export function AnswerVisuals({ sources, onQuestion }: { sources: SearchResult["
       const parsed = presetsVisualSchema.safeParse(source.result);
       if (parsed.success) content = <div className={styles.card}><div className={styles.kicker}>CHOOSE A LOCATION</div>{parsed.data.presets.map((preset, i) => <button className={styles.location} key={i} onClick={() => onQuestion(`Show Sun and Earth conditions at latitude ${preset.position.latDeg}, longitude ${preset.position.lonDeg} at 2030-01-01T12:00:00Z. Explain the main limitation.`)} type="button"><strong>{preset.name}</strong><span>{coordinates(preset.position)} ↗</span></button>)}<p className={styles.note}>Select a location to fill a question. Review the date before searching.</p></div>;
     }
-    return content ? <div key={index}><p className={styles.source}>FROM TOOL DATA · SOURCE #{index + 1}</p>{content}</div> : null;
+    return content ? <div key={index}><p className={styles.source}>FROM STRUCTURED DATA · SOURCE #{index + 1}</p>{content}</div> : null;
   })}</div>;
 }

@@ -7,6 +7,7 @@ import { AnswerVisuals } from "./answer-visuals";
 import { AnswerText } from "./answer-text";
 
 const EXAMPLES = [
+  { label: "Map my surroundings", question: "At 18.00°N 82.80°E, which named craters and landmarks are nearby? Show their positions and distances, and explain what this schematic cannot tell me." },
   { label: "Explore landing sites", question: "List the available lunar landing site presets and their coordinates." },
   { label: "Find flat sunny sites", question: "Find south polar sites south of -85 latitude with slope under 5 degrees and longest darkness under 400 hours." },
   { label: "Compare two locations", question: "Compare the lunar south pole and Apollo 11 at 2030-01-01T12:00:00Z." },
@@ -16,6 +17,7 @@ const EXAMPLES = [
   { label: "What can astronauts eat?", question: "Can astronauts find or grow food on the Moon? Explain what must be brought from Earth and which resources this lunar navigator cannot assess. Do not infer food or water availability from coordinates." },
 ];
 const TOOL_LABELS: Record<string, string> = {
+  lunar_gazetteer: "Nearby IAU landmarks",
   list_presets: "Lunar locations",
   get_point_conditions: "Point conditions",
   compare_points: "Site comparison",
@@ -116,13 +118,13 @@ export function LunarSearch({ embedded = false }: { embedded?: boolean } = {}) {
         <AnswerVisuals sources={result.sources} onQuestion={choose} />
         <div className={styles.answerText}><AnswerText text={result.answer} /></div>
         {result.sources.length ? <div className={styles.sources}>
-          <h4>Tool data · {result.sources.length}</h4>
+          <h4>Data sources · {result.sources.length}</h4>
           <p>Expand to inspect the inputs, returned values and provenance.</p>
           {result.sources.map((source, index) => <details key={`${source.tool}-${index}`}>
             <summary>{TOOL_LABELS[source.tool] ?? "Lunar tool"} <span>#{index + 1}</span></summary>
             <pre tabIndex={0} aria-label={`Data source ${index + 1}`}>{JSON.stringify({ input: source.input, result: source.result }, null, 2)}</pre>
           </details>)}
-        </div> : <p className={styles.hint}>No lunar calculation tool was used for this answer.</p>}
+        </div> : <p className={styles.hint}>No structured lunar data source was returned for this answer.</p>}
       </article> : null}
       <footer className={styles.footer}><span aria-hidden="true">◌</span><p>Exploration, not mission planning. Positions use an analytical approximation; terrain uses a coarse whole-Moon map. Annual statistics currently cover 2030, independent of the selected date. Check each result’s provenance and period.</p></footer>
     </section>
