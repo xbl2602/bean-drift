@@ -43,6 +43,7 @@ export function DescentAnimation() {
       canvas.width = Math.round(width * dpr);
       canvas.height = Math.round(height * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      cosmos.dpr = dpr;
       cosmos.resize(width, height);
       // The scene lives in the band under the headline and button.
       const button = section.querySelector<HTMLElement>(".lq-button");

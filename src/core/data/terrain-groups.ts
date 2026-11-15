@@ -1,9 +1,9 @@
 // 把预计算的地形数据和现算的可见性、一年统计，拼成 PointConditions 里的 terrain / visibility / yearStats 三组。
 // 读不到数据文件时降级成"不可用"（字段为 null + 说明），不让整个接口出错；错误细节不透传（可能带服务器路径）。
 import type { SkyAtPoint } from "../ephemeris/ephemeris";
-import type { HorizonSample, PointConditions, Provenance, TerrainParameters, Visibility, YearStats } from "../types";
+import type { HorizonSample, PointConditions, PointQueryOptions, Provenance, TerrainParameters, Visibility, YearStats } from "../types";
 import { readPointTerrainData } from "./terrain-source-routing";
-import { computeVisibility, computeYearStats, YEAR_STATS_HOURS } from "./point-visibility";
+import { computeVisibility, computeYearStats, YEAR_STATS_HOURS, YEAR_STATS_START_MS } from "./point-visibility";
 import {
   emptyTerrain,
   emptyVisibility,
@@ -42,16 +42,23 @@ function visibilityProvenance(minEarthElevationDeg: number | undefined): Provena
   };
 }
 
-function yearStatsProvenance(minEarthElevationDeg: number | undefined): Provenance {
+/** 统计期起点的说明：默认起点什么都不多说；调用方指定了起点就明说，免得被当成默认的 2030 年。 */
+function statsStartNote(startMs: number): string {
+  return startMs === YEAR_STATS_START_MS ? "" : " The period start was chosen by the caller (statsStart); the default period starts 2030-01-01T00:00:00Z.";
+}
+
+function yearStatsProvenance(minEarthElevationDeg: number | undefined, startMs: number): Provenance {
+  const startUtc = new Date(startMs).toISOString().replace(".000Z", "Z");
   return {
     status: "ok",
     source: "Sun/Earth ephemeris + terrain horizon profile, computed per request",
     note:
-      `Hourly samples (${YEAR_STATS_HOURS} hours) from 2030-01-01T00:00:00Z, same visibility rule as provenance.visibility. Runs cut by the start or end of the period count with their cut length. ` +
+      `Hourly samples (${YEAR_STATS_HOURS} hours) from ${startUtc}, same visibility rule as provenance.visibility. Runs cut by the start or end of the period count with their cut length. ` +
       "bothVisibleFraction is the share of hours in which the Sun and the Earth are visible at the same time. " +
       "One year is not the worst year: the Moon's orbit has an 18.6 year cycle that changes how far Sun and Earth swing above and below the horizon near the poles. " +
       "The whole-Moon maps (L4-L7) use the same rule at the map cell centre, so they can differ slightly from this exact-point result." +
-      minElevationNote(minEarthElevationDeg),
+      minElevationNote(minEarthElevationDeg) +
+      statsStartNote(startMs),
   };
 }
 
@@ -69,7 +76,8 @@ function unavailableGroups(): TerrainGroups {
   };
 }
 
-export function buildTerrainGroups(latDeg: number, lonDeg: number, timeMs: number, sky: SkyAtPoint, minEarthElevationDeg?: number): TerrainGroups {
+export function buildTerrainGroups(latDeg: number, lonDeg: number, timeMs: number, sky: SkyAtPoint, options: PointQueryOptions = {}): TerrainGroups {
+  const { minEarthElevationDeg, statsStartMs = YEAR_STATS_START_MS } = options;
   try {
     const { source, terrain, horizonProfileDeg: profileDeg } = readPointTerrainData(latDeg, lonDeg);
     const azimuths = profileDeg.length;
@@ -83,11 +91,11 @@ export function buildTerrainGroups(latDeg: number, lonDeg: number, timeMs: numbe
         resolutionM: Math.round(terrain.resolutionM),
       },
       visibility: computeVisibility(profileDeg, latDeg, lonDeg, timeMs, sky, minEarthElevationDeg),
-      yearStats: computeYearStats(profileDeg, latDeg, lonDeg, minEarthElevationDeg),
+      yearStats: computeYearStats(profileDeg, latDeg, lonDeg, minEarthElevationDeg, statsStartMs),
       provenance: {
         terrain: source.terrainProvenance(azimuths),
         visibility: visibilityProvenance(minEarthElevationDeg),
-        yearStats: yearStatsProvenance(minEarthElevationDeg),
+        yearStats: yearStatsProvenance(minEarthElevationDeg, statsStartMs),
       },
     };
   } catch {

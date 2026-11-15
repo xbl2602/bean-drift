@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { searchLunarData, type SearchResult } from "./search-client";
@@ -30,7 +30,8 @@ const TOOL_LABELS: Record<string, string> = {
  * Self-contained product-page widget. Calls only the site's /api/agent route.
  * `embedded` drops the card chrome, eyebrow and big title so it fits inside a panel that already has a title.
  */
-export function LunarSearch({ embedded = false }: { embedded?: boolean } = {}) {
+export type SelectedLunarLocation = { latDeg: number; lonDeg: number; label: string; diameterKm?: number };
+export function LunarSearch({ embedded = false, onSelectLocation }: { embedded?: boolean; onSelectLocation?: (location: SelectedLunarLocation) => void } = {}) {
   const id = useId();
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const answerRef = useRef<HTMLElement>(null);
@@ -115,7 +116,7 @@ export function LunarSearch({ embedded = false }: { embedded?: boolean } = {}) {
       {result ? <article ref={answerRef} className={styles.answer} aria-label="Search answer">
         <div className={styles.answerHeader}><h3>Search result</h3><span>{result.model}</span></div>
         <p className={styles.question}>{submitted}</p>
-        <AnswerVisuals sources={result.sources} onQuestion={choose} />
+        <AnswerVisuals sources={result.sources} onQuestion={choose} onSelectLocation={onSelectLocation} />
         <div className={styles.answerText}><AnswerText text={result.answer} /></div>
         {result.sources.length ? <div className={styles.sources}>
           <h4>Data sources · {result.sources.length}</h4>
@@ -130,3 +131,4 @@ export function LunarSearch({ embedded = false }: { embedded?: boolean } = {}) {
     </section>
   );
 }
+

@@ -21,6 +21,27 @@ export const timeUtcSchema = utcTimeInRange.optional().describe("UTC time in ISO
 /** 必填的 UTC 时间（比较多个日期时用）。 */
 export const requiredTimeUtcSchema = utcTimeInRange.describe("UTC time in ISO 8601 with a trailing Z, e.g. 2030-01-01T12:00:00Z. Valid 2000-2100.");
 
+/** 一年统计是 8760 小时，起点加上它之后也要落在星历适用范围内。 */
+const YEAR_STATS_SPAN_MS = 8760 * 3_600_000;
+
+/** 可选：一年统计从哪一刻开始算。不传 = 2030-01-01T00:00:00Z（和整月地图一致）。 */
+export const statsStartSchema = z
+  .iso
+  .datetime()
+  .refine((value) => {
+    const ms = Date.parse(value);
+    return ms >= MIN_TIME_MS && ms + YEAR_STATS_SPAN_MS < MAX_TIME_MS;
+  }, "statsStart must be between 2000-01-01 and 2099-01-01 (UTC) so the whole 8760 hours stay within 2000-2100")
+  .optional()
+  .describe(
+    "Optional. UTC time (ISO 8601 with a trailing Z) where the yearStats period starts; the period is always the following 8760 hours. Omit to use the default period from 2030-01-01T00:00:00Z. Use the launch or landing time to get the year that follows it. Valid 2000-2099.",
+  );
+
+/** 把可选的 statsStart 转成毫秒时间戳；没传就是 undefined（用默认起点）。 */
+export function resolveStatsStartMs(statsStart: string | undefined): number | undefined {
+  return statsStart === undefined ? undefined : Date.parse(statsStart);
+}
+
 /**
  * 通信要求的地球最低仰角（选填）。不传 = 只看地形，和整月地图、一年统计的默认口径一致。
  * 注意：不传和传 0 不一样——传 0 还额外要求地球不低于光滑球面的水平线。

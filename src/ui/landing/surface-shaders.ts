@@ -177,11 +177,17 @@ vec3 shadeGround(vec3 origin, vec3 ray, float t) {
   // One pixel covers more ground the further away it is, and much more where we look along the
   // ground at a shallow angle; read the terrain at that scale so distant detail stays calm.
   float footprintM = t * uPixelAngle * 2.4;
-  // At least two samples of the finest detail tile: any closer and the slope shows the tile's pixel grid.
+  // At least two samples of the finest detail tile: any closer and the slope shows the tile pixel grid.
   float e = max(0.1, footprintM);
-  float slopeX = terrainHeight(p.xz + vec2(e, 0.0), footprintM) - terrainHeight(p.xz - vec2(e, 0.0), footprintM);
-  float slopeZ = terrainHeight(p.xz + vec2(0.0, e), footprintM) - terrainHeight(p.xz - vec2(0.0, e), footprintM);
-  vec3 normal = normalize(vec3(-slopeX, 2.0 * e, -slopeZ));
+  float h0 = terrainHeight(p.xz, footprintM);
+  float hxp = terrainHeight(p.xz + vec2(e, 0.0), footprintM);
+  float hxm = terrainHeight(p.xz - vec2(e, 0.0), footprintM);
+  float hzp = terrainHeight(p.xz + vec2(0.0, e), footprintM);
+  float hzm = terrainHeight(p.xz - vec2(0.0, e), footprintM);
+  vec3 normal = normalize(vec3(-(hxp - hxm), 2.0 * e, -(hzp - hzm)));
+  // Pits are darker and ridges lighter: the sky cannot reach into a hollow. This keeps the shape of the
+  // ground readable even where the light is weak, without raising the exposure.
+  float cavity = clamp(1.0 - 0.5 * (hxp + hxm + hzp + hzm - 4.0 * h0) / e, 0.55, 1.15);
 
   float shadow = sunShadow(p + normal * (0.02 + t * 0.0008), t, footprintM);
   float towardSun = max(dot(normal, uSunDir), 0.0);
@@ -193,19 +199,19 @@ vec3 shadeGround(vec3 origin, vec3 ray, float t) {
   float broadDetail = 1.0 - smoothstep(20.0, 60.0, footprintM);
   float patches = mix(0.5, noise3(vec3(p.xz * 0.012, 3.0)), 0.6 * broadDetail);
   patches += (noise3(vec3(p.xz * 0.11, 7.0)) - 0.5) * 0.4 * (1.0 - smoothstep(2.0, 7.0, footprintM));
-  vec3 dust = vec3(0.40, 0.385, 0.37) * (0.82 + 0.36 * patches);
-  // When the Sun is down the ground is lit by the Earth (earthshine) and by starlight. Real
-  // earthshine is faint, but a camera would be set to expose for it, so lift it: the night
-  // surface stays readable, with a cool blue cast that points towards the Earth.
-  float night = smoothstep(0.12, -0.06, uSunDir.y);
+  vec3 dust = vec3(0.40, 0.385, 0.37) * (0.78 + 0.44 * patches);
+
+  // There is no air on the Moon, so no twilight: the ground is lit by the Sun in proportion to how high it
+  // stands (the sine law above, plus shadows that stretch as it sinks) and, once the Sun is gone, only by
+  // the Earth. Earthshine is far weaker than sunlight in reality (a camera would record almost black);
+  // here it is shown at a readable level but kept one-directional, so slopes facing the Earth glow and
+  // everything else falls dark and the relief stays clear, rather than being flattened by extra exposure.
+  float night = smoothstep(0.02, -0.04, uSunDir.y);
   float earthFacing = max(dot(normal, uEarthDir), 0.0);
-  // By night the Earth is the only big light, low in the sky: slopes facing it glow and everything
-  // else falls into long shadows, which is what makes craters and rocks stand out instead of a flat grey plain.
   float earthShadow = night > 0.02 ? rayShadow(p + normal * (0.02 + t * 0.0008), uEarthDir, t, footprintM) : 1.0;
-  vec3 earthLight = vec3(0.62, 0.74, 1.0) * (0.1 + 1.3 * earthFacing * earthShadow) * (0.6 + 2.8 * night);
-  vec3 ambient = vec3(0.07, 0.082, 0.11) * (1.0 + 2.6 * night);
-  // The overall exposure is set a little high so the lunar ground reads as bright regolith.
-  return dust * (light * 3.0 + ambient + earthLight) * 1.22;
+  vec3 earthLight = vec3(0.62, 0.76, 1.0) * earthFacing * earthShadow * (0.2 + 0.8 * night) * 4.6;
+  vec3 ambient = vec3(0.012, 0.014, 0.02) * (1.0 + night);
+  return dust * (light * 3.3 + earthLight + ambient) * cavity * (1.0 + 0.35 * night) * 1.25;
 }
 
 vec3 skyColor(vec2 frag, float sunVisible) {
@@ -251,7 +257,10 @@ void main() {
     color = mix(skyColor(frag, sunVisible), groundColor(groundFrag, groundSample, sunVisible), smoothstep(0.0, 1.0, cover));
   }
 
-  outColor = vec4(finishColor(color, frag), 1.0);
+  // An S-curve on top of the soft roll-off: deeper blacks and brighter lit ground, so the Moon is not a flat grey.
+  vec3 finished = finishColor(color, frag);
+  finished = mix(finished, finished * finished * (3.0 - 2.0 * finished), 0.36);
+  outColor = vec4(finished, 1.0);
 }
 `;
 

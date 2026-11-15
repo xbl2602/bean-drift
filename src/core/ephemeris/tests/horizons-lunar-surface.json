@@ -1,0 +1,1574 @@
+{
+ "source": "JPL Horizons API (https://ssd-api.jpl.nasa.gov/doc/horizons.api), observer on the Moon: CENTER=coord@301, COORD_TYPE=GEODETIC, SITE_COORD=east-longitude,latitude,0 km, QUANTITIES=4 (airless apparent azimuth/elevation, degrees, azimuth clockwise from north), TIME_TYPE=UT",
+ "fetchedUtc": "2026-11-15T03:17:58Z",
+ "rows": [
+  {
+   "site": "apollo-11 (IAU Statio Tranquillitatis)",
+   "latDeg": 0.6741,
+   "lonDeg": 23.4732,
+   "timeUtc": "2005-03-20T18:00:00Z",
+   "sun": {
+    "azimuthDeg": 92.187357992,
+    "elevationDeg": 56.027949535
+   },
+   "earth": {
+    "azimuthDeg": 252.305495341,
+    "elevationDeg": 65.022004629
+   }
+  },
+  {
+   "site": "apollo-11 (IAU Statio Tranquillitatis)",
+   "latDeg": 0.6741,
+   "lonDeg": 23.4732,
+   "timeUtc": "2015-09-09T03:00:00Z",
+   "sun": {
+    "azimuthDeg": 270.439027908,
+    "elevationDeg": -61.341002255
+   },
+   "earth": {
+    "azimuthDeg": 287.386773231,
+    "elevationDeg": 71.856557688
+   }
+  },
+  {
+   "site": "apollo-11 (IAU Statio Tranquillitatis)",
+   "latDeg": 0.6741,
+   "lonDeg": 23.4732,
+   "timeUtc": "2026-11-15T12:00:00Z",
+   "sun": {
+    "azimuthDeg": 91.623199672,
+    "elevationDeg": 5.111485026
+   },
+   "earth": {
+    "azimuthDeg": 274.653856546,
+    "elevationDeg": 63.042922492
+   }
+  },
+  {
+   "site": "apollo-11 (IAU Statio Tranquillitatis)",
+   "latDeg": 0.6741,
+   "lonDeg": 23.4732,
+   "timeUtc": "2027-02-03T06:00:00Z",
+   "sun": {
+    "azimuthDeg": 271.77436333,
+    "elevationDeg": -74.703474978
+   },
+   "earth": {
+    "azimuthDeg": 280.962610298,
+    "elevationDeg": 67.780772681
+   }
+  },
+  {
+   "site": "apollo-11 (IAU Statio Tranquillitatis)",
+   "latDeg": 0.6741,
+   "lonDeg": 23.4732,
+   "timeUtc": "2027-08-30T00:00:00Z",
+   "sun": {
+    "azimuthDeg": 270.512371178,
+    "elevationDeg": -89.861016121
+   },
+   "earth": {
+    "azimuthDeg": 268.764945212,
+    "elevationDeg": 65.54854791
+   }
+  },
+  {
+   "site": "apollo-11 (IAU Statio Tranquillitatis)",
+   "latDeg": 0.6741,
+   "lonDeg": 23.4732,
+   "timeUtc": "2028-03-01T15:00:00Z",
+   "sun": {
+    "azimuthDeg": 88.982104754,
+    "elevationDeg": -2.339679141
+   },
+   "earth": {
+    "azimuthDeg": 255.779503786,
+    "elevationDeg": 58.947537011
+   }
+  },
+  {
+   "site": "apollo-11 (IAU Statio Tranquillitatis)",
+   "latDeg": 0.6741,
+   "lonDeg": 23.4732,
+   "timeUtc": "2029-05-10T09:00:00Z",
+   "sun": {
+    "azimuthDeg": 278.22809144,
+    "elevationDeg": -77.276862567
+   },
+   "earth": {
+    "azimuthDeg": 251.705076807,
+    "elevationDeg": 66.216234682
+   }
+  },
+  {
+   "site": "apollo-11 (IAU Statio Tranquillitatis)",
+   "latDeg": 0.6741,
+   "lonDeg": 23.4732,
+   "timeUtc": "2030-01-01T00:00:00Z",
+   "sun": {
+    "azimuthDeg": 273.360198247,
+    "elevationDeg": -71.448029945
+   },
+   "earth": {
+    "azimuthDeg": 276.097583017,
+    "elevationDeg": 66.096668312
+   }
+  },
+  {
+   "site": "apollo-11 (IAU Statio Tranquillitatis)",
+   "latDeg": 0.6741,
+   "lonDeg": 23.4732,
+   "timeUtc": "2030-06-15T12:00:00Z",
+   "sun": {
+    "azimuthDeg": 267.250905794,
+    "elevationDeg": 71.544164813
+   },
+   "earth": {
+    "azimuthDeg": 267.023538196,
+    "elevationDeg": 67.492711722
+   }
+  },
+  {
+   "site": "apollo-11 (IAU Statio Tranquillitatis)",
+   "latDeg": 0.6741,
+   "lonDeg": 23.4732,
+   "timeUtc": "2030-10-21T07:30:00Z",
+   "sun": {
+    "azimuthDeg": 269.217623891,
+    "elevationDeg": -48.849781032
+   },
+   "earth": {
+    "azimuthDeg": 281.358300832,
+    "elevationDeg": 59.624838035
+   }
+  },
+  {
+   "site": "apollo-11 (IAU Statio Tranquillitatis)",
+   "latDeg": 0.6741,
+   "lonDeg": 23.4732,
+   "timeUtc": "2035-07-04T21:00:00Z",
+   "sun": {
+    "azimuthDeg": 92.175292218,
+    "elevationDeg": -74.500441767
+   },
+   "earth": {
+    "azimuthDeg": 283.079155072,
+    "elevationDeg": 66.171406777
+   }
+  },
+  {
+   "site": "apollo-11 (IAU Statio Tranquillitatis)",
+   "latDeg": 0.6741,
+   "lonDeg": 23.4732,
+   "timeUtc": "2043-12-25T12:00:00Z",
+   "sun": {
+    "azimuthDeg": 268.528746847,
+    "elevationDeg": -43.717546529
+   },
+   "earth": {
+    "azimuthDeg": 280.048978267,
+    "elevationDeg": 71.463266671
+   }
+  },
+  {
+   "site": "apollo-11 (IAU Statio Tranquillitatis)",
+   "latDeg": 0.6741,
+   "lonDeg": 23.4732,
+   "timeUtc": "2060-04-12T05:00:00Z",
+   "sun": {
+    "azimuthDeg": 93.09780154,
+    "elevationDeg": 69.704204523
+   },
+   "earth": {
+    "azimuthDeg": 251.887717031,
+    "elevationDeg": 69.391747773
+   }
+  },
+  {
+   "site": "apollo-11 (IAU Statio Tranquillitatis)",
+   "latDeg": 0.6741,
+   "lonDeg": 23.4732,
+   "timeUtc": "2090-11-30T14:00:00Z",
+   "sun": {
+    "azimuthDeg": 88.547582462,
+    "elevationDeg": 39.604015338
+   },
+   "earth": {
+    "azimuthDeg": 271.086254767,
+    "elevationDeg": 67.683544205
+   }
+  },
+  {
+   "site": "chang-e-4 (IAU Statio Tianhe)",
+   "latDeg": -45.45,
+   "lonDeg": 177.6,
+   "timeUtc": "2005-03-20T18:00:00Z",
+   "sun": {
+    "azimuthDeg": 247.031169685,
+    "elevationDeg": -20.146510812
+   },
+   "earth": {
+    "azimuthDeg": 182.6088243,
+    "elevationDeg": -37.982430792
+   }
+  },
+  {
+   "site": "chang-e-4 (IAU Statio Tianhe)",
+   "latDeg": -45.45,
+   "lonDeg": 177.6,
+   "timeUtc": "2015-09-09T03:00:00Z",
+   "sun": {
+    "azimuthDeg": 63.34393967,
+    "elevationDeg": 24.316649347
+   },
+   "earth": {
+    "azimuthDeg": 193.268314279,
+    "elevationDeg": -49.976041714
+   }
+  },
+  {
+   "site": "chang-e-4 (IAU Statio Tianhe)",
+   "latDeg": -45.45,
+   "lonDeg": 177.6,
+   "timeUtc": "2026-11-15T12:00:00Z",
+   "sun": {
+    "azimuthDeg": 284.007880208,
+    "elevationDeg": 15.526947568
+   },
+   "earth": {
+    "azimuthDeg": 178.662854839,
+    "elevationDeg": -47.410942885
+   }
+  },
+  {
+   "site": "chang-e-4 (IAU Statio Tianhe)",
+   "latDeg": -45.45,
+   "lonDeg": 177.6,
+   "timeUtc": "2027-02-03T06:00:00Z",
+   "sun": {
+    "azimuthDeg": 50.932805752,
+    "elevationDeg": 32.032507055
+   },
+   "earth": {
+    "azimuthDeg": 186.240566863,
+    "elevationDeg": -49.286988124
+   }
+  },
+  {
+   "site": "chang-e-4 (IAU Statio Tianhe)",
+   "latDeg": -45.45,
+   "lonDeg": 177.6,
+   "timeUtc": "2027-08-30T00:00:00Z",
+   "sun": {
+    "azimuthDeg": 34.748943992,
+    "elevationDeg": 39.701296613
+   },
+   "earth": {
+    "azimuthDeg": 182.167637246,
+    "elevationDeg": -44.831153537
+   }
+  },
+  {
+   "site": "chang-e-4 (IAU Statio Tianhe)",
+   "latDeg": -45.45,
+   "lonDeg": 177.6,
+   "timeUtc": "2028-03-01T15:00:00Z",
+   "sun": {
+    "azimuthDeg": 291.616193544,
+    "elevationDeg": 18.627003284
+   },
+   "earth": {
+    "azimuthDeg": 174.686959916,
+    "elevationDeg": -37.942157013
+   }
+  },
+  {
+   "site": "chang-e-4 (IAU Statio Tianhe)",
+   "latDeg": -45.45,
+   "lonDeg": 177.6,
+   "timeUtc": "2029-05-10T09:00:00Z",
+   "sun": {
+    "azimuthDeg": 47.398021475,
+    "elevationDeg": 32.335971803
+   },
+   "earth": {
+    "azimuthDeg": 184.144581884,
+    "elevationDeg": -38.037611926
+   }
+  },
+  {
+   "site": "chang-e-4 (IAU Statio Tianhe)",
+   "latDeg": -45.45,
+   "lonDeg": 177.6,
+   "timeUtc": "2030-01-01T00:00:00Z",
+   "sun": {
+    "azimuthDeg": 53.668541281,
+    "elevationDeg": 29.730612477
+   },
+   "earth": {
+    "azimuthDeg": 183.238705229,
+    "elevationDeg": -47.763594918
+   }
+  },
+  {
+   "site": "chang-e-4 (IAU Statio Tianhe)",
+   "latDeg": -45.45,
+   "lonDeg": 177.6,
+   "timeUtc": "2030-06-15T12:00:00Z",
+   "sun": {
+    "azimuthDeg": 190.342742806,
+    "elevationDeg": -43.84897648
+   },
+   "earth": {
+    "azimuthDeg": 184.867252252,
+    "elevationDeg": -44.134451288
+   }
+  },
+  {
+   "site": "chang-e-4 (IAU Statio Tianhe)",
+   "latDeg": -45.45,
+   "lonDeg": 177.6,
+   "timeUtc": "2030-10-21T07:30:00Z",
+   "sun": {
+    "azimuthDeg": 73.907139211,
+    "elevationDeg": 16.646476392
+   },
+   "earth": {
+    "azimuthDeg": 173.846938283,
+    "elevationDeg": -50.841382544
+   }
+  },
+  {
+   "site": "chang-e-4 (IAU Statio Tianhe)",
+   "latDeg": -45.45,
+   "lonDeg": 177.6,
+   "timeUtc": "2035-07-04T21:00:00Z",
+   "sun": {
+    "azimuthDeg": 14.719899269,
+    "elevationDeg": 44.844900351
+   },
+   "earth": {
+    "azimuthDeg": 184.179496316,
+    "elevationDeg": -50.500270874
+   }
+  },
+  {
+   "site": "chang-e-4 (IAU Statio Tianhe)",
+   "latDeg": -45.45,
+   "lonDeg": 177.6,
+   "timeUtc": "2043-12-25T12:00:00Z",
+   "sun": {
+    "azimuthDeg": 78.156202112,
+    "elevationDeg": 13.525480745
+   },
+   "earth": {
+    "azimuthDeg": 191.434890746,
+    "elevationDeg": -47.986571617
+   }
+  },
+  {
+   "site": "chang-e-4 (IAU Statio Tianhe)",
+   "latDeg": -45.45,
+   "lonDeg": 177.6,
+   "timeUtc": "2060-04-12T05:00:00Z",
+   "sun": {
+    "azimuthDeg": 235.302512943,
+    "elevationDeg": -28.724914036
+   },
+   "earth": {
+    "azimuthDeg": 188.051079995,
+    "elevationDeg": -38.809530858
+   }
+  },
+  {
+   "site": "chang-e-4 (IAU Statio Tianhe)",
+   "latDeg": -45.45,
+   "lonDeg": 177.6,
+   "timeUtc": "2090-11-30T14:00:00Z",
+   "sun": {
+    "azimuthDeg": 261.213326441,
+    "elevationDeg": -10.701780779
+   },
+   "earth": {
+    "azimuthDeg": 185.208230891,
+    "elevationDeg": -45.640513793
+   }
+  },
+  {
+   "site": "malapert crater centre (IAU)",
+   "latDeg": -84.9998,
+   "lonDeg": 11.4031,
+   "timeUtc": "2005-03-20T18:00:00Z",
+   "sun": {
+    "azimuthDeg": 46.167142537,
+    "elevationDeg": 4.131014947
+   },
+   "earth": {
+    "azimuthDeg": 348.107223875,
+    "elevationDeg": 11.381618129
+   }
+  },
+  {
+   "site": "malapert crater centre (IAU)",
+   "latDeg": -84.9998,
+   "lonDeg": 11.4031,
+   "timeUtc": "2015-09-09T03:00:00Z",
+   "sun": {
+    "azimuthDeg": 220.815487116,
+    "elevationDeg": -3.407428638
+   },
+   "earth": {
+    "azimuthDeg": 354.787698614,
+    "elevationDeg": -1.231667699
+   }
+  },
+  {
+   "site": "malapert crater centre (IAU)",
+   "latDeg": -84.9998,
+   "lonDeg": 11.4031,
+   "timeUtc": "2026-11-15T12:00:00Z",
+   "sun": {
+    "azimuthDeg": 97.045843558,
+    "elevationDeg": 0.946845853
+   },
+   "earth": {
+    "azimuthDeg": 345.294462227,
+    "elevationDeg": 1.888616003
+   }
+  },
+  {
+   "site": "malapert crater centre (IAU)",
+   "latDeg": -84.9998,
+   "lonDeg": 11.4031,
+   "timeUtc": "2027-02-03T06:00:00Z",
+   "sun": {
+    "azimuthDeg": 207.44129522,
+    "elevationDeg": -4.258310936
+   },
+   "earth": {
+    "azimuthDeg": 350.323361569,
+    "elevationDeg": -0.049694638
+   }
+  },
+  {
+   "site": "malapert crater centre (IAU)",
+   "latDeg": -84.9998,
+   "lonDeg": 11.4031,
+   "timeUtc": "2027-08-30T00:00:00Z",
+   "sun": {
+    "azimuthDeg": 192.241842968,
+    "elevationDeg": -4.214747442
+   },
+   "earth": {
+    "azimuthDeg": 347.695760711,
+    "elevationDeg": 4.504615487
+   }
+  },
+  {
+   "site": "malapert crater centre (IAU)",
+   "latDeg": -84.9998,
+   "lonDeg": 11.4031,
+   "timeUtc": "2028-03-01T15:00:00Z",
+   "sun": {
+    "azimuthDeg": 104.285063507,
+    "elevationDeg": -2.230413454
+   },
+   "earth": {
+    "azimuthDeg": 341.720992752,
+    "elevationDeg": 11.173427517
+   }
+  },
+  {
+   "site": "malapert crater centre (IAU)",
+   "latDeg": -84.9998,
+   "lonDeg": 11.4031,
+   "timeUtc": "2029-05-10T09:00:00Z",
+   "sun": {
+    "azimuthDeg": 204.787870429,
+    "elevationDeg": -5.691335356
+   },
+   "earth": {
+    "azimuthDeg": 349.34386312,
+    "elevationDeg": 11.296763603
+   }
+  },
+  {
+   "site": "malapert crater centre (IAU)",
+   "latDeg": -84.9998,
+   "lonDeg": 11.4031,
+   "timeUtc": "2030-01-01T00:00:00Z",
+   "sun": {
+    "azimuthDeg": 210.704721899,
+    "elevationDeg": -4.732539757
+   },
+   "earth": {
+    "azimuthDeg": 348.395088612,
+    "elevationDeg": 1.551633355
+   }
+  },
+  {
+   "site": "malapert crater centre (IAU)",
+   "latDeg": -84.9998,
+   "lonDeg": 11.4031,
+   "timeUtc": "2030-06-15T12:00:00Z",
+   "sun": {
+    "azimuthDeg": 353.609967412,
+    "elevationDeg": 5.199123231
+   },
+   "earth": {
+    "azimuthDeg": 349.653521476,
+    "elevationDeg": 5.153248889
+   }
+  },
+  {
+   "site": "malapert crater centre (IAU)",
+   "latDeg": -84.9998,
+   "lonDeg": 11.4031,
+   "timeUtc": "2030-10-21T07:30:00Z",
+   "sun": {
+    "azimuthDeg": 233.257254236,
+    "elevationDeg": -1.971872145
+   },
+   "earth": {
+    "azimuthDeg": 342.382472148,
+    "elevationDeg": -1.767891622
+   }
+  },
+  {
+   "site": "malapert crater centre (IAU)",
+   "latDeg": -84.9998,
+   "lonDeg": 11.4031,
+   "timeUtc": "2035-07-04T21:00:00Z",
+   "sun": {
+    "azimuthDeg": 176.571553138,
+    "elevationDeg": -3.761138297
+   },
+   "earth": {
+    "azimuthDeg": 348.934854423,
+    "elevationDeg": -1.213199349
+   }
+  },
+  {
+   "site": "malapert crater centre (IAU)",
+   "latDeg": -84.9998,
+   "lonDeg": 11.4031,
+   "timeUtc": "2043-12-25T12:00:00Z",
+   "sun": {
+    "azimuthDeg": 238.338529631,
+    "elevationDeg": -1.096674129
+   },
+   "earth": {
+    "azimuthDeg": 353.876101034,
+    "elevationDeg": 0.916332002
+   }
+  },
+  {
+   "site": "malapert crater centre (IAU)",
+   "latDeg": -84.9998,
+   "lonDeg": 11.4031,
+   "timeUtc": "2060-04-12T05:00:00Z",
+   "sun": {
+    "azimuthDeg": 32.454858891,
+    "elevationDeg": 4.663833974
+   },
+   "earth": {
+    "azimuthDeg": 352.416441971,
+    "elevationDeg": 10.335972302
+   }
+  },
+  {
+   "site": "malapert crater centre (IAU)",
+   "latDeg": -84.9998,
+   "lonDeg": 11.4031,
+   "timeUtc": "2090-11-30T14:00:00Z",
+   "sun": {
+    "azimuthDeg": 62.43826734,
+    "elevationDeg": 0.764175441
+   },
+   "earth": {
+    "azimuthDeg": 349.825500637,
+    "elevationDeg": 3.641383858
+   }
+  },
+  {
+   "site": "shackleton crater centre (IAU)",
+   "latDeg": -89.67,
+   "lonDeg": 129.78,
+   "timeUtc": "2005-03-20T18:00:00Z",
+   "sun": {
+    "azimuthDeg": 287.635420314,
+    "elevationDeg": 0.762184712
+   },
+   "earth": {
+    "azimuthDeg": 229.866437093,
+    "elevationDeg": 6.271118316
+   }
+  },
+  {
+   "site": "shackleton crater centre (IAU)",
+   "latDeg": -89.67,
+   "lonDeg": 129.78,
+   "timeUtc": "2015-09-09T03:00:00Z",
+   "sun": {
+    "azimuthDeg": 102.354233645,
+    "elevationDeg": 0.309700081
+   },
+   "earth": {
+    "azimuthDeg": 236.412297352,
+    "elevationDeg": -6.392238338
+   }
+  },
+  {
+   "site": "shackleton crater centre (IAU)",
+   "latDeg": -89.67,
+   "lonDeg": 129.78,
+   "timeUtc": "2026-11-15T12:00:00Z",
+   "sun": {
+    "azimuthDeg": 338.55680366,
+    "elevationDeg": 1.863029961
+   },
+   "earth": {
+    "azimuthDeg": 226.923128366,
+    "elevationDeg": -3.173086137
+   }
+  },
+  {
+   "site": "shackleton crater centre (IAU)",
+   "latDeg": -89.67,
+   "lonDeg": 129.78,
+   "timeUtc": "2027-02-03T06:00:00Z",
+   "sun": {
+    "azimuthDeg": 88.983535972,
+    "elevationDeg": 0.187383281
+   },
+   "earth": {
+    "azimuthDeg": 231.935056191,
+    "elevationDeg": -5.181107808
+   }
+  },
+  {
+   "site": "shackleton crater centre (IAU)",
+   "latDeg": -89.67,
+   "lonDeg": 129.78,
+   "timeUtc": "2027-08-30T00:00:00Z",
+   "sun": {
+    "azimuthDeg": 73.836166939,
+    "elevationDeg": 0.764073114
+   },
+   "earth": {
+    "azimuthDeg": 229.363240909,
+    "elevationDeg": -0.597031968
+   }
+  },
+  {
+   "site": "shackleton crater centre (IAU)",
+   "latDeg": -89.67,
+   "lonDeg": 129.78,
+   "timeUtc": "2028-03-01T15:00:00Z",
+   "sun": {
+    "azimuthDeg": 346.045523096,
+    "elevationDeg": -0.669873934
+   },
+   "earth": {
+    "azimuthDeg": 223.566145702,
+    "elevationDeg": 6.179474041
+   }
+  },
+  {
+   "site": "shackleton crater centre (IAU)",
+   "latDeg": -89.67,
+   "lonDeg": 129.78,
+   "timeUtc": "2029-05-10T09:00:00Z",
+   "sun": {
+    "azimuthDeg": 86.279382466,
+    "elevationDeg": -1.127638309
+   },
+   "earth": {
+    "azimuthDeg": 231.084465215,
+    "elevationDeg": 6.170943084
+   }
+  },
+  {
+   "site": "shackleton crater centre (IAU)",
+   "latDeg": -89.67,
+   "lonDeg": 129.78,
+   "timeUtc": "2030-01-01T00:00:00Z",
+   "sun": {
+    "azimuthDeg": 92.210362228,
+    "elevationDeg": -0.442783411
+   },
+   "earth": {
+    "azimuthDeg": 230.021259878,
+    "elevationDeg": -3.558013336
+   }
+  },
+  {
+   "site": "shackleton crater centre (IAU)",
+   "latDeg": -89.67,
+   "lonDeg": 129.78,
+   "timeUtc": "2030-06-15T12:00:00Z",
+   "sun": {
+    "azimuthDeg": 235.258775293,
+    "elevationDeg": 0.041762206
+   },
+   "earth": {
+    "azimuthDeg": 231.321310793,
+    "elevationDeg": 0.026535951
+   }
+  },
+  {
+   "site": "shackleton crater centre (IAU)",
+   "latDeg": -89.67,
+   "lonDeg": 129.78,
+   "timeUtc": "2030-10-21T07:30:00Z",
+   "sun": {
+    "azimuthDeg": 114.85214572,
+    "elevationDeg": 0.883063807
+   },
+   "earth": {
+    "azimuthDeg": 223.92780535,
+    "elevationDeg": -6.768557859
+   }
+  },
+  {
+   "site": "shackleton crater centre (IAU)",
+   "latDeg": -89.67,
+   "lonDeg": 129.78,
+   "timeUtc": "2035-07-04T21:00:00Z",
+   "sun": {
+    "azimuthDeg": 58.207705062,
+    "elevationDeg": 1.404013788
+   },
+   "earth": {
+    "azimuthDeg": 230.527483411,
+    "elevationDeg": -6.328291186
+   }
+  },
+  {
+   "site": "shackleton crater centre (IAU)",
+   "latDeg": -89.67,
+   "lonDeg": 129.78,
+   "timeUtc": "2043-12-25T12:00:00Z",
+   "sun": {
+    "azimuthDeg": 119.984950566,
+    "elevationDeg": 1.363629854
+   },
+   "earth": {
+    "azimuthDeg": 235.505419189,
+    "elevationDeg": -4.241598097
+   }
+  },
+  {
+   "site": "shackleton crater centre (IAU)",
+   "latDeg": -89.67,
+   "lonDeg": 129.78,
+   "timeUtc": "2060-04-12T05:00:00Z",
+   "sun": {
+    "azimuthDeg": 273.95583011,
+    "elevationDeg": 0.463796018
+   },
+   "earth": {
+    "azimuthDeg": 234.107079159,
+    "elevationDeg": 5.18251198
+   }
+  },
+  {
+   "site": "shackleton crater centre (IAU)",
+   "latDeg": -89.67,
+   "lonDeg": 129.78,
+   "timeUtc": "2090-11-30T14:00:00Z",
+   "sun": {
+    "azimuthDeg": 304.098661765,
+    "elevationDeg": -1.364429338
+   },
+   "earth": {
+    "azimuthDeg": 231.475706275,
+    "elevationDeg": -1.486416508
+   }
+  },
+  {
+   "site": "haworth crater centre (IAU)",
+   "latDeg": -87.45,
+   "lonDeg": -5.17,
+   "timeUtc": "2005-03-20T18:00:00Z",
+   "sun": {
+    "azimuthDeg": 62.638723845,
+    "elevationDeg": 1.835305385
+   },
+   "earth": {
+    "azimuthDeg": 4.876102717,
+    "elevationDeg": 9.026169352
+   }
+  },
+  {
+   "site": "haworth crater centre (IAU)",
+   "latDeg": -87.45,
+   "lonDeg": -5.17,
+   "timeUtc": "2015-09-09T03:00:00Z",
+   "sun": {
+    "azimuthDeg": 237.3138187,
+    "elevationDeg": -0.997172143
+   },
+   "earth": {
+    "azimuthDeg": 11.291935052,
+    "elevationDeg": -3.710166777
+   }
+  },
+  {
+   "site": "haworth crater centre (IAU)",
+   "latDeg": -87.45,
+   "lonDeg": -5.17,
+   "timeUtc": "2026-11-15T12:00:00Z",
+   "sun": {
+    "azimuthDeg": 113.553156631,
+    "elevationDeg": 0.537619724
+   },
+   "earth": {
+    "azimuthDeg": 1.859217447,
+    "elevationDeg": -0.399393155
+   }
+  },
+  {
+   "site": "haworth crater centre (IAU)",
+   "latDeg": -87.45,
+   "lonDeg": -5.17,
+   "timeUtc": "2027-02-03T06:00:00Z",
+   "sun": {
+    "azimuthDeg": 223.95520298,
+    "elevationDeg": -1.654671607
+   },
+   "earth": {
+    "azimuthDeg": 6.844638634,
+    "elevationDeg": -2.446589637
+   }
+  },
+  {
+   "site": "haworth crater centre (IAU)",
+   "latDeg": -87.45,
+   "lonDeg": -5.17,
+   "timeUtc": "2027-08-30T00:00:00Z",
+   "sun": {
+    "azimuthDeg": 208.791721244,
+    "elevationDeg": -1.562752148
+   },
+   "earth": {
+    "azimuthDeg": 4.316216458,
+    "elevationDeg": 2.160845215
+   }
+  },
+  {
+   "site": "haworth crater centre (IAU)",
+   "latDeg": -87.45,
+   "lonDeg": -5.17,
+   "timeUtc": "2028-03-01T15:00:00Z",
+   "sun": {
+    "azimuthDeg": 120.931544544,
+    "elevationDeg": -2.302226751
+   },
+   "earth": {
+    "azimuthDeg": 358.533182452,
+    "elevationDeg": 8.96932082
+   }
+  },
+  {
+   "site": "haworth crater centre (IAU)",
+   "latDeg": -87.45,
+   "lonDeg": -5.17,
+   "timeUtc": "2029-05-10T09:00:00Z",
+   "sun": {
+    "azimuthDeg": 221.29780422,
+    "elevationDeg": -3.065867418
+   },
+   "earth": {
+    "azimuthDeg": 6.101258941,
+    "elevationDeg": 8.91536531
+   }
+  },
+  {
+   "site": "haworth crater centre (IAU)",
+   "latDeg": -87.45,
+   "lonDeg": -5.17,
+   "timeUtc": "2030-01-01T00:00:00Z",
+   "sun": {
+    "azimuthDeg": 227.205194482,
+    "elevationDeg": -2.163298829
+   },
+   "earth": {
+    "azimuthDeg": 4.950281408,
+    "elevationDeg": -0.80597707
+   }
+  },
+  {
+   "site": "haworth crater centre (IAU)",
+   "latDeg": -87.45,
+   "lonDeg": -5.17,
+   "timeUtc": "2030-06-15T12:00:00Z",
+   "sun": {
+    "azimuthDeg": 10.221148892,
+    "elevationDeg": 2.739410463
+   },
+   "earth": {
+    "azimuthDeg": 6.281798584,
+    "elevationDeg": 2.767805693
+   }
+  },
+  {
+   "site": "haworth crater centre (IAU)",
+   "latDeg": -87.45,
+   "lonDeg": -5.17,
+   "timeUtc": "2030-10-21T07:30:00Z",
+   "sun": {
+    "azimuthDeg": 249.772861619,
+    "elevationDeg": 0.140478313
+   },
+   "earth": {
+    "azimuthDeg": 358.856607003,
+    "elevationDeg": -3.982502353
+   }
+  },
+  {
+   "site": "haworth crater centre (IAU)",
+   "latDeg": -87.45,
+   "lonDeg": -5.17,
+   "timeUtc": "2035-07-04T21:00:00Z",
+   "sun": {
+    "azimuthDeg": 193.151362335,
+    "elevationDeg": -1.253001465
+   },
+   "earth": {
+    "azimuthDeg": 5.431611742,
+    "elevationDeg": -3.581087276
+   }
+  },
+  {
+   "site": "haworth crater centre (IAU)",
+   "latDeg": -87.45,
+   "lonDeg": -5.17,
+   "timeUtc": "2043-12-25T12:00:00Z",
+   "sun": {
+    "azimuthDeg": 254.876277947,
+    "elevationDeg": 0.864234361
+   },
+   "earth": {
+    "azimuthDeg": 10.416293263,
+    "elevationDeg": -1.547347389
+   }
+  },
+  {
+   "site": "haworth crater centre (IAU)",
+   "latDeg": -87.45,
+   "lonDeg": -5.17,
+   "timeUtc": "2060-04-12T05:00:00Z",
+   "sun": {
+    "azimuthDeg": 48.9513763,
+    "elevationDeg": 2.116484058
+   },
+   "earth": {
+    "azimuthDeg": 9.131653589,
+    "elevationDeg": 7.895115416
+   }
+  },
+  {
+   "site": "haworth crater centre (IAU)",
+   "latDeg": -87.45,
+   "lonDeg": -5.17,
+   "timeUtc": "2090-11-30T14:00:00Z",
+   "sun": {
+    "azimuthDeg": 78.98464856,
+    "elevationDeg": -1.063353256
+   },
+   "earth": {
+    "azimuthDeg": 6.421735435,
+    "elevationDeg": 1.253119037
+   }
+  },
+  {
+   "site": "far-side centre",
+   "latDeg": 0.0,
+   "lonDeg": 180.0,
+   "timeUtc": "2005-03-20T18:00:00Z",
+   "sun": {
+    "azimuthDeg": 269.213357053,
+    "elevationDeg": -32.578779048
+   },
+   "earth": {
+    "azimuthDeg": 177.253521221,
+    "elevationDeg": -83.292567799
+   }
+  },
+  {
+   "site": "far-side centre",
+   "latDeg": 0.0,
+   "lonDeg": 180.0,
+   "timeUtc": "2015-09-09T03:00:00Z",
+   "sun": {
+    "azimuthDeg": 90.48257382,
+    "elevationDeg": 37.866203365
+   },
+   "earth": {
+    "azimuthDeg": 314.201354226,
+    "elevationDeg": -81.471229529
+   }
+  },
+  {
+   "site": "far-side centre",
+   "latDeg": 0.0,
+   "lonDeg": 180.0,
+   "timeUtc": "2026-11-15T12:00:00Z",
+   "sun": {
+    "azimuthDeg": 268.360205207,
+    "elevationDeg": 18.332757966
+   },
+   "earth": {
+    "azimuthDeg": 50.731748521,
+    "elevationDeg": -85.747665339
+   }
+  },
+  {
+   "site": "far-side centre",
+   "latDeg": 0.0,
+   "lonDeg": 180.0,
+   "timeUtc": "2027-02-03T06:00:00Z",
+   "sun": {
+    "azimuthDeg": 90.291013788,
+    "elevationDeg": 51.236744965
+   },
+   "earth": {
+    "azimuthDeg": 340.36286596,
+    "elevationDeg": -84.994854832
+   }
+  },
+  {
+   "site": "far-side centre",
+   "latDeg": 0.0,
+   "lonDeg": 180.0,
+   "timeUtc": "2027-08-30T00:00:00Z",
+   "sun": {
+    "azimuthDeg": 91.679449312,
+    "elevationDeg": 66.378507925
+   },
+   "earth": {
+    "azimuthDeg": 83.001013264,
+    "elevationDeg": -89.140025875
+   }
+  },
+  {
+   "site": "far-side centre",
+   "latDeg": 0.0,
+   "lonDeg": 180.0,
+   "timeUtc": "2028-03-01T15:00:00Z",
+   "sun": {
+    "azimuthDeg": 271.09921322,
+    "elevationDeg": 25.819631708
+   },
+   "earth": {
+    "azimuthDeg": 135.371829828,
+    "elevationDeg": -80.649206209
+   }
+  },
+  {
+   "site": "far-side centre",
+   "latDeg": 0.0,
+   "lonDeg": 180.0,
+   "timeUtc": "2029-05-10T09:00:00Z",
+   "sun": {
+    "azimuthDeg": 88.049850361,
+    "elevationDeg": 53.917890072
+   },
+   "earth": {
+    "azimuthDeg": 187.653054118,
+    "elevationDeg": -83.346744826
+   }
+  },
+  {
+   "site": "far-side centre",
+   "latDeg": 0.0,
+   "lonDeg": 180.0,
+   "timeUtc": "2030-01-01T00:00:00Z",
+   "sun": {
+    "azimuthDeg": 89.358241791,
+    "elevationDeg": 48.004888426
+   },
+   "earth": {
+    "azimuthDeg": 3.956769311,
+    "elevationDeg": -86.93386071
+   }
+  },
+  {
+   "site": "far-side centre",
+   "latDeg": 0.0,
+   "lonDeg": 180.0,
+   "timeUtc": "2030-06-15T12:00:00Z",
+   "sun": {
+    "azimuthDeg": 267.378080265,
+    "elevationDeg": -84.955383499
+   },
+   "earth": {
+    "azimuthDeg": 245.165296625,
+    "elevationDeg": -88.790344303
+   }
+  },
+  {
+   "site": "far-side centre",
+   "latDeg": 0.0,
+   "lonDeg": 180.0,
+   "timeUtc": "2030-10-21T07:30:00Z",
+   "sun": {
+    "azimuthDeg": 91.131537027,
+    "elevationDeg": 25.367904919
+   },
+   "earth": {
+    "azimuthDeg": 45.005825065,
+    "elevationDeg": -81.141080007
+   }
+  },
+  {
+   "site": "far-side centre",
+   "latDeg": 0.0,
+   "lonDeg": 180.0,
+   "timeUtc": "2035-07-04T21:00:00Z",
+   "sun": {
+    "azimuthDeg": 98.79587593,
+    "elevationDeg": 81.924917741
+   },
+   "earth": {
+    "azimuthDeg": 357.256147316,
+    "elevationDeg": -84.17963043
+   }
+  },
+  {
+   "site": "far-side centre",
+   "latDeg": 0.0,
+   "lonDeg": 180.0,
+   "timeUtc": "2043-12-25T12:00:00Z",
+   "sun": {
+    "azimuthDeg": 91.629826161,
+    "elevationDeg": 20.234107959
+   },
+   "earth": {
+    "azimuthDeg": 305.940598574,
+    "elevationDeg": -83.53221313
+   }
+  },
+  {
+   "site": "far-side centre",
+   "latDeg": 0.0,
+   "lonDeg": 180.0,
+   "timeUtc": "2060-04-12T05:00:00Z",
+   "sun": {
+    "azimuthDeg": 269.361156334,
+    "elevationDeg": -46.260246198
+   },
+   "earth": {
+    "azimuthDeg": 214.73346083,
+    "elevationDeg": -83.183622837
+   }
+  },
+  {
+   "site": "far-side centre",
+   "latDeg": 0.0,
+   "lonDeg": 180.0,
+   "timeUtc": "2090-11-30T14:00:00Z",
+   "sun": {
+    "azimuthDeg": 271.612163507,
+    "elevationDeg": -16.122880876
+   },
+   "earth": {
+    "azimuthDeg": 309.612985516,
+    "elevationDeg": -88.383767812
+   }
+  },
+  {
+   "site": "near-side limb",
+   "latDeg": 0.0,
+   "lonDeg": -88.0,
+   "timeUtc": "2005-03-20T18:00:00Z",
+   "sun": {
+    "azimuthDeg": 91.167797362,
+    "elevationDeg": -55.414149358
+   },
+   "earth": {
+    "azimuthDeg": 96.73389378,
+    "elevationDeg": 2.06229399
+   }
+  },
+  {
+   "site": "near-side limb",
+   "latDeg": 0.0,
+   "lonDeg": -88.0,
+   "timeUtc": "2015-09-09T03:00:00Z",
+   "sun": {
+    "azimuthDeg": 269.405704429,
+    "elevationDeg": 50.130348923
+   },
+   "earth": {
+    "azimuthDeg": 84.023802511,
+    "elevationDeg": -4.390498484
+   }
+  },
+  {
+   "site": "near-side limb",
+   "latDeg": 0.0,
+   "lonDeg": -88.0,
+   "timeUtc": "2026-11-15T12:00:00Z",
+   "sun": {
+    "azimuthDeg": 264.48321973,
+    "elevationDeg": -73.587829489
+   },
+   "earth": {
+    "azimuthDeg": 87.286789748,
+    "elevationDeg": 5.057295875
+   }
+  },
+  {
+   "site": "near-side limb",
+   "latDeg": 0.0,
+   "lonDeg": -88.0,
+   "timeUtc": "2027-02-03T06:00:00Z",
+   "sun": {
+    "azimuthDeg": 269.772566461,
+    "elevationDeg": 36.761711926
+   },
+   "earth": {
+    "azimuthDeg": 85.266435125,
+    "elevationDeg": 0.060773129
+   }
+  },
+  {
+   "site": "near-side limb",
+   "latDeg": 0.0,
+   "lonDeg": -88.0,
+   "timeUtc": "2027-08-30T00:00:00Z",
+   "sun": {
+    "azimuthDeg": 269.27627014,
+    "elevationDeg": 21.61001168
+   },
+   "earth": {
+    "azimuthDeg": 89.894577033,
+    "elevationDeg": 2.581128332
+   }
+  },
+  {
+   "site": "near-side limb",
+   "latDeg": 0.0,
+   "lonDeg": -88.0,
+   "timeUtc": "2028-03-01T15:00:00Z",
+   "sun": {
+    "azimuthDeg": 272.448312564,
+    "elevationDeg": -66.156560644
+   },
+   "earth": {
+    "azimuthDeg": 96.744710461,
+    "elevationDeg": 8.319558696
+   }
+  },
+  {
+   "site": "near-side limb",
+   "latDeg": 0.0,
+   "lonDeg": -88.0,
+   "timeUtc": "2029-05-10T09:00:00Z",
+   "sun": {
+    "azimuthDeg": 271.386180594,
+    "elevationDeg": 34.057594352
+   },
+   "earth": {
+    "azimuthDeg": 96.623094129,
+    "elevationDeg": 0.853721906
+   }
+  },
+  {
+   "site": "near-side limb",
+   "latDeg": 0.0,
+   "lonDeg": -88.0,
+   "timeUtc": "2030-01-01T00:00:00Z",
+   "sun": {
+    "azimuthDeg": 270.560437672,
+    "elevationDeg": 39.991001691
+   },
+   "earth": {
+    "azimuthDeg": 86.924315153,
+    "elevationDeg": 1.936670573
+   }
+  },
+  {
+   "site": "near-side limb",
+   "latDeg": 0.0,
+   "lonDeg": -88.0,
+   "timeUtc": "2030-06-15T12:00:00Z",
+   "sun": {
+    "azimuthDeg": 90.230796666,
+    "elevationDeg": -3.040049072
+   },
+   "earth": {
+    "azimuthDeg": 90.510551177,
+    "elevationDeg": 0.619115846
+   }
+  },
+  {
+   "site": "near-side limb",
+   "latDeg": 0.0,
+   "lonDeg": -88.0,
+   "timeUtc": "2030-10-21T07:30:00Z",
+   "sun": {
+    "azimuthDeg": 267.777176254,
+    "elevationDeg": 62.609244038
+   },
+   "earth": {
+    "azimuthDeg": 83.655263976,
+    "elevationDeg": 8.016022942
+   }
+  },
+  {
+   "site": "near-side limb",
+   "latDeg": 0.0,
+   "lonDeg": -88.0,
+   "timeUtc": "2035-07-04T21:00:00Z",
+   "sun": {
+    "azimuthDeg": 268.762469247,
+    "elevationDeg": 5.979215914
+   },
+   "earth": {
+    "azimuthDeg": 84.155526507,
+    "elevationDeg": 1.431920263
+   }
+  },
+  {
+   "site": "near-side limb",
+   "latDeg": 0.0,
+   "lonDeg": -88.0,
+   "timeUtc": "2043-12-25T12:00:00Z",
+   "sun": {
+    "azimuthDeg": 265.965777225,
+    "elevationDeg": 67.707630069
+   },
+   "earth": {
+    "azimuthDeg": 86.186538279,
+    "elevationDeg": -3.507255576
+   }
+  },
+  {
+   "site": "near-side limb",
+   "latDeg": 0.0,
+   "lonDeg": -88.0,
+   "timeUtc": "2060-04-12T05:00:00Z",
+   "sun": {
+    "azimuthDeg": 90.591909676,
+    "elevationDeg": -41.737408338
+   },
+   "earth": {
+    "azimuthDeg": 95.624578332,
+    "elevationDeg": -2.150114844
+   }
+  },
+  {
+   "site": "near-side limb",
+   "latDeg": 0.0,
+   "lonDeg": -88.0,
+   "timeUtc": "2090-11-30T14:00:00Z",
+   "sun": {
+    "azimuthDeg": 85.03371013,
+    "elevationDeg": -71.808102576
+   },
+   "earth": {
+    "azimuthDeg": 88.965060555,
+    "elevationDeg": 0.503210406
+   }
+  },
+  {
+   "site": "mid-latitude north",
+   "latDeg": 45.0,
+   "lonDeg": 60.0,
+   "timeUtc": "2005-03-20T18:00:00Z",
+   "sun": {
+    "azimuthDeg": 183.605504098,
+    "elevationDeg": 44.279242601
+   },
+   "earth": {
+    "azimuthDeg": 243.483359295,
+    "elevationDeg": 15.118904143
+   }
+  },
+  {
+   "site": "mid-latitude north",
+   "latDeg": 45.0,
+   "lonDeg": 60.0,
+   "timeUtc": "2015-09-09T03:00:00Z",
+   "sun": {
+    "azimuthDeg": 11.130591644,
+    "elevationDeg": -44.841056228
+   },
+   "earth": {
+    "azimuthDeg": 246.956044284,
+    "elevationDeg": 29.018078436
+   }
+  },
+  {
+   "site": "mid-latitude north",
+   "latDeg": 45.0,
+   "lonDeg": 60.0,
+   "timeUtc": "2026-11-15T12:00:00Z",
+   "sun": {
+    "azimuthDeg": 123.218134544,
+    "elevationDeg": 26.783868178
+   },
+   "earth": {
+    "azimuthDeg": 252.351150098,
+    "elevationDeg": 20.292619871
+   }
+  },
+  {
+   "site": "mid-latitude north",
+   "latDeg": 45.0,
+   "lonDeg": 60.0,
+   "timeUtc": "2027-02-03T06:00:00Z",
+   "sun": {
+    "azimuthDeg": 28.87606857,
+    "elevationDeg": -41.401902879
+   },
+   "earth": {
+    "azimuthDeg": 249.807113141,
+    "elevationDeg": 25.155380462
+   }
+  },
+  {
+   "site": "mid-latitude north",
+   "latDeg": 45.0,
+   "lonDeg": 60.0,
+   "timeUtc": "2027-08-30T00:00:00Z",
+   "sun": {
+    "azimuthDeg": 46.603854146,
+    "elevationDeg": -35.275409531
+   },
+   "earth": {
+    "azimuthDeg": 248.556736008,
+    "elevationDeg": 19.961034499
+   }
+  },
+  {
+   "site": "mid-latitude north",
+   "latDeg": 45.0,
+   "lonDeg": 60.0,
+   "timeUtc": "2028-03-01T15:00:00Z",
+   "sun": {
+    "azimuthDeg": 114.954828176,
+    "elevationDeg": 24.163748525
+   },
+   "earth": {
+    "azimuthDeg": 248.413488253,
+    "elevationDeg": 11.084708205
+   }
+  },
+  {
+   "site": "mid-latitude north",
+   "latDeg": 45.0,
+   "lonDeg": 60.0,
+   "timeUtc": "2029-05-10T09:00:00Z",
+   "sun": {
+    "azimuthDeg": 31.559447613,
+    "elevationDeg": -39.198591738
+   },
+   "earth": {
+    "azimuthDeg": 242.581889904,
+    "elevationDeg": 15.970837679
+   }
+  },
+  {
+   "site": "mid-latitude north",
+   "latDeg": 45.0,
+   "lonDeg": 60.0,
+   "timeUtc": "2030-01-01T00:00:00Z",
+   "sun": {
+    "azimuthDeg": 24.51802723,
+    "elevationDeg": -41.848251615
+   },
+   "earth": {
+    "azimuthDeg": 250.150001106,
+    "elevationDeg": 22.620505757
+   }
+  },
+  {
+   "site": "mid-latitude north",
+   "latDeg": 45.0,
+   "lonDeg": 60.0,
+   "timeUtc": "2030-06-15T12:00:00Z",
+   "sun": {
+    "azimuthDeg": 243.466085921,
+    "elevationDeg": 23.773436336
+   },
+   "earth": {
+    "azimuthDeg": 246.540840121,
+    "elevationDeg": 20.776856554
+   }
+  },
+  {
+   "site": "mid-latitude north",
+   "latDeg": 45.0,
+   "lonDeg": 60.0,
+   "timeUtc": "2030-10-21T07:30:00Z",
+   "sun": {
+    "azimuthDeg": 353.352368428,
+    "elevationDeg": -45.833068541
+   },
+   "earth": {
+    "azimuthDeg": 257.30956483,
+    "elevationDeg": 20.84095299
+   }
+  },
+  {
+   "site": "mid-latitude north",
+   "latDeg": 45.0,
+   "lonDeg": 60.0,
+   "timeUtc": "2035-07-04T21:00:00Z",
+   "sun": {
+    "azimuthDeg": 61.951047467,
+    "elevationDeg": -26.759936259
+   },
+   "earth": {
+    "azimuthDeg": 251.78326484,
+    "elevationDeg": 25.004327641
+   }
+  },
+  {
+   "site": "mid-latitude north",
+   "latDeg": 45.0,
+   "lonDeg": 60.0,
+   "timeUtc": "2043-12-25T12:00:00Z",
+   "sun": {
+    "azimuthDeg": 345.965153546,
+    "elevationDeg": -45.684609235
+   },
+   "earth": {
+    "azimuthDeg": 246.134809229,
+    "elevationDeg": 26.800077277
+   }
+  },
+  {
+   "site": "mid-latitude north",
+   "latDeg": 45.0,
+   "lonDeg": 60.0,
+   "timeUtc": "2060-04-12T05:00:00Z",
+   "sun": {
+    "azimuthDeg": 202.255810309,
+    "elevationDeg": 42.325403657
+   },
+   "earth": {
+    "azimuthDeg": 240.783692651,
+    "elevationDeg": 18.632341249
+   }
+  },
+  {
+   "site": "mid-latitude north",
+   "latDeg": 45.0,
+   "lonDeg": 60.0,
+   "timeUtc": "2090-11-30T14:00:00Z",
+   "sun": {
+    "azimuthDeg": 160.239352153,
+    "elevationDeg": 44.856900538
+   },
+   "earth": {
+    "azimuthDeg": 247.503005754,
+    "elevationDeg": 22.077457668
+   }
+  }
+ ]
+}
