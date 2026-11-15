@@ -9,7 +9,7 @@ import { FAMOUS_SITES, type FamousSite } from "./landing-sites-content";
 import { globeRotation, lerp } from "./space-math";
 import { createSpaceRenderer, type SpaceScene } from "./space-renderer";
 
-const createSitesRenderer = (canvas: HTMLCanvasElement) => createSpaceRenderer(canvas, { withSun: false });
+const createSitesRenderer = (canvas: HTMLCanvasElement) => createSpaceRenderer(canvas);
 import { useAnimatedCanvas } from "./use-animated-canvas";
 import "./landing-sites.css";
 

@@ -4,7 +4,7 @@
 // the ground) is done ONCE into a "depth" image (MARCH pass). Every frame after that only does
 // the lighting for the current Sun position (SHADE pass), which is what makes the shadows sweep.
 
-import { GLSL_EARTH, GLSL_GLOBE, GLSL_NOISE, GLSL_STARS, GLSL_SUN_PHOTO } from "./shader-chunks";
+import { GLSL_EARTH, GLSL_GLOBE, GLSL_NOISE, GLSL_STARS, GLSL_SUN } from "./shader-chunks";
 import { FINE_TILE_M, MID_TILE_M } from "./surface-terrain";
 
 const GLSL_TERRAIN_AND_CAMERA = `
@@ -118,7 +118,6 @@ uniform float uTime;
 uniform float uStarDrift;
 uniform sampler2D uDepth;        // result of the MARCH pass
 uniform sampler2D uEarthColor;
-uniform sampler2D uSunImage;
 uniform vec3 uSunDir;            // world direction towards the Sun
 uniform vec3 uEarthDir;          // world direction towards the Earth
 uniform vec2 uSunCenter;         // device pixels, origin bottom-left
@@ -132,7 +131,7 @@ ${GLSL_NOISE}
 ${GLSL_STARS}
 ${GLSL_GLOBE}
 ${GLSL_EARTH}
-${GLSL_SUN_PHOTO}
+${GLSL_SUN}
 ${GLSL_TERRAIN_AND_CAMERA}
 
 // 0 = the Sun is hidden from point p by terrain, 1 = fully visible; soft at the shadow's edge.
@@ -217,8 +216,9 @@ vec3 shadeGround(vec3 origin, vec3 ray, float t) {
 vec3 skyColor(vec2 frag, float sunVisible) {
   // Stars fade a little while the Sun is up, as they would for a camera.
   vec3 color = starField(frag / uPixelRatio, uStarDrift) * (1.0 - 0.45 * sunVisible);
-  color = drawEarth(color, frag, uEarthCenter, uEarthRadius, uEarthRotation, uEarthLight);
+  // The Sun is far behind the Earth, so paint it first: when they overlap, the Earth covers the Sun.
   if (sunVisible > 0.0) color = drawSun(color, frag, uSunCenter, uSunRadius, sunVisible);
+  color = drawEarth(color, frag, uEarthCenter, uEarthRadius, uEarthRotation, uEarthLight);
   return color;
 }
 
