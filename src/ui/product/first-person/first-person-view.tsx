@@ -302,7 +302,11 @@ export function FirstPersonView({ point, timeMs, onExit, onLoadingChange, onErro
             onClick={() => setHoverLook((value) => !value)}
             className={`rounded-full border px-5 py-2.5 text-sm font-medium lunar-glass backdrop-blur-md transition ${hoverLook ? "border-lime-300/70 bg-lime-300/20 text-lime-100" : "border-white/15 bg-black/60 text-white hover:bg-white/15"}`}
           >
-            {hoverLook ? "Mouse look: ON" : "Mouse look: off"}
+            {/* 两种文字叠在同一格里，按钮宽度取较长的那个：开 / 关时按钮不变宽，旁边的按钮也不挪位置 */}
+            <span className="grid">
+              <span aria-hidden={!hoverLook} className={`col-start-1 row-start-1 ${hoverLook ? "" : "invisible"}`}>Mouse look: ON</span>
+              <span aria-hidden={hoverLook} className={`col-start-1 row-start-1 ${hoverLook ? "invisible" : ""}`}>Mouse look: off</span>
+            </span>
           </button>
           <button
             type="button"

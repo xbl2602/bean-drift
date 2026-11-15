@@ -53,7 +53,8 @@ export function LunarQuestApp() {
     if (saved === "landing-sites") setLandingVisited(true);
   }, []);
   const [landingSiteId, setLandingSiteId] = useState<string | null>(null);
-  const [landingFilter, setLandingFilter] = useState<LandingFilter>("all");
+  // null = 用户还没选类别（载人 / 无人 / 全部），这时地图上显示全部标记。
+  const [landingFilter, setLandingFilter] = useState<LandingFilter | null>(null);
   const [findTarget, setFindTarget] = useState<SearchTarget | null>(null);
   const [simResultsOpen, setSimResultsOpen] = useState(false);
   // 默认 3D 地球仪（Explore 模式进来就是 3D；2D 展开图可以在右上角切换）
@@ -75,7 +76,7 @@ export function LunarQuestApp() {
   const landingState = usePresetSites(landingVisited || appMode === "landing-sites");
   // 地图上只画筛选后的着陆任务；南极地名挤在极点附近，全画出来会叠成一团，所以只在选中它时才画那一个
   const landingSites = useMemo(
-    () => filterLandingSites(landingState.status === "ready" ? landingState.sites : [], landingFilter).filter((site) => site.kind === "landing-site" || site.id === landingSiteId),
+    () => filterLandingSites(landingState.status === "ready" ? landingState.sites : [], landingFilter ?? "all").filter((site) => site.kind === "landing-site" || site.id === landingSiteId),
     [landingState, landingFilter, landingSiteId],
   );
   const exploring = appMode === "explore";
@@ -185,8 +186,9 @@ export function LunarQuestApp() {
     // 不强制切 3D：用户在 2D 平面图里点着陆点，就留在 2D，平面图自己会居中到这个点（3D 球则飞过去）
     requestFocus(site, 45);
   };
-  const changeLandingFilter = (filter: LandingFilter) => {
+  const changeLandingFilter = (filter: LandingFilter | null) => {
     setLandingFilter(filter);
+    if (filter === null) return; // 回到选类别：地图显示全部，讲解可以留着
     // 选中的着陆点不在新的筛选里，就把右边的讲解收起
     const stillShown = landingState.status === "ready" && filterLandingSites(landingState.sites, filter).some((site) => site.id === landingSiteId);
     if (!stillShown) setLandingSiteId(null);
@@ -285,7 +287,7 @@ export function LunarQuestApp() {
       {!standingAt && <ViewControls mode={mapMode} onModeChange={changeMode} layers={layers} onLayersChange={setLayers} />}
 
       {appMode === "landing-sites" && !standingAt && (
-        <LandingSitesMode state={landingState} selectedId={rightToolOpen ? null : landingSiteId} filter={landingFilter} onFilterChange={changeLandingFilter} onSelect={selectLandingSite} onCloseDetail={() => setLandingSiteId(null)} timeMs={timeMs} weights={layers.weights} onStandHere={enterFirstPerson} />
+        <LandingSitesMode state={landingState} selectedId={rightToolOpen ? null : landingSiteId} category={landingFilter} onCategoryChange={changeLandingFilter} onSelect={selectLandingSite} onCloseDetail={() => setLandingSiteId(null)} timeMs={timeMs} weights={layers.weights} onStandHere={enterFirstPerson} />
       )}
       {appMode === "find-data" && !standingAt && (
         <FindDataMode target={findTarget} onGoTo={lookUpPoint} onClear={() => setFindTarget(null)} timeMs={timeMs} onTimeChange={setTimeMs} weights={layers.weights} onStandHere={enterFirstPerson} onCompareLocation={chooseSiteForComparison} resultsHidden={rightToolOpen} onResultsOpenChange={setSimResultsOpen} />

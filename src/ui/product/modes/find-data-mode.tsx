@@ -67,7 +67,7 @@ export function FindDataMode({ target, onGoTo, onClear, timeMs, onTimeChange, we
           {target && (
             <>
               <h2 className="mb-2 mt-4 text-xs font-semibold uppercase tracking-[0.14em] text-white/55">{t("sim.step2")}</h2>
-              <fieldset disabled={running} className="disabled:opacity-60">
+              <fieldset disabled={running} className="disabled:pointer-events-none disabled:opacity-60">
                 <MissionSetupForm config={config} onChange={setConfig} mapTimeMs={timeMs} />
               </fieldset>
             </>

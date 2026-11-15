@@ -1,14 +1,22 @@
 "use client";
 // 模拟器第 2 步：选任务类型、时长、开始时间、设备（太阳能板 / 电池 / 核电源 / 乘员）和对地通信要求。
-// 选了任务类型就填好这类任务的典型数值，用户可以再改。
+// 选了任务类型就填好这类任务的典型数值，用户可以再改。开始时间和设备都用和时间轴一样的滚轮来选。
 import type { ReactNode } from "react";
 import { useLocale, useT } from "../i18n/use-t";
-import { DURATION_CHOICES_DAYS, EARTH_ELEVATION_CHOICES, MISSION_TYPES, NUCLEAR_CHOICES_W, defaultConfig, operatingLoadW, survivalLoadW, type MissionConfig, type MissionTypeId } from "./mission-presets";
-import { formatPower } from "./mission-format";
+import { DateTimePicker } from "../timeline/date-time-picker";
+import { TimeWheel } from "../timeline/time-wheel";
+import { BATTERY_CHOICES_WH, DURATION_CHOICES_DAYS, EARTH_ELEVATION_CHOICES, MAX_CREW, MISSION_TYPES, NUCLEAR_CHOICES_W, SOLAR_CHOICES_W, defaultConfig, operatingLoadW, survivalLoadW, type MissionConfig, type MissionTypeId } from "./mission-presets";
+import { formatEnergyKWh, formatPower } from "./mission-format";
 
 const MIN_START_MS = Date.UTC(2000, 0, 1);
 const MAX_START_MS = Date.UTC(2099, 0, 1);
-const MAX_CREW = 12;
+const CREW_CHOICES = Array.from({ length: MAX_CREW }, (_, i) => i + 1);
+/** 滚轮上"地球高度"那一列：空字符串 = 不要求高度（只看地形遮挡）。 */
+const ANY_HEIGHT = "";
+
+const clampStart = (ms: number) => Math.min(MAX_START_MS, Math.max(MIN_START_MS, ms));
+/** 滚轮的选项：固定的一串数值，再补上当前值（各任务类型的默认值、用户以前填的值），从小到大排好。 */
+const wheelValues = (choices: readonly number[], current: number) => [...new Set([...choices, current])].sort((a, b) => a - b).map(String);
 
 interface MissionSetupFormProps {
   config: MissionConfig;
@@ -60,64 +68,34 @@ export function MissionSetupForm({ config, onChange, mapTimeMs }: MissionSetupFo
 
       <Field label={t("sim.start")}>
         <div className="flex items-center gap-2">
-          <input
-            type="datetime-local"
-            value={new Date(config.startMs).toISOString().slice(0, 16)}
-            min="2000-01-01T00:00"
-            max="2099-01-01T00:00"
-            onChange={(event) => {
-              const ms = Date.parse(`${event.target.value}:00Z`);
-              if (Number.isFinite(ms)) set({ startMs: Math.min(MAX_START_MS, Math.max(MIN_START_MS, ms)) });
-            }}
-            className="min-w-0 flex-1 rounded-lg border border-white/15 bg-white/5 px-2 py-1.5 font-mono text-xs text-white focus:border-lime-300/60 focus:outline-none"
-          />
-          <button type="button" onClick={() => set({ startMs: Math.min(MAX_START_MS, Math.max(MIN_START_MS, mapTimeMs)) })} className="shrink-0 rounded-full border border-white/15 px-2.5 py-1.5 text-[11px] text-white/80 hover:bg-white/10">
+          <DateTimePicker variant="field" timeMs={config.startMs} onApply={(ms) => set({ startMs: clampStart(ms) })} />
+          <button type="button" onClick={() => set({ startMs: clampStart(mapTimeMs) })} className="shrink-0 rounded-full border border-white/15 px-2.5 py-1.5 text-[11px] text-white/80 hover:bg-white/10">
             {t("sim.useMapTime")}
           </button>
         </div>
       </Field>
 
       <Field label={t("sim.requirements")}>
-        <div className="space-y-2 rounded-xl border border-white/10 bg-white/[0.03] p-2.5">
-          <NumberRow label={t("sim.solar")} unit="W" value={config.solarW} step={100} max={200_000} onChange={(solarW) => set({ solarW })} />
-          <NumberRow label={t("sim.battery")} unit="kWh" value={config.batteryWh / 1000} step={0.5} max={5_000} onChange={(kWh) => set({ batteryWh: Math.round(kWh * 1000) })} />
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-xs text-white/75">{t("sim.nuclear")}</span>
-            <select
-              value={config.nuclearW}
-              onChange={(event) => set({ nuclearW: Number(event.target.value) })}
-              className="rounded-lg border border-white/15 bg-white/5 px-2 py-1 text-xs text-white focus:border-lime-300/60 focus:outline-none"
-            >
-              {[...new Set([...NUCLEAR_CHOICES_W, config.nuclearW])].sort((a, b) => a - b).map((watts) => (
-                <option key={watts} value={watts}>{watts === 0 ? t("sim.none") : formatPower(locale, watts)}</option>
-              ))}
-            </select>
+        <div className="rounded-xl border border-white/10 bg-white/[0.03] p-2.5">
+          <p className="mb-2 text-[11px] text-white/50">{t("sim.scrollToChoose")}</p>
+          <div className="grid grid-cols-3 gap-x-2 gap-y-3">
+            <TimeWheel label={t("sim.solar")} rows={3} value={config.solarW} values={wheelValues(SOLAR_CHOICES_W, config.solarW)} onChange={(w) => set({ solarW: Number(w) })} format={(w) => formatPower(locale, Number(w))} />
+            <TimeWheel label={t("sim.battery")} rows={3} value={config.batteryWh} values={wheelValues(BATTERY_CHOICES_WH, config.batteryWh)} onChange={(wh) => set({ batteryWh: Number(wh) })} format={(wh) => formatEnergyKWh(locale, Number(wh) / 1000)} />
+            <TimeWheel label={t("sim.nuclear")} rows={3} value={config.nuclearW} values={wheelValues(NUCLEAR_CHOICES_W, config.nuclearW)} onChange={(w) => set({ nuclearW: Number(w) })} format={(w) => (w === "0" ? t("sim.none") : formatPower(locale, Number(w)))} />
+            <TimeWheel
+              label={t("sim.earthLink")}
+              rows={3}
+              value={config.minEarthElevationDeg ?? ANY_HEIGHT}
+              values={EARTH_ELEVATION_CHOICES.map((deg) => (deg === null ? ANY_HEIGHT : String(deg)))}
+              onChange={(deg) => set({ minEarthElevationDeg: deg === ANY_HEIGHT ? null : Number(deg) })}
+              format={(deg) => (deg === ANY_HEIGHT ? t("sim.terrainOnly") : `${deg}°`)}
+            />
+            {config.crewed && <TimeWheel label={t("sim.crew")} rows={3} value={config.crew} values={CREW_CHOICES.map(String)} onChange={(n) => set({ crew: Number(n) })} format={(n) => n} />}
           </div>
-          {config.crewed && (
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-xs text-white/75">{t("sim.crew")}</span>
-              <div className="flex items-center gap-1">
-                <StepButton label="−" disabled={config.crew <= 1} onClick={() => set({ crew: config.crew - 1 })} />
-                <span className="min-w-16 whitespace-nowrap px-1 text-center text-xs tabular-nums text-white">{t("sim.people", { n: config.crew })}</span>
-                <StepButton label="+" disabled={config.crew >= MAX_CREW} onClick={() => set({ crew: config.crew + 1 })} />
-              </div>
-            </div>
-          )}
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-xs text-white/75">{t("sim.earthLink")}</span>
-            <select
-              value={config.minEarthElevationDeg ?? ""}
-              onChange={(event) => set({ minEarthElevationDeg: event.target.value === "" ? null : Number(event.target.value) })}
-              className="max-w-[11rem] rounded-lg border border-white/15 bg-white/5 px-2 py-1 text-xs text-white focus:border-lime-300/60 focus:outline-none"
-            >
-              {EARTH_ELEVATION_CHOICES.map((deg) => (
-                <option key={deg ?? "terrain"} value={deg ?? ""}>{deg === null ? t("sim.terrainOnly") : t("sim.degrees", { n: deg })}</option>
-              ))}
-            </select>
-          </div>
-          <p className="border-t border-white/10 pt-2 text-[11px] leading-snug text-white/60">
+          <p className="mt-3 border-t border-white/10 pt-2 text-[11px] leading-snug text-white/60">
             {t("sim.load", { operating: formatPower(locale, operatingLoadW(config)), survival: formatPower(locale, survivalLoadW(config)) })}
           </p>
+          <p className="mt-1 text-[11px] leading-snug text-white/45">{t("sim.earthNote")}</p>
         </div>
         <p className="mt-1.5 text-[11px] leading-snug text-white/45">{t("sim.typical")}</p>
       </Field>
@@ -149,37 +127,5 @@ function Chips<T extends number>({ options, value, onChange, label }: { options:
         </button>
       ))}
     </div>
-  );
-}
-
-function NumberRow({ label, unit, value, step, max, onChange }: { label: string; unit: string; value: number; step: number; max: number; onChange: (value: number) => void }) {
-  return (
-    <label className="flex items-center justify-between gap-2">
-      <span className="text-xs text-white/75">{label}</span>
-      <span className="flex items-center gap-1.5">
-        <input
-          type="number"
-          inputMode="decimal"
-          min={0}
-          max={max}
-          step={step}
-          value={Number(value.toFixed(2))}
-          onChange={(event) => {
-            const next = Number(event.target.value);
-            if (Number.isFinite(next)) onChange(Math.min(max, Math.max(0, next)));
-          }}
-          className="w-24 rounded-lg border border-white/15 bg-white/5 px-2 py-1 text-right font-mono text-xs text-white focus:border-lime-300/60 focus:outline-none"
-        />
-        <span className="w-8 text-[11px] text-white/55">{unit}</span>
-      </span>
-    </label>
-  );
-}
-
-function StepButton({ label, disabled, onClick }: { label: string; disabled: boolean; onClick: () => void }) {
-  return (
-    <button type="button" disabled={disabled} onClick={onClick} className="grid h-6 w-6 place-items-center rounded-full border border-white/15 text-sm text-white/85 hover:bg-white/10 disabled:opacity-30">
-      {label}
-    </button>
   );
 }

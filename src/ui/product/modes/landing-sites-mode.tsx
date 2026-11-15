@@ -1,14 +1,18 @@
 "use client";
 // Landing Sites 模式：左边是预设点位清单（真实着陆过的任务 + 南极地名），点一个，地球仪转过去，右边讲解并给出这个位置的数据。
-// 清单可以按"全部 / 载人 / 无人"筛选；载人琥珀色、无人青绿色，地图上的标记同色。
+// 先选类别（载人 → 无人 → 全部），选了才列出这一类的点位，可以随时返回重选；载人琥珀色、无人青绿色，地图上的标记同色。
 import { useEffect, useState } from "react";
+import { useT } from "../i18n/use-t";
 import { usePointAnalysis } from "../analysis/use-point-analysis";
 import type { SuitabilityWeights } from "../map-layers";
 import type { LatLon } from "../moon-frames";
 import { PanelShell } from "../panels/panel-shell";
 import { SiteReport } from "../panels/site-report";
 import { usePointApi } from "../point-api/use-point-api";
-import { filterLandingSites, LANDING_FILTERS, LANDING_KIND_COLORS, loadPresetSites, type LandingFilter, type SiteEntry } from "./preset-sites";
+import { filterLandingSites, LANDING_KIND_COLORS, loadPresetSites, type LandingFilter, type SiteEntry } from "./preset-sites";
+
+/** 类别选择的顺序：载人在前，然后无人，最后全部。 */
+const CATEGORY_ORDER: readonly LandingFilter[] = ["human", "robotic", "all"];
 
 export type LandingSitesState = { status: "loading" } | { status: "ready"; sites: SiteEntry[] } | { status: "error" };
 
@@ -39,8 +43,9 @@ function siteCaption(site: SiteEntry): string {
 interface LandingSitesModeProps {
   state: LandingSitesState;
   selectedId: string | null;
-  filter: LandingFilter;
-  onFilterChange: (filter: LandingFilter) => void;
+  /** null = 还在第 1 步选类别。 */
+  category: LandingFilter | null;
+  onCategoryChange: (category: LandingFilter | null) => void;
   onSelect: (site: SiteEntry) => void;
   onCloseDetail: () => void;
   timeMs: number;
@@ -48,9 +53,10 @@ interface LandingSitesModeProps {
   onStandHere: (point: LatLon) => void;
 }
 
-export function LandingSitesMode({ state, selectedId, filter, onFilterChange, onSelect, onCloseDetail, timeMs, weights, onStandHere }: LandingSitesModeProps) {
+export function LandingSitesMode({ state, selectedId, category, onCategoryChange, onSelect, onCloseDetail, timeMs, weights, onStandHere }: LandingSitesModeProps) {
+  const t = useT();
   const allSites = state.status === "ready" ? state.sites : [];
-  const sites = filterLandingSites(allSites, filter);
+  const sites = filterLandingSites(allSites, category ?? "all");
   const selected = sites.find((site) => site.id === selectedId) ?? null;
   const missions = sites.filter((site) => site.kind === "landing-site");
   const places = sites.filter((site) => site.kind === "place");
@@ -77,31 +83,57 @@ export function LandingSitesMode({ state, selectedId, filter, onFilterChange, on
   );
   return (
     <>
-      <nav aria-label="Lunar landing sites" className="absolute left-4 right-4 top-32 z-20 sm:right-auto sm:top-24 sm:w-[17rem]">
+      <nav aria-label={t("landing.title")} className="absolute left-4 right-4 top-32 z-20 sm:right-auto sm:top-24 sm:w-[17rem]">
         <div className="rounded-2xl border border-white/10 bg-[#0b0f17]/90 p-2 shadow-2xl shadow-black/60 lunar-glass backdrop-blur-xl">
-          <h2 className="hidden px-2 pb-2 pt-1 text-sm font-semibold uppercase tracking-[0.18em] text-lime-200/90 sm:block">Landing sites</h2>
-          <fieldset className="px-2 pb-2">
-            <legend className="sr-only">Which landing sites to show</legend>
-            <div className="flex flex-wrap gap-x-3 gap-y-1 sm:flex-col sm:gap-y-1.5">
-              {LANDING_FILTERS.map((option) => (
-                <label key={option.id} className="flex cursor-pointer items-center gap-2 text-xs text-slate-200">
-                  <input type="radio" name="landing-filter" value={option.id} checked={filter === option.id} onChange={() => onFilterChange(option.id)} className="accent-lime-300" />
-                  {option.id !== "all" && <span aria-hidden="true" className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: LANDING_KIND_COLORS[option.id] }} />}
-                  <span>{option.label}</span>
-                  <span className="text-[10px] text-slate-500">{filterLandingSites(allSites, option.id).length}</span>
-                </label>
-              ))}
-            </div>
-          </fieldset>
-          {state.status === "loading" && <p role="status" className="px-2 py-2 text-xs text-slate-400">Loading landing sites…</p>}
-          {state.status === "error" && <p role="alert" className="px-2 py-2 text-xs text-amber-200">The landing-site list could not be loaded. Check the connection and reload.</p>}
-          <ul className="flex gap-1.5 overflow-x-auto sm:max-h-[calc(100dvh-25rem)] sm:flex-col sm:overflow-y-auto sm:overflow-x-visible">
-            {missions.length > 0 && groupHeading("Missions")}
-            {missions.map(renderSite)}
-            {places.length > 0 && groupHeading("Near the south pole")}
-            {places.map(renderSite)}
-          </ul>
-          {state.status === "ready" && <p className="hidden px-2 pt-2 text-[10px] leading-snug text-slate-500 sm:block">Positions: NASA, LROC and IAU data. Open a site to see its exact source.</p>}
+          {state.status === "loading" && <p role="status" className="px-2 py-2 text-xs text-slate-400">{t("landing.loading")}</p>}
+          {state.status === "error" && <p role="alert" className="px-2 py-2 text-xs text-amber-200">{t("landing.error")}</p>}
+          {state.status === "ready" && category === null && (
+            <>
+              <h2 className="hidden px-2 pb-1 pt-1 text-sm font-semibold uppercase tracking-[0.18em] text-lime-200/90 sm:block">{t("landing.title")}</h2>
+              <p className="hidden px-2 pb-2 text-xs text-slate-400 sm:block">{t("landing.choose")}</p>
+              <ul className="grid grid-cols-3 gap-1.5 sm:grid-cols-1">
+                {CATEGORY_ORDER.map((id) => (
+                  <li key={id}>
+                    <button
+                      type="button"
+                      onClick={() => onCategoryChange(id)}
+                      className="flex h-full w-full items-start gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-2.5 py-2 text-left transition hover:border-lime-300/40 hover:bg-white/10 sm:px-3 sm:py-2.5"
+                    >
+                      <span aria-hidden="true" className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full" style={id === "all" ? { background: `linear-gradient(90deg, ${LANDING_KIND_COLORS.human} 50%, ${LANDING_KIND_COLORS.robotic} 50%)` } : { backgroundColor: LANDING_KIND_COLORS[id] }} />
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-xs font-semibold leading-snug text-white sm:text-sm">{t(`landing.cat.${id}`)}</span>
+                        <span className="hidden text-[11px] leading-snug text-slate-400 sm:block">{t(`landing.cat.${id}.desc`)}</span>
+                        <span className="block text-[10px] text-slate-500">{t("landing.count", { n: filterLandingSites(allSites, id).length })}</span>
+                      </span>
+                      <svg aria-hidden="true" viewBox="0 0 24 24" className="mt-1 hidden h-4 w-4 shrink-0 text-slate-500 sm:block" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 6l6 6-6 6" /></svg>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+          {state.status === "ready" && category !== null && (
+            <>
+              <div className="flex items-center gap-2 px-1 pb-2 pt-0.5">
+                <button type="button" onClick={() => onCategoryChange(null)} className="flex shrink-0 items-center gap-1 rounded-full border border-white/15 py-1 pl-1.5 pr-2.5 text-[11px] text-white/85 hover:bg-white/10">
+                  <svg aria-hidden="true" viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 6l-6 6 6 6" /></svg>
+                  {t("landing.back")}
+                </button>
+                <h2 className="flex min-w-0 items-center gap-1.5 text-xs font-semibold text-lime-200/90">
+                  {category !== "all" && <span aria-hidden="true" className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: LANDING_KIND_COLORS[category] }} />}
+                  <span className="truncate">{t(`landing.cat.${category}`)}</span>
+                  <span className="shrink-0 text-[10px] font-normal text-slate-500">{sites.length}</span>
+                </h2>
+              </div>
+              <ul className="flex gap-1.5 overflow-x-auto sm:max-h-[calc(100dvh-22rem)] sm:flex-col sm:overflow-y-auto sm:overflow-x-visible">
+                {category === "all" && missions.length > 0 && groupHeading(t("landing.missions"))}
+                {missions.map(renderSite)}
+                {places.length > 0 && groupHeading(t("landing.places"))}
+                {places.map(renderSite)}
+              </ul>
+            </>
+          )}
+          {state.status === "ready" && <p className="hidden px-2 pt-2 text-[10px] leading-snug text-slate-500 sm:block">{t("landing.sources")}</p>}
         </div>
       </nav>
       {selected && <LandingSiteDetail key={selected.id} site={selected} timeMs={timeMs} weights={weights} onStandHere={onStandHere} onClose={onCloseDetail} />}
