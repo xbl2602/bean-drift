@@ -1,28 +1,15 @@
-﻿"use client";
-// AI Tools：自然语言助手。对话框本体是 src/features/agent-search/ui/ 的 LunarSearch，
-// 它只向我们自己的 /api/agent 发请求，DeepSeek 密钥只在服务端，这里碰不到。这里只负责把它放进面板。
-import { LunarSearch, type SelectedLunarLocation } from "@/features/agent-search/ui/lunar-search";
-import { formatLatLon } from "../moon-frames";
-import { viewSpanDegFor } from "../search/lunar-names";
+"use client";
+// AI Tools：聊天框（panels/ai-chat/）。它只调用我们自己的 POST /api/agent（约定见 docs/SHARED_INTERFACES.md 第 6 节），
+// DeepSeek 密钥只在服务端，这里碰不到。面板在右边：三个模式都能打开它。
+import { AiChat } from "./ai-chat/ai-chat";
+import { useT } from "../i18n/use-t";
 import { PanelShell } from "./panel-shell";
-import type { SearchTarget } from "./search-panel";
 
-export function AiPanel({ onGoTo, onClose }: { onGoTo?: (target: SearchTarget) => void; onClose: () => void }) {
-  const handleSelectLocation = onGoTo
-    ? (loc: SelectedLunarLocation) => {
-        onGoTo({
-          latDeg: loc.latDeg,
-          lonDeg: loc.lonDeg,
-          label: loc.label,
-          detail: formatLatLon(loc),
-          spanDeg: loc.diameterKm && loc.diameterKm > 0 ? viewSpanDegFor(loc.diameterKm) : 25,
-        });
-      }
-    : undefined;
-
+export function AiPanel({ onClose }: { onClose: () => void }) {
+  const t = useT();
   return (
-    <PanelShell title="AI Tools" onClose={onClose}>
-      <LunarSearch embedded onSelectLocation={handleSelectLocation} />
+    <PanelShell title={t("tool.ai.label")} onClose={onClose} side="right" fill>
+      <AiChat />
     </PanelShell>
   );
 }

@@ -14,16 +14,17 @@ export interface MetricRow {
 }
 
 export const METRIC_ROWS: MetricRow[] = [
+  // 和面板里长条的顺序一致：按重要性从高到低（综合 → 光照 → 通信 → 坡度 → 水冰 → 温度 → 高程）。
   { key: "suitability", label: "Suitability score", unit: "0–1", source: "model", value: (a) => a.suitability, digits: 2, better: "higher" },
-  { key: "heightM", label: "Elevation", unit: "m", source: "measured", value: (a) => a.heightM, digits: 0 },
-  { key: "slopeDeg", label: "Slope", unit: "°", source: "measured", value: (a) => a.slopeDeg, digits: 1, better: "lower" },
   { key: "illuminationPct", label: "Sunlit time", unit: "%", source: "model", value: (a) => a.illuminationFraction * 100, digits: 0, better: "higher" },
   { key: "sunElevationDeg", label: "Sun elevation now", unit: "°", source: "ephemeris", value: (a) => a.sunElevationDeg, digits: 1 },
-  { key: "temperatureNowK", label: "Temperature now", unit: "K", source: "model", value: (a) => a.temperatureNowK, digits: 0 },
-  { key: "maxTemperatureK", label: "Peak temperature (month)", unit: "K", source: "model", value: (a) => a.maxTemperatureK, digits: 0 },
-  { key: "iceIndex", label: "Water-ice potential", unit: "0–1", source: "model", value: (a) => a.iceIndex, digits: 2, better: "higher" },
   { key: "earthVisiblePct", label: "Earth in view (comms)", unit: "%", source: "model", value: (a) => a.earthVisibleFraction * 100, digits: 0, better: "higher" },
   { key: "earthElevationDeg", label: "Earth elevation now", unit: "°", source: "ephemeris", value: (a) => a.earthElevationDeg, digits: 1 },
+  { key: "slopeDeg", label: "Slope", unit: "°", source: "measured", value: (a) => a.slopeDeg, digits: 1, better: "lower" },
+  { key: "iceIndex", label: "Water-ice potential", unit: "0–1", source: "model", value: (a) => a.iceIndex, digits: 2, better: "higher" },
+  { key: "temperatureNowK", label: "Temperature now", unit: "K", source: "model", value: (a) => a.temperatureNowK, digits: 0 },
+  { key: "maxTemperatureK", label: "Peak temperature (month)", unit: "K", source: "model", value: (a) => a.maxTemperatureK, digits: 0 },
+  { key: "heightM", label: "Elevation", unit: "m", source: "measured", value: (a) => a.heightM, digits: 0 },
 ];
 
 export const formatMetric = (row: MetricRow, analysis: PointAnalysis) => row.value(analysis).toFixed(row.digits);

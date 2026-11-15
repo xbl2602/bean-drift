@@ -35,3 +35,47 @@
 .time-wheel { color-scheme: dark; scrollbar-width: thin; scrollbar-color: #748799 transparent; }
 .time-wheel option:checked { background: linear-gradient(#405143,#405143); color: #edf5dc; }
 .time-wheel:focus-visible { outline: 2px solid #c8d8ad; outline-offset: 2px; }
+
+/* Appearance setting (settings/settings-store.ts): light mode turns the bars, panels and tooltips into light frosted glass.
+   Space, the Moon and the first-person view stay dark. Tailwind 4 colours are CSS variables, so inside light glass we swap
+   "white" (used for text and faint fills) for a dark ink, and darken the light accent shades so they stay readable on white. */
+.lunar-explorer[data-theme="dark"] { color-scheme: dark; }
+.lunar-explorer[data-theme="light"] .lunar-glass,
+.lunar-explorer[data-theme="light"] [role="tooltip"] {
+  color-scheme: light;
+  --color-white: #0f172a;
+  --color-slate-100: #1e293b;
+  --color-slate-200: #273449;
+  --color-slate-300: #3b4a5e;
+  --color-slate-400: #536173;
+  --color-slate-500: #66758a;
+  --color-lime-100: #2f4a07;
+  --color-lime-200: #3f6212;
+  --color-lime-300: #65a30d;
+  --color-amber-100: #78350f;
+  --color-amber-200: #92400e;
+  --color-amber-300: #b45309;
+  --color-red-100: #7f1d1d;
+  --color-red-200: #991b1b;
+  --color-sky-300: #0369a1;
+  color: #0f172a;
+}
+.lunar-explorer[data-theme="light"] .lunar-glass {
+  background: linear-gradient(135deg, rgba(255,255,255,.90) 0%, rgba(244,248,253,.84) 45%, rgba(226,234,244,.82) 100%) !important;
+  border-color: rgba(15,23,42,.13) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 12px 32px rgba(0,0,0,.28) !important;
+  scrollbar-color: rgba(15,23,42,.30) transparent;
+}
+.lunar-explorer[data-theme="light"] .lunar-glass [class~="text-slate-400"] { color: #536173; }
+.lunar-explorer[data-theme="light"] .lunar-glass header { border-bottom-color: rgba(15,23,42,.10); }
+.lunar-explorer[data-theme="light"] .lunar-glass article {
+  background: linear-gradient(145deg, rgba(255,255,255,.75), rgba(232,239,247,.70)) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.8);
+}
+.lunar-explorer[data-theme="light"] [role="tooltip"] { background: rgba(250,252,255,.97); border-color: rgba(15,23,42,.12); }
+@supports not (backdrop-filter: blur(1px)) {
+  .lunar-explorer[data-theme="light"] .lunar-glass { background: linear-gradient(135deg,#ffffff,#e6edf5) !important; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .lunar-explorer[data-theme="light"] .lunar-glass { background: linear-gradient(135deg,#ffffff,#e6edf5) !important; }
+}

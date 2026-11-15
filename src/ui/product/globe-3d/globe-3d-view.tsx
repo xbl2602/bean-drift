@@ -16,13 +16,19 @@ import { AnnotationLayer, type MapAnnotations } from "../overlay/annotations";
 import { usePointerGestures } from "../use-pointer-gestures";
 import { createGlobeMaterials } from "./globe-material";
 import { createGlobeSky } from "./globe-sky";
+import { SmoothValue, prefersReducedMotion } from "../motion/smooth-value";
+import { rightPanelCoverPx, type RightPanelSize } from "../panels/panel-shell";
+import { CameraMotionTracker, placeCameraOnFlight, startCameraFlight, type CameraFlight } from "./camera-flight";
 
 const MOON_RADIUS_KM = 1737.4;
 const CAMERA_FOV_DEG = 35;
 const SUN_DISTANCE_KM = 8000;
 const MIN_DISTANCE_KM = MOON_RADIUS_KM * 1.08;
 const MAX_DISTANCE_KM = MOON_RADIUS_KM * 9;
-const FLY_DURATION_MS = 800;
+/** 面板开关时，月球往左挪 / 缩小的动画时长。 */
+const REFRAME_MS = 700;
+/** 缩小时月球和面板之间留的空隙。 */
+const FIT_MARGIN_PX = 24;
 
 interface GlobeRuntime {
   camera: THREE.PerspectiveCamera;
@@ -32,14 +38,18 @@ interface GlobeRuntime {
   surface: THREE.MeshStandardMaterial | null;
   analysisUniforms: AnalysisUniforms | null;
   overlay: AnnotationLayer;
-  flight: { from: THREE.Vector3; to: THREE.Vector3; startMs: number } | null;
+  flight: CameraFlight | null;
+  motion: CameraMotionTracker;
+  /** 月球画面中心往左挪多少像素、缩放多少（1 = 不缩），都是二阶导连续的动画。 */
+  framing: { shiftPx: SmoothValue; scale: SmoothValue; key: string };
+  remPx: number;
 }
 
-export function Globe3dView({ timeMs, layers, annotations, focus, cursor, onPick, onHover, onLoadingChange, onError }: MapViewProps) {
+export function Globe3dView({ timeMs, layers, annotations, focus, rightPanel, cursor, onPick, onHover, onLoadingChange, onError }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const runtimeRef = useRef<GlobeRuntime | null>(null);
-  const settingsRef = useRef({ timeMs, layers, annotations });
-  settingsRef.current = { timeMs, layers, annotations };
+  const settingsRef = useRef({ timeMs, layers, annotations, rightPanel });
+  settingsRef.current = { timeMs, layers, annotations, rightPanel };
 
   useEffect(() => {
     const container = containerRef.current;
@@ -80,10 +90,13 @@ export function Globe3dView({ timeMs, layers, annotations, focus, cursor, onPick
       controls.rotateSpeed = THREE.MathUtils.clamp(altitude / 4000, 0.05, 0.6);
     });
     controls.addEventListener("start", () => {
-      if (runtimeRef.current) runtimeRef.current.flight = null; // 用户一动手就停止自动飞行
+      // 用户一动手就停止自动飞行，交还给 OrbitControls（恢复阻尼）
+      if (runtimeRef.current) runtimeRef.current.flight = null;
+      controls.enableDamping = true;
     });
     placeCameraForTime(camera, controls, settingsRef.current.timeMs, container);
-    const rt: GlobeRuntime = { camera, controls, sun, ambient, surface: null, analysisUniforms: null, overlay: new AnnotationLayer(container), flight: null };
+    const rt: GlobeRuntime = { camera, controls, sun, ambient, surface: null, analysisUniforms: null, overlay: new AnnotationLayer(container), flight: null, motion: new CameraMotionTracker(),
+      framing: { shiftPx: new SmoothValue(0), scale: new SmoothValue(1), key: "" }, remPx: parseFloat(getComputedStyle(document.documentElement).fontSize) || 16 };
     runtimeRef.current = rt;
 
     onLoadingChange(true);
@@ -130,10 +143,11 @@ export function Globe3dView({ timeMs, layers, annotations, focus, cursor, onPick
 
     const tick = () => {
       frame = requestAnimationFrame(tick);
-      const { timeMs: t, layers: l, annotations: a } = settingsRef.current;
+      const { timeMs: t, layers: l, annotations: a, rightPanel: panel } = settingsRef.current;
       const sunDirection = applySettings(rt, t, l);
-      advanceFlight(rt);
-      controls.update();
+      const now = performance.now();
+      steerCamera(rt, now);
+      frameBesidePanel(rt, container, panel, now);
       sky.update(camera, t, renderer.getPixelRatio(), sunDirection);
       detail.update(l.base === "color" ? globeDetailView(camera, renderer.domElement.width, MOON_RADIUS_KM) : null);
       renderer.render(scene, camera);
@@ -167,7 +181,7 @@ export function Globe3dView({ timeMs, layers, annotations, focus, cursor, onPick
 
   useEffect(() => {
     const rt = runtimeRef.current;
-    if (focus && rt) rt.flight = { from: rt.camera.position.clone(), to: cameraPositionFor(focus, rt.camera.fov), startMs: performance.now() };
+    if (focus && rt) rt.flight = startCameraFlight(cameraPositionFor(focus, rt.camera.fov), performance.now(), rt.flight, rt.motion);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 只在收到新的定位请求时执行
   }, [focus?.seq]);
 
@@ -227,17 +241,69 @@ function cameraPositionFor(focus: FocusRequest, fovDeg = CAMERA_FOV_DEG): THREE.
   return bodyToThree(latLonToBody(focus.point)).multiplyScalar(distanceKm);
 }
 
-/** 自动飞行：方向沿球面插值、距离线性插值，缓入缓出。 */
-function advanceFlight(rt: GlobeRuntime) {
-  if (!rt.flight) return;
-  const raw = Math.min((performance.now() - rt.flight.startMs) / FLY_DURATION_MS, 1);
-  const t = raw * raw * (3 - 2 * raw);
-  const { from, to } = rt.flight;
-  const direction = new THREE.Vector3().copy(from).normalize();
-  const rotation = new THREE.Quaternion().setFromUnitVectors(direction, to.clone().normalize());
-  direction.applyQuaternion(new THREE.Quaternion().slerp(rotation, t));
-  rt.camera.position.copy(direction.multiplyScalar(THREE.MathUtils.lerp(from.length(), to.length(), t)));
-  if (raw >= 1) rt.flight = null;
+/**
+ * 每帧决定相机位置：在自动飞行就沿飞行路线走（camera-flight.ts，二阶导连续），否则交给 OrbitControls。
+ * 飞行期间先关掉阻尼跑一次 controls.update()，把用户拖动留下的惯性清零，否则降落后会被残余惯性推一下。
+ */
+function steerCamera(rt: GlobeRuntime, nowMs: number) {
+  if (rt.flight) {
+    rt.controls.enableDamping = false;
+    rt.controls.update();
+    if (placeCameraOnFlight(rt.camera, rt.flight, nowMs)) {
+      rt.flight = null;
+      rt.controls.enableDamping = true;
+    }
+  } else {
+    rt.controls.update();
+  }
+  rt.motion.record(rt.camera.position, nowMs);
+}
+
+/**
+ * 右边开着面板时，把月球画到面板左边空出来的那块区域正中间；那块区域放不下整个月球，就同时缩小一点。
+ * 用 setViewOffset 只改投影（相当于把画面平移、缩放），相机本身不动：拖动、点选、自动飞行都照常。
+ * 平移量和缩放量各走一条二阶导连续的动画（motion/smooth-value.ts），开关面板时不会突然跳。
+ * 缩放只在面板开关、窗口大小变化的那一刻决定；之后用户滚轮放大缩小照常生效，不会被"自动缩回去"。
+ */
+function frameBesidePanel(rt: GlobeRuntime, container: HTMLElement, panel: RightPanelSize | null | undefined, nowMs: number) {
+  const width = Math.max(container.clientWidth, 1);
+  const height = Math.max(container.clientHeight, 1);
+  const coverPx = rightPanelCoverPx(panel, window.innerWidth, rt.remPx);
+  const { framing } = rt;
+  const key = `${coverPx}|${width}|${height}`;
+  if (framing.key !== key) {
+    framing.key = key;
+    const targetShift = coverPx / 2;
+    const targetScale = coverPx > 0 ? scaleToFitBeside(rt.camera, width - coverPx, height) : 1;
+    if (prefersReducedMotion()) {
+      framing.shiftPx.jump(targetShift);
+      framing.scale.jump(targetScale);
+    } else {
+      framing.shiftPx.retarget(targetShift, nowMs, REFRAME_MS);
+      framing.scale.retarget(targetScale, nowMs, REFRAME_MS);
+    }
+  }
+  const { shiftPx, scale } = framing;
+  const shift = shiftPx.at(nowMs).value;
+  const s = scale.at(nowMs).value;
+  if (Math.abs(shift) < 0.01 && Math.abs(s - 1) < 1e-5) {
+    if (rt.camera.view?.enabled) rt.camera.clearViewOffset();
+    return;
+  }
+  // 整幅画面按 s 缩放成 (sW, sH)，它的中心（月球所在）落在窗口的 (W/2 - shift, H/2)
+  rt.camera.setViewOffset(width * s, height * s, (width * s) / 2 - (width / 2 - shift), (height * s - height) / 2, width, height);
+}
+
+/**
+ * 整个月球放进 freeWidth × height 的区域要缩多少。月球在画面上的直径 = 2·tan(视角半径)/tan(半视场)·H/2。
+ * 用户已经放大到月面细节（月球比屏幕大很多）时不缩，只往左挪，免得把他放大的画面又缩回去。
+ */
+function scaleToFitBeside(camera: THREE.PerspectiveCamera, freeWidthPx: number, heightPx: number): number {
+  const angularRadius = Math.asin(Math.min(1, MOON_RADIUS_KM / camera.position.length()));
+  const moonPx = (Math.tan(angularRadius) / Math.tan(THREE.MathUtils.degToRad(camera.fov / 2))) * heightPx;
+  const fit = Math.min(1, (Math.min(freeWidthPx, heightPx) - FIT_MARGIN_PX) / moonPx);
+  const zoomedIn = THREE.MathUtils.smoothstep(moonPx / heightPx, 1.6, 2.4);
+  return THREE.MathUtils.clamp(THREE.MathUtils.lerp(fit, 1, zoomedIn), 0.35, 1);
 }
 
 /** 开场镜头：对着昼夜分界线附近（太阳直射点往西 55°）。 */

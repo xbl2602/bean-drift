@@ -18,13 +18,19 @@ interface SearchPanelProps {
   onStandHere: (point: LatLon) => void;
   onSaveSite: (point: LatLon, name: string) => void;
   onClose: () => void;
+  /** 外层定位。默认浮在地图上方正中；Find Data 模式放在左边一栏里。 */
+  placementClassName?: string;
+  /** 不显示"搜到的结果"小卡片（Find Data 模式下面已经有完整报告）。 */
+  hideResult?: boolean;
+  placeholder?: string;
 }
 
+const DEFAULT_PLACEMENT = "absolute left-24 right-4 top-36 z-20 sm:left-1/2 sm:right-auto sm:top-24 sm:w-[min(34rem,calc(100vw-13rem))] sm:-translate-x-1/2";
 const SUGGESTION_LIMIT = 8;
 const targetForName = (entry: LunarName): SearchTarget => ({ latDeg: entry.latDeg, lonDeg: entry.lonDeg, label: entry.name, detail: formatLatLon(entry), spanDeg: viewSpanDegFor(entry.diameterKm) });
 const targetForCoordinates = (point: LatLon): SearchTarget => ({ ...point, label: "Searched point", detail: formatLatLon(point), spanDeg: 25 });
 
-export function SearchPanel({ selected, onGoTo, onStandHere, onSaveSite, onClose }: SearchPanelProps) {
+export function SearchPanel({ selected, onGoTo, onStandHere, onSaveSite, onClose, placementClassName = DEFAULT_PLACEMENT, hideResult, placeholder = "Search a place (Shackleton Crater) or coordinates (-89.9, 0)" }: SearchPanelProps) {
   const [query, setQuery] = useState("");
   const [names, setNames] = useState<LunarName[] | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -76,7 +82,7 @@ export function SearchPanel({ selected, onGoTo, onStandHere, onSaveSite, onClose
   };
 
   return (
-    <div className="absolute left-24 right-4 top-36 z-20 sm:left-1/2 sm:right-auto sm:top-24 sm:w-[min(34rem,calc(100vw-13rem))] sm:-translate-x-1/2">
+    <div className={placementClassName}>
       <form
         role="search"
         onSubmit={(e) => {
@@ -96,7 +102,7 @@ export function SearchPanel({ selected, onGoTo, onStandHere, onSaveSite, onClose
           }}
           onFocus={() => setShowSuggestions(true)}
           onKeyDown={(e) => e.key === "Escape" && onClose()}
-          placeholder="Search a place (Shackleton Crater) or coordinates (-89.9, 0)"
+          placeholder={placeholder}
           aria-label="Search by lunar place name, or latitude and longitude"
           className="min-w-0 flex-1 bg-transparent py-2 text-sm text-white placeholder:text-white/35 focus:outline-none"
         />
@@ -141,7 +147,7 @@ export function SearchPanel({ selected, onGoTo, onStandHere, onSaveSite, onClose
         </ul>
       )}
 
-      {selected && !showSuggestions && !notFound && (
+      {selected && !hideResult && !showSuggestions && !notFound && (
         <div className="mt-2 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-fuchsia-300/30 bg-[#0b0f17]/92 px-4 py-2.5 shadow-xl shadow-black/50 lunar-glass backdrop-blur-xl">
           <span className="min-w-0">
             <span className="block truncate text-sm font-semibold">{selected.label}</span>
