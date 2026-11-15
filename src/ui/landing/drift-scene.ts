@@ -7,9 +7,10 @@
 // scales up without smoothing, so every "pixel" is a crisp square. No pictures are used: the car, the
 // bean, the track and the smoke are all made in code (see docs/CREDITS.md).
 
-export const SCENE_SECONDS = 3.5;
-/** The page change is started a little before the end, so the next page is ready when the car leaves. */
-export const NAVIGATE_AT_S = 3.0;
+/** Roughly how long the whole show lasts (the car is gone a little after this); only used for the progress bar. */
+export const SCENE_SECONDS = 3.7;
+/** The page is changed only once the car has completely left the picture; this is the longest we ever wait. */
+export const GIVE_UP_AT_S = 6;
 
 const HEIGHT = 180;
 const ROAD_TOP = 104;
@@ -22,10 +23,14 @@ const REAR_WHEEL = { x: -18 * SPRITE_SCALE, y: 7 * SPRITE_SCALE };
 
 const ENTER_S = 1.2;
 const HOLD_END_S = 2.25;
+const EXIT_S = 1.5;
+/** The car turns this far (degrees, clockwise) while it speeds away, so it leaves in a curve, not a straight line. */
+const EXIT_TURN_DEG = 40;
 const GLASSES_UP = [1.3, 2.05] as const;
 const WINK = [1.55, 1.9] as const;
 
 const ease = {
+  inOutQuad: (t: number) => (t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2),
   outCubic: (t: number) => 1 - (1 - t) ** 3,
   inCubic: (t: number) => t * t * t,
   inQuad: (t: number) => t * t,
@@ -208,6 +213,12 @@ export class DriftScene {
   private previous = { t: 0, x: 0, y: 0 };
   private wheelTurn = 0;
   private rnd = seeded(99);
+  private goneAt: number | null = null;
+
+  /** Whether the car has completely left the picture (the page can change now). */
+  get carHasLeft(): boolean {
+    return this.goneAt !== null;
+  }
 
   constructor(private readonly canvas: HTMLCanvasElement) {
     const ctx = canvas.getContext("2d");
@@ -243,12 +254,30 @@ export class DriftScene {
       const k = t - ENTER_S;
       return { x: w / 2 + Math.sin(k * 5) * 1.5, y: CAR_Y + Math.sin(k * 11) * 1.2, angle: -7 + Math.sin(k * 8) * 1.4 };
     }
-    const q = clamp01((t - HOLD_END_S) / (SCENE_SECONDS - HOLD_END_S));
-    return {
-      x: w / 2 + (w * 0.75) * ease.inCubic(q),
-      y: CAR_Y + 22 * ease.inQuad(q),
-      angle: lerp(-7, 22, ease.outQuad(clamp01(q / 0.28))),
-    };
+    // Leaving: the car speeds up and swings round to the right in one long curve, drifting (its nose
+    // points further round than the way it is travelling), and keeps going until it is completely off screen.
+    const q = (t - HOLD_END_S) / EXIT_S; // 0 to 1 over the main turn; keeps growing after that
+    const reach = (w / 2 + 230) / 0.9;
+    const steps = 40;
+    let dx = 0;
+    let dy = 0;
+    for (let i = 0; i < steps; i++) {
+      const u = ((i + 0.5) / steps) * q;
+      const heading = rad(EXIT_TURN_DEG * ease.inOutQuad(clamp01(u)));
+      const speed = 0.15 + 3 * u * u;
+      dx += Math.cos(heading) * speed * (q / steps) * reach;
+      dy += Math.sin(heading) * speed * (q / steps) * reach;
+    }
+    const heading = EXIT_TURN_DEG * ease.inOutQuad(clamp01(q));
+    const slip = 16 * Math.sin(Math.PI * clamp01(q * 1.5));
+    return { x: w / 2 + dx, y: CAR_Y + dy, angle: -7 + heading + slip };
+  }
+
+  /** True once the car is completely outside the picture. */
+  isCarGone(timeS: number): boolean {
+    if (timeS <= HOLD_END_S) return false;
+    const car = this.carState(timeS);
+    return car.x > this.width + SPRITE_W * SPRITE_SCALE * 0.6 || car.y > HEIGHT + SPRITE_H * SPRITE_SCALE;
   }
 
   private emitPuffs(dt: number, t: number, x: number, y: number, angle: number, speed: number) {
@@ -273,7 +302,8 @@ export class DriftScene {
   }
 
   render(timeS: number) {
-    const t = Math.min(Math.max(timeS, 0), SCENE_SECONDS);
+    const t = Math.max(timeS, 0);
+    if (this.goneAt === null && this.isCarGone(t)) this.goneAt = t;
     const dt = Math.min(Math.max(t - this.previous.t, 0), 0.05);
     const { ctx } = this;
     const car = this.carState(t);
@@ -289,7 +319,7 @@ export class DriftScene {
     ctx.drawImage(this.backdrop, 0, 0);
 
     // Tyre marks stay on the road behind the rear wheels.
-    if (dt > 0 && (t < ENTER_S || t > HOLD_END_S - 0.1)) {
+    if (dt > 0 && (t < ENTER_S || (t > HOLD_END_S - 0.1 && !this.carHasLeft))) {
       this.marks.push({ x: car.x + Math.cos(rad(car.angle)) * REAR_WHEEL.x - Math.sin(rad(car.angle)) * (REAR_WHEEL.y + 8), y: car.y + Math.sin(rad(car.angle)) * REAR_WHEEL.x + Math.cos(rad(car.angle)) * (REAR_WHEEL.y + 8) });
     }
     ctx.fillStyle = "#12111c";
@@ -327,10 +357,10 @@ export class DriftScene {
     // Pixel progress blocks and the closing fade to black.
     const blocks = 14;
     for (let i = 0; i < blocks; i++) {
-      const done = i < Math.floor((t / SCENE_SECONDS) * blocks + 0.5);
+      const done = i < Math.floor(Math.min(1, t / SCENE_SECONDS) * blocks + 0.5);
       rect(ctx, this.width / 2 - blocks * 5 + i * 10, HEIGHT - 20, 8, 5, done ? "#ffe08a" : "#2b2655");
     }
-    const fade = clamp01((t - (SCENE_SECONDS - 0.3)) / 0.3);
+    const fade = this.goneAt === null ? 0 : clamp01((t - this.goneAt) / 0.4) * 0.85;
     if (fade > 0) {
       ctx.fillStyle = `rgba(5,4,15,${fade.toFixed(2)})`;
       ctx.fillRect(0, 0, this.width, HEIGHT);

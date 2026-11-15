@@ -1,12 +1,12 @@
 "use client";
 
 // Plays the pixel drift animation (drift-scene.ts) when someone clicks any link to the product page,
-// and goes to the page while the car is leaving. Clicking the animation skips it. People who ask their
+// and goes to the page once the car has completely left the picture. Clicking the animation skips it. People who ask their
 // system for less motion go straight to the page. Modified clicks (new tab, etc.) are left alone.
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { DriftScene, NAVIGATE_AT_S, SCENE_SECONDS } from "./drift-scene";
+import { DriftScene, GIVE_UP_AT_S } from "./drift-scene";
 import "./product-transition.css";
 
 function DriftOverlay({ href }: { href: string }) {
@@ -35,8 +35,9 @@ function DriftOverlay({ href }: { href: string }) {
     const draw = (nowMs: number) => {
       const timeS = (nowMs - startMs) / 1000;
       scene.render(timeS);
-      if (timeS >= NAVIGATE_AT_S) goNow();
-      if (timeS < SCENE_SECONDS + 0.3) frame = requestAnimationFrame(draw);
+      // The page changes only when the car has completely left the picture (or, as a safety net, after a while).
+      if (scene.carHasLeft || timeS >= GIVE_UP_AT_S) goNow();
+      frame = requestAnimationFrame(draw);
     };
     frame = requestAnimationFrame(draw);
     const onResize = () => scene.resize(canvas.clientWidth, canvas.clientHeight);
