@@ -149,14 +149,13 @@ export function LunarQuestApp() {
     setAppMode(mode);
     rememberAppMode(mode);
     if (mode === "landing-sites") setLandingVisited(true);
-    // 换模式时收起 Explore 的工具和未保存标记（AI Tools 和设置三个模式通用，保持打开），离开第一人称；三个模式进来都先看 3D 地球仪
+    // 换模式时收起 Explore 的工具和未保存标记（AI Tools 和设置三个模式通用，保持打开），离开第一人称；视图（3D 球 / 2D 平面图）保持用户当前在看的那个，不强制切回 3D
     setActiveTool((current) => (current === "ai" || current === "settings" ? current : null));
     setDraftSite(null);
     setStandingAt(null);
     setError(null);
     setFocus(null);
     setLayers((current) => ({ ...current, base: "color" }));
-    setMapMode("3d");
   };
   /** 导览讲的是 Explore 里的工具：先切到 Explore 再开始。 */
   const openTutorial = () => {
