@@ -100,11 +100,13 @@ function craterProfileM(rho: number, radiusM: number, crispness: number): number
   const rimM = diameterM * (0.01 + 0.026 * crispness);
   const rimWidth = 0.35 - 0.22 * crispness;
   let h = rimM * Math.exp(-(((rho - 1) / rimWidth) ** 2));
+  // 溅射毯：坑沿外按 r^-3 衰减。坑沿里面也要接上（从坑心的 0 一路抬到坑沿的值），
+  // 否则坑沿处会有一道几十到几百米高的"悬崖"，画面上就是一整面带竖条纹的墙。
+  const ejectaM = rimM * 0.55 * (0.4 + 0.6 * crispness);
+  h += rho < 1 ? ejectaM * Math.pow(rho, 4) : ejectaM * Math.pow(rho, -3) * (1 - smooth(2.2, 3, rho));
   if (rho < 1) {
     h -= depthM * (1 - Math.pow(rho, complex ? 3.6 : 2));
     if (complex && diameterM > 22_000) h += 0.22 * depthM * Math.exp(-((rho / 0.13) ** 2)); // 中央峰
-  } else {
-    h += rimM * 0.55 * (0.4 + 0.6 * crispness) * Math.pow(rho, -3) * (1 - smooth(2.2, 3, rho));
   }
   return h;
 }
