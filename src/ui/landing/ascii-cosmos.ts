@@ -89,15 +89,6 @@ export class AsciiCosmos {
     for (let i = 0; i < BELT_MAX; i++) this.belt.push({ angle: rnd() * Math.PI * 2, radius: 0.345 + rnd() * 0.05, speed: 0.4 + rnd() * 0.2, hue: rnd() });
   }
 
-  /** Applies new tuning values (from the developer panel); the character grid is rebuilt only if its shape changed. */
-  setParams(next: CosmosParams) {
-    const prev = this.params;
-    this.params = next;
-    const gridChanged = prev.cellScale !== next.cellScale || prev.lineHeight !== next.lineHeight || prev.ramp !== next.ramp;
-    if (gridChanged) this.resize(this.width, this.height);
-    else this.chooseSystemCenter(this.systemCenter.x, 0);
-  }
-
   resize(widthPx: number, heightPx: number) {
     this.width = Math.max(widthPx, 1);
     this.height = Math.max(heightPx, 1);

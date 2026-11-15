@@ -6,8 +6,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { AsciiCosmos, type CosmosPhase } from "./ascii-cosmos";
-import { CosmosDevPanel } from "./cosmos-dev-panel";
-import { type CosmosParams, DEFAULT_PARAMS, loadSavedParams, saveParams } from "./cosmos-params";
 import "./descent-animation.css";
 
 const MAX_DPR = 2;
@@ -23,10 +21,6 @@ export function DescentAnimation() {
   const keyRef = useRef<HTMLButtonElement>(null);
   const cosmosRef = useRef<AsciiCosmos | null>(null);
   const [phase, setPhase] = useState<CosmosPhase>("idle");
-  const [devOpen, setDevOpen] = useState(false);
-  const [params, setParams] = useState<CosmosParams>(DEFAULT_PARAMS);
-  const [engine, setEngine] = useState<AsciiCosmos | null>(null);
-  const [isNear, setIsNear] = useState(false);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -36,15 +30,6 @@ export function DescentAnimation() {
 
     const cosmos = new AsciiCosmos();
     cosmosRef.current = cosmos;
-    setEngine(cosmos);
-    // The developer panel is hidden: it only opens with ?dev on the address of a development build, and only then are saved slider values used.
-    const openDev = () => {
-      const saved = loadSavedParams();
-      cosmos.setParams(saved);
-      setParams(saved);
-      setDevOpen(true);
-    };
-    if (process.env.NODE_ENV !== "production" && new URLSearchParams(window.location.search).has("dev")) openDev();
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     let frameRequest = 0;
     let isVisible = false;
@@ -121,7 +106,6 @@ export function DescentAnimation() {
 
     const visibility = new IntersectionObserver(([entry]) => {
       isVisible = entry.isIntersecting;
-      setIsNear(entry.isIntersecting);
       if (isVisible && !reducedMotion && frameRequest === 0) {
         lastMs = performance.now();
         frameRequest = requestAnimationFrame(frame);
@@ -184,18 +168,6 @@ export function DescentAnimation() {
       <p className="lq-cosmos-status" role="status">
         {STATUS[phase]}
       </p>
-      {devOpen && isNear && (
-        <CosmosDevPanel
-          cosmos={engine}
-          params={params}
-          onChange={(next) => {
-            setParams(next);
-            engine?.setParams(next);
-            saveParams(next);
-          }}
-          onClose={() => setDevOpen(false)}
-        />
-      )}
     </div>
   );
 }

@@ -1,6 +1,5 @@
-// Every number that shapes the closing ASCII scene, in one place. The developer panel
-// (cosmos-dev-panel.tsx) builds its sliders from this list, so adding a line here adds a slider.
-// Once the look is settled, the defaults below are the values the page ships with.
+// Every number that shapes the closing ASCII scene, in one place. The values below are the settled
+// look the page ships with (they were tuned with a slider panel that has since been removed).
 
 export type ParamDef = {
   key: string;
@@ -75,29 +74,3 @@ export type ParamKey = (typeof PARAM_DEFS)[number]["key"];
 export type CosmosParams = Record<ParamKey, number>;
 
 export const DEFAULT_PARAMS = Object.fromEntries(PARAM_DEFS.map((def) => [def.key, def.value])) as CosmosParams;
-
-const STORAGE_KEY = "lq-cosmos-params";
-
-/** Values saved by the developer panel in this browser (only read while the panel is in use). */
-export function loadSavedParams(): CosmosParams {
-  try {
-    const saved = JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? "{}") as Partial<CosmosParams>;
-    return { ...DEFAULT_PARAMS, ...saved };
-  } catch {
-    return { ...DEFAULT_PARAMS };
-  }
-}
-
-export function saveParams(params: CosmosParams): void {
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(params));
-  } catch {
-    // Private windows can refuse storage; the sliders still work for this visit.
-  }
-}
-
-/** Only the values that differ from the shipped defaults, as the text the developer sends back. */
-export function changedParamsText(params: CosmosParams): string {
-  const changed = Object.fromEntries((Object.keys(params) as ParamKey[]).filter((key) => params[key] !== DEFAULT_PARAMS[key]).map((key) => [key, params[key]]));
-  return JSON.stringify(changed, null, 2);
-}
