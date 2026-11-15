@@ -3,6 +3,9 @@
 import * as THREE from "three";
 import { glowTexture } from "../first-person/sky-objects";
 import { bodyToThree, earthDirectionBody } from "../moon-frames";
+import { decodeTexture } from "../imagery/decode-texture";
+import { SKY_TEXTURES } from "../moon-texture-urls";
+import { fetchTextureBlob } from "../preload/texture-blob-cache";
 import { createStarfield, updateStarfield } from "../starfield";
 import { createEarthMaterial } from "./earth-material";
 
@@ -17,17 +20,16 @@ export interface GlobeSky {
   dispose: () => void;
 }
 
-export function createGlobeSky(renderer: THREE.WebGLRenderer): GlobeSky {
+/** invalidate：天空贴图下好后让画面重画一次（3D 球只在有变化时才画）。 */
+export function createGlobeSky(renderer: THREE.WebGLRenderer, invalidate: () => void): GlobeSky {
   const group = new THREE.Group();
   const stars = createStarfield(120_000);
   const textures: THREE.Texture[] = [];
   let disposed = false;
-  const loader = new THREE.TextureLoader();
+  // 走和其它贴图同一份下载缓存：首页预载过的话，这里直接用
   const load = async (url: string) => {
-    const texture = await loader.loadAsync(url);
+    const texture = await decodeTexture(await fetchTextureBlob(url), true, Math.min(8, renderer.capabilities.getMaxAnisotropy()));
     if (disposed) { texture.dispose(); return null; }
-    texture.colorSpace = THREE.SRGBColorSpace;
-    texture.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
     textures.push(texture);
     return texture;
   };
@@ -61,19 +63,21 @@ export function createGlobeSky(renderer: THREE.WebGLRenderer): GlobeSky {
   const earthHalo = new THREE.Sprite(new THREE.SpriteMaterial({ map: glow, color: 0x44aaff, opacity: 0.16, depthWrite: false, toneMapped: false, blending: THREE.AdditiveBlending }));
   earthHalo.scale.setScalar(SKY_DISTANCE_KM * Math.tan(THREE.MathUtils.degToRad(EARTH_ANGULAR_RADIUS_DEG)) * 2 / 0.3);
   group.add(stars, halo, sun, earthHalo, earth);
-  const earthUrl = renderer.capabilities.maxTextureSize >= 8192 ? "/product/sky/earth-8k.jpg" : "/product/sky/earth-4k.jpg";
+  // 地球和太阳在画面里只有一百来像素，用 2K / 1K 的小图就够了；它们不挡进场，下好了再出现
   const ready = Promise.all([
-    load(earthUrl).then((texture) => {
+    load(SKY_TEXTURES.earth).then((texture) => {
       if (!texture) return;
       texture.wrapS = THREE.RepeatWrapping;
       earthMaterial.uniforms.uDayMap.value = texture;
       earth.visible = true;
+      invalidate();
     }),
-    load("/product/sky/sun-sdo-4k.jpg").then((texture) => {
+    load(SKY_TEXTURES.sun).then((texture) => {
       if (!texture) return;
       sunMaterial.map = texture;
       sunMaterial.needsUpdate = true;
       sun.visible = true;
+      invalidate();
     }),
   ]).then(() => undefined);
 
