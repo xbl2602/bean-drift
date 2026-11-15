@@ -1,7 +1,7 @@
 // 左上角工具清单。以后加工具：在这里加一项，再在 panels/tool-panel.tsx 里接上对应的面板。
 import type { BaseLayer } from "../map-layers";
 
-export type ToolId = "tutorial" | "settings" | "ai" | "search" | "site" | "measure" | "elevation" | "illumination" | "temperature" | "ice" | "slope" | "suitability" | "compare" | "export";
+export type ToolId = "tutorial" | "settings" | "ai" | "search" | "inspect" | "site" | "measure" | "elevation" | "illumination" | "temperature" | "ice" | "slope" | "suitability" | "compare" | "export";
 
 /** 菜单里的分组。top = 顶部模式条右边的按钮（AI 工具、教程、设置），不在左边工具栏里。 */
 export type ToolCategory = "top" | "explore" | "science" | "evaluate";
@@ -42,7 +42,8 @@ export const TOOLS: ToolInfo[] = [
   { id: "settings", category: "top", label: "Settings", hint: "Appearance, language and information about this site", icon: GEAR_ICON },
   { id: "ai", category: "top", label: "AI Tools", hint: "Ask questions about the Moon in everyday words", icon: "M12 3l1.8 4.7L18.5 9.5l-4.700 1.800L12 16l-1.800-4.700L5.500 9.500l4.700-1.800L12 3Zm6.500 11 .900 2.100 2.100.900-2.100.900-.900 2.100-.900-2.100-2.100-.900 2.100-.900.900-2.100Z" },
   { id: "search", category: "explore", label: "Search Location", hint: "Jump to a crater, landing site or coordinates", icon: "M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14Zm9 16-4.3-4.3" },
-  { id: "site", category: "explore", label: "Select Landing Site", hint: "Drop a pin, see its data and save it as a candidate", icon: "M12 21s-6-6.2-6-11a6 6 0 0 1 12 0c0 4.800-6 11-6 11Zm0-9a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z", clickMode: "drop-site" },
+  { id: "inspect", category: "explore", label: "Landing site details", hint: "Inspect a location without adding it to comparison", icon: "M12 21s-6-6.2-6-11a6 6 0 0 1 12 0c0 4.8-6 11-6 11Z" },
+  { id: "site", category: "evaluate", label: "Select Landing Site", hint: "Drop a pin, see its data and save it as a candidate", icon: "M12 21s-6-6.2-6-11a6 6 0 0 1 12 0c0 4.800-6 11-6 11Zm0-9a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z", clickMode: "drop-site" },
   { id: "measure", category: "explore", label: "Measure Distance", hint: "Click points to see how far apart they are", icon: "M3 17 17 3l4 4L7 21l-4-4Zm5-5 2 2m1-5 2 2m1-5 2 2", clickMode: "measure" },
   { id: "elevation", category: "science", label: "Terrain & Elevation", hint: "Colour the map by height: high ground vs. low basins", icon: "M3 19 9 8l4 6 3-4 5 9H3Z", layer: "elevation" },
   { id: "illumination", category: "science", label: "Solar Illumination", hint: "See which places get the most sunlight (power)", icon: "M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm0-5v2m0 14v2M3 12h2m14 0h2M5.600 5.600 7 7m10 10 1.400 1.400M5.600 18.400 7 17M17 7l1.400-1.400", layer: "illumination" },

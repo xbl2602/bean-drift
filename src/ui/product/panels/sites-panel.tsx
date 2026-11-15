@@ -1,89 +1,57 @@
 "use client";
-// Pick a location, inspect its data, then optionally send it to the comparison window.
-// Location details stay here; comparison candidates are managed in the bottom comparison window.
-import type { PointAnalysis } from "../analysis/point-analysis";
-import type { SiteAnalyses } from "../analysis/use-point-analysis";
 import type { LatLon } from "../moon-frames";
+import { formatLatLon } from "../moon-frames";
+import { ToolIcon } from "../menu/tool-menu";
 import type { SavedSite } from "../overlay/annotations";
 import { MAX_SITES } from "../sites/use-saved-sites";
-import { SiteDataCard as SiteCard } from "./site-data-card";
 import { PanelButton, PanelShell } from "./panel-shell";
-import { SitePhoto } from "./site-photo";
+import { CoordinateBox } from "./site-metric-bars";
 
-export interface DraftSite extends LatLon {
-  name: string;
-}
+export interface DraftSite extends LatLon { name: string }
 
 interface SitesPanelProps {
   draft: DraftSite | null;
-  draftAnalysis: PointAnalysis | "error" | null;
   onDraftName: (name: string) => void;
   onSaveDraft: () => void;
   sites: SavedSite[];
-  analyses: SiteAnalyses;
   selectedId: string | null;
+  onSelectSite: (site: SavedSite) => void;
   onRename: (id: string, name: string) => void;
   onRemove: (id: string) => void;
-  onStandHere: (point: LatLon) => void;
-  /** 打开 Evaluate → Compare Landing Sites。 */
   onCompare: () => void;
-  /** 地图当前时刻：照片里的太阳和阴影按它画。 */
-  timeMs: number;
   onClose: () => void;
 }
 
+/** The comparison picker owns candidate actions; it never opens results implicitly. */
 export function SitesPanel(props: SitesPanelProps) {
-  const { draft, sites, selectedId } = props;
-  const selected = draft ? null : (sites.find((site) => site.id === selectedId) ?? null);
-  const selectedAnalysis = selected ? props.analyses[selected.id] : undefined;
+  const { draft, sites } = props;
+  const selected = draft ? null : sites.find(site => site.id === props.selectedId);
+  const point = draft ?? selected;
   const full = sites.length >= MAX_SITES;
+  return <PanelShell title="Choose comparison sites" onClose={props.onClose} side="right">
+    <p className="text-sm leading-relaxed text-white/75">Click the Moon to choose a location, then add it to your comparison.</p>
+    {point ? <section aria-label="Selected comparison location" className="mt-4 rounded-2xl border border-white/10 bg-white/[0.04] p-3">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-lime-200">{draft ? "Selected location" : "Already added"}</p>
+      <label className="mt-3 block text-xs text-slate-400">Site name
+        <input value={point.name} maxLength={40} onChange={event => draft ? props.onDraftName(event.target.value) : selected && props.onRename(selected.id, event.target.value)} className="mt-1 block w-full rounded-xl border border-white/15 bg-black/20 px-3 py-2 text-sm font-medium text-white focus:border-lime-300 focus:outline-none" />
+      </label>
+      <CoordinateBox point={point} />
+      <div className="mt-4 grid"><PanelButton primary onClick={props.onSaveDraft} disabled={!draft || full || !draft.name.trim()}>{draft ? "Add site" : "Added"}</PanelButton></div>
+    </section> : <p className="mt-4 rounded-xl border border-dashed border-white/20 px-4 py-5 text-center text-sm text-slate-400">Choose your next site on the map.</p>}
+    {draft && full && <p className="mt-2 text-xs text-amber-200">The list is full ({MAX_SITES}). Remove a site below to add another.</p>}
 
-  return (
-    <PanelShell title="Select Landing Site" onClose={props.onClose} side="right">
-      {!draft && !selected && <p className="text-sm text-white/75">Click anywhere on the Moon to place a marker. Its latitude, longitude and site details appear here.</p>}
-
-      {draft && (
-        <SiteCard
-          tag="Selected location"
-          name={draft.name}
-          onName={props.onDraftName}
-          point={draft}
-          analysis={props.draftAnalysis ?? undefined}
-          photo={<SitePhoto point={draft} name={draft.name} timeMs={props.timeMs} onStandHere={() => props.onStandHere(draft)} />}
-          actions={
-            <>
-
-              <div className="col-span-2"><PanelButton onClick={() => props.onStandHere(draft)}>Stand here</PanelButton></div>
-            </>
-          }
-        />
-      )}
-      {draft && full && <p className="mt-2 text-xs text-amber-200">The list is full ({MAX_SITES}). Remove one in Compare Landing Sites first.</p>}
-
-      {selected && (
-        <SiteCard
-          tag="Comparison candidate"
-          name={selected.name}
-          onName={(name) => props.onRename(selected.id, name)}
-          point={selected}
-          analysis={selectedAnalysis}
-          photo={<SitePhoto point={selected} name={selected.name} timeMs={props.timeMs} onStandHere={() => props.onStandHere(selected)} />}
-          actions={
-            <>
-
-              <div className="col-span-2"><PanelButton onClick={() => props.onStandHere(selected)}>Stand here</PanelButton></div>
-            </>
-          }
-        />
-      )}
-
-      <div className="mt-5 border-t border-white/10 pt-4">
-        <p className="text-[11px] leading-snug text-slate-400">Want to compare this location?</p>
-        <button type="button" onClick={props.onCompare} disabled={(!draft && sites.length === 0) || Boolean(draft && (full || !draft.name.trim()))} className="mt-2 flex w-full items-center justify-between gap-2 rounded-xl border border-white/15 bg-white/[0.04] px-3.5 py-2.5 text-left text-sm font-medium text-white transition disabled:cursor-not-allowed disabled:opacity-40 hover:border-lime-300/40 hover:bg-lime-300/10">
-          <span>{draft ? "Add to comparison" : sites.length ? "Compare landing sites" : "Pick a location first"}<span className="ml-2 font-mono text-[11px] font-normal text-slate-400">{sites.length} selected</span></span>
-          <span aria-hidden="true" className="text-lime-300">→</span>
-        </button>
-      </div>
-    </PanelShell>
-  );
+    <section aria-label="Selected comparison sites" className="mt-5">
+      <div className="flex items-center justify-between gap-2"><h3 className="text-xs font-semibold text-slate-200">Sites to compare</h3><span className="font-mono text-xs text-slate-400">{sites.length}/{MAX_SITES}</span></div>
+      {sites.length === 0 ? <p className="mt-3 text-xs leading-relaxed text-slate-400">No sites added yet. Pick a location and choose Add site.</p> : <ul className="mt-3 space-y-2">
+        {sites.map(site => <li key={site.id} className={`flex items-center gap-2 rounded-xl border p-2 ${site.id === props.selectedId ? "border-lime-200/30 bg-lime-200/5" : "border-white/10 bg-white/[0.025]"}`}>
+          <button type="button" onClick={() => props.onSelectSite(site)} aria-label={`Show ${site.name} on map`} className="min-w-0 flex-1 rounded-lg px-1 text-left focus-visible:outline focus-visible:outline-lime-200"><span className="block truncate text-sm font-medium text-slate-100">{site.name}</span><span className="mt-1 block font-mono text-[10px] text-slate-400">{formatLatLon(site)}</span></button>
+          <button type="button" aria-label={`Remove ${site.name}`} title={`Remove ${site.name}`} onClick={() => props.onRemove(site.id)} className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-white/10 text-slate-400 transition hover:border-red-200/30 hover:bg-red-200/10 hover:text-red-100 focus-visible:outline focus-visible:outline-lime-200"><ToolIcon path="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7m4-7v7" className="h-4 w-4" /></button>
+        </li>)}
+      </ul>}
+    </section>
+    <div className="mt-5 border-t border-white/10 pt-4">
+      {sites.length < 2 && <p className="mb-3 text-xs text-slate-400">Add at least two sites to compare.</p>}
+      <button type="button" disabled={sites.length < 2} onClick={props.onCompare} className="w-full rounded-xl bg-lime-300 px-4 py-3 text-sm font-semibold text-[#11180a] transition hover:bg-lime-200 disabled:cursor-not-allowed disabled:opacity-40">Compare</button>
+    </div>
+  </PanelShell>;
 }

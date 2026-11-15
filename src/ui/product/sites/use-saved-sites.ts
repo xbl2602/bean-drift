@@ -29,5 +29,7 @@ export function useSavedSites() {
   const removeSite = useCallback((id: string) => setSites((current) => current.filter((s) => s.id !== id)), []);
   const renameSite = useCallback((id: string, name: string) => setSites((current) => current.map((s) => (s.id === id ? { ...s, name: name.slice(0, 40) } : s))), []);
 
-  return { sites, addSite, removeSite, renameSite };
+  const clearSites = useCallback(() => setSites([]), []);
+
+  return { sites, addSite, removeSite, renameSite, clearSites };
 }

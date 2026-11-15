@@ -100,11 +100,13 @@ function craterProfileM(rho: number, radiusM: number, crispness: number): number
   const rimM = diameterM * (0.01 + 0.026 * crispness);
   const rimWidth = 0.35 - 0.22 * crispness;
   let h = rimM * Math.exp(-(((rho - 1) / rimWidth) ** 2));
+  // 溅射毯：坑沿外按 r^-3 衰减。坑沿里面也要接上（从坑心的 0 一路抬到坑沿的值），
+  // 否则坑沿处会有一道几十到几百米高的"悬崖"，画面上就是一整面带竖条纹的墙。
+  const ejectaM = rimM * 0.55 * (0.4 + 0.6 * crispness);
+  h += rho < 1 ? ejectaM * Math.pow(rho, 4) : ejectaM * Math.pow(rho, -3) * (1 - smooth(2.2, 3, rho));
   if (rho < 1) {
     h -= depthM * (1 - Math.pow(rho, complex ? 3.6 : 2));
     if (complex && diameterM > 22_000) h += 0.22 * depthM * Math.exp(-((rho / 0.13) ** 2)); // 中央峰
-  } else {
-    h += rimM * 0.55 * (0.4 + 0.6 * crispness) * Math.pow(rho, -3) * (1 - smooth(2.2, 3, rho));
   }
   return h;
 }
@@ -160,6 +162,21 @@ export function createTerrainDetail(latDeg: number, lonDeg: number, realCraters:
     if (Math.hypot(c.eastM, c.northM) < realRadiusM && c.radiusM * 2 >= 1000) realNear++;
   }
 
+  // 生成的坑不能把着陆点（人站的地方）包进去：真实的着陆点都选在平地上，站在一个几十米深的坑底，
+  // 四周坑壁会挡住地球和大半个天空（比如 Luna 9 那次：坑壁高到 28°，地球被挡住）。坑沿外再留一点余地。
+  // 真实数据库里的坑（≥ 1 km）不受影响，位置照旧。
+  const clearOfStart = (eastM: number, northM: number, radiusM: number) => Math.hypot(eastM, northM) > radiusM * 1.6 + 10;
+  /** 随机找一个不压住着陆点的位置：最多试 8 次，找不到就不放这个坑。 */
+  const placeClear = (radiusM: number, pick: () => [number, number], crispness: number) => {
+    for (let attempt = 0; attempt < 8; attempt++) {
+      const [eastM, northM] = pick();
+      if (!clearOfStart(eastM, northM, radiusM)) continue;
+      add({ eastM, northM, radiusM, crispness });
+      return true;
+    }
+    return false;
+  };
+
   // 2. 按本地真实大坑的密度定标的小坑：数量随直径 -2.2 次方减少
   const areaKm2 = Math.PI * (realRadiusM / 1000) ** 2;
   const density1km = realCraters.length > 0 ? Math.min(Math.max(realNear / areaKm2, 0.02), 0.15) : 0.04;
@@ -171,32 +188,44 @@ export function createTerrainDetail(latDeg: number, lonDeg: number, realCraters:
   for (let i = 0; i < wanted; i++) {
     // 反解累计分布：直径 D 满足 N(>D) ∝ D^-2.2
     const diameterKm = Math.pow(Math.pow(dMin, -SIZE_EXPONENT) - random() * (Math.pow(dMin, -SIZE_EXPONENT) - Math.pow(dMax, -SIZE_EXPONENT)), -1 / SIZE_EXPONENT);
-    const distanceM = Math.sqrt(random()) * SMALL_FIELD_RADIUS_M;
-    const angle = random() * Math.PI * 2;
-    add({ eastM: Math.cos(angle) * distanceM, northM: Math.sin(angle) * distanceM, radiusM: (diameterKm * 1000) / 2, crispness: Math.pow(random(), 1.3) });
-    generated++;
+    const crispness = Math.pow(random(), 1.3);
+    const placed = placeClear((diameterKm * 1000) / 2, () => {
+      const distanceM = Math.sqrt(random()) * SMALL_FIELD_RADIUS_M;
+      const angle = random() * Math.PI * 2;
+      return [Math.cos(angle) * distanceM, Math.sin(angle) * distanceM];
+    }, crispness);
+    if (placed) generated++;
   }
   for (let i = 0; i < HERO_CRATER_COUNT; i++) {
     // 均匀分布在各个方向上，离人 70 m ~ 700 m；直径 25 ~ 160 m，几乎都是新坑
     const angle = ((i + random() * 0.8) / HERO_CRATER_COUNT) * Math.PI * 2;
-    const distanceM = 45 + Math.pow(random(), 1.3) * 400;
     const diameterM = 22 * Math.pow(130 / 22, random());
-    add({ eastM: Math.cos(angle) * distanceM, northM: Math.sin(angle) * distanceM, radiusM: diameterM / 2, crispness: 0.7 + 0.3 * random() });
-    generated++;
+    const crispness = 0.7 + 0.3 * random();
+    const placed = placeClear(diameterM / 2, () => {
+      const distanceM = 45 + Math.pow(random(), 1.3) * 400;
+      return [Math.cos(angle) * distanceM, Math.sin(angle) * distanceM];
+    }, crispness);
+    if (placed) generated++;
   }
   for (let i = 0; i < NEAR_CRATER_COUNT; i++) {
     const diameterM = 14 * Math.pow(70 / 14, random());
-    const distanceM = 20 + Math.sqrt(random()) * 310;
-    const angle = random() * Math.PI * 2;
-    add({ eastM: Math.cos(angle) * distanceM, northM: Math.sin(angle) * distanceM, radiusM: diameterM / 2, crispness: 0.35 + 0.65 * Math.pow(random(), 0.9) });
-    generated++;
+    const crispness = 0.35 + 0.65 * Math.pow(random(), 0.9);
+    const placed = placeClear(diameterM / 2, () => {
+      const distanceM = 20 + Math.sqrt(random()) * 310;
+      const angle = random() * Math.PI * 2;
+      return [Math.cos(angle) * distanceM, Math.sin(angle) * distanceM];
+    }, crispness);
+    if (placed) generated++;
   }
   for (let i = 0; i < MID_CRATER_COUNT; i++) {
     const diameterM = 40 * Math.pow(400 / 40, random());
-    const distanceM = 90 + Math.sqrt(random()) * 1900;
-    const angle = random() * Math.PI * 2;
-    add({ eastM: Math.cos(angle) * distanceM, northM: Math.sin(angle) * distanceM, radiusM: diameterM / 2, crispness: 0.25 + 0.75 * Math.pow(random(), 1.2) });
-    generated++;
+    const crispness = 0.25 + 0.75 * Math.pow(random(), 1.2);
+    const placed = placeClear(diameterM / 2, () => {
+      const distanceM = 90 + Math.sqrt(random()) * 1900;
+      const angle = random() * Math.PI * 2;
+      return [Math.cos(angle) * distanceM, Math.sin(angle) * distanceM];
+    }, crispness);
+    if (placed) generated++;
   }
 
   /** 对 (east, north) 附近每个够大的坑调用一次 visit(坑, rho)。 */

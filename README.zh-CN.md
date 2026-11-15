@@ -1,7 +1,6 @@
 <div align="center">
 
-<h1>BEAN DRIFT</h1>
-<p><strong>月球着陆点导航仪 · 3D/2D/第一人称 · 可视化 AI · MCP</strong></p>
+![Bean Drift animated title](docs/assets/bean-drift-title-zh.svg)
 
 <a href="https://bean-drift.vercel.app/product">
   <img src="docs/assets/bean-drift-mascot.svg" alt="Bean Drift 三幕动画：宇航员、着陆器、卫星与月球车，流星间歇划过" width="740" />

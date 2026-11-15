@@ -270,3 +270,13 @@ pitch/              视频脚本、分镜、素材清单（leeziqi0531-debug，�
 4. **不要新建重复的文档**，也不要把记录写到约定之外的地方。命名遵守 [docs/README.md](docs/README.md) 的命名规则（共享文档 `UPPER_SNAKE.md`，记录类 `YYYY-MM-DD_...`，英文小写加连字符，不要空格和中文文件名）。
 5. **PR 描述里写一句**："改了哪些文档"或"没改文档，因为……"。审核的人据此检查文档有没有跟上。
 6. 写文档用大白话，写明日期；不确定的内容明说"不确定"，不要写得像定论。
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+## This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->

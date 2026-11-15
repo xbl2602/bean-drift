@@ -5,12 +5,13 @@ import * as THREE from "three";
 import { MoonTextureSet, fineMapsForLayer } from "../imagery/moon-texture-set";
 import { TileAtlas } from "../imagery/tile-atlas";
 import { COLOR_PYRAMID_SOURCE, MOON_TREK_SOURCE, type MoonAtlases } from "../imagery/tile-sources";
-import { applyAnalysisUniforms, type AnalysisUniforms } from "../analysis/analysis-glsl";
+import { applyAnalysisUniforms, applyGridScale, type AnalysisUniforms } from "../analysis/analysis-glsl";
 import { monthSunSamples, sunBodyAt } from "../analysis/sun-samples";
 import type { LayerSettings } from "../map-layers";
 import type { FocusRequest, MapViewProps } from "../map-view-props";
 import { bodyToLatLon, sunDirectionBody, type LatLon } from "../moon-frames";
 import { prefersReducedMotion } from "../motion/smooth-value";
+import { LunarFeatureLayer } from "../overlay/lunar-feature-layer";
 import { AnnotationLayer } from "../overlay/annotations";
 import { usePointerGestures } from "../use-pointer-gestures";
 import { createMap2dMaterial } from "./map-2d-material";
@@ -23,6 +24,7 @@ interface Map2dRuntime {
   camera3: THREE.Camera;
   material: THREE.ShaderMaterial;
   analysisUniforms: AnalysisUniforms;
+  features: LunarFeatureLayer;
   overlay: AnnotationLayer;
   atlases: MoonAtlases;
   textures: MoonTextureSet;
@@ -52,6 +54,7 @@ export function Map2dView({ timeMs, layers, annotations, focus, cursor, onPick, 
       const { timeMs: t, layers: l, annotations: a } = settingsRef.current;
       applyUniforms(rt, t, l);
       rt.renderer.render(rt.scene, rt.camera3);
+      rt.features.draw(a, (point) => latLonToScreen(rt.mapCamera, rt.screen, point), { ...rt.screen, pixelsPerDegree: rt.mapCamera.mapWidthPx / 360 });
       rt.overlay.draw(a, (point) => latLonToScreen(rt.mapCamera, rt.screen, point), rt.screen.widthPx);
       if (stillFlying) requestRender();
     });
@@ -85,7 +88,7 @@ export function Map2dView({ timeMs, layers, annotations, focus, cursor, onPick, 
         const subSolar = bodyToLatLon(sunDirectionBody(settingsRef.current.timeMs));
         const pending = focusRef.current;
         const mapCamera = pending ? cameraForFocus(pending, screen) : initialCamera(screen, subSolar.lonDeg - 45);
-        runtimeRef.current = { atlases, textures, fineRequestedFor: null, renderer, scene, camera3: new THREE.Camera(), material, analysisUniforms, overlay: new AnnotationLayer(container), mapCamera, flight: null, screen, frame: 0 };
+        runtimeRef.current = { atlases, textures, fineRequestedFor: null, renderer, scene, camera3: new THREE.Camera(), material, analysisUniforms, features: new LunarFeatureLayer(container, requestRender), overlay: new AnnotationLayer(container), mapCamera, flight: null, screen, frame: 0 };
         resize();
         onLoadingChange(false);
         textures.request(["relief", "slope", "polar"], "coarse");
@@ -114,7 +117,8 @@ export function Map2dView({ timeMs, layers, annotations, focus, cursor, onPick, 
       const rt = runtimeRef.current;
       if (rt) {
         cancelAnimationFrame(rt.frame);
-        rt.overlay.dispose();
+        rt.features.dispose();
+      rt.overlay.dispose();
         rt.atlases.tiles.dispose();
         rt.atlases.detail.dispose();
         rt.material.dispose();
@@ -146,6 +150,7 @@ export function Map2dView({ timeMs, layers, annotations, focus, cursor, onPick, 
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 只在收到新的定位请求时执行
   }, [focus?.seq]);
 
+  const tappedPointRef = useRef<LatLon | null>(null);
   const latLonAt = (xPx: number, yPx: number): LatLon | null => {
     const rt = runtimeRef.current;
     if (!rt) return null;
@@ -169,11 +174,12 @@ export function Map2dView({ timeMs, layers, annotations, focus, cursor, onPick, 
       requestRender();
     },
     onDoubleTap: onDoublePick ? (x, y) => {
-      const point = latLonAt(x, y);
+      const point = tappedPointRef.current ?? latLonAt(x, y);
       if (point) onDoublePick(point);
     } : undefined,
     onTap: (x, y) => {
       const point = latLonAt(x, y);
+      tappedPointRef.current = point;
       if (point) onPick(point);
     },
     onHover: (x, y) => onHover(x === null || y === null ? null : latLonAt(x, y)),
@@ -219,4 +225,5 @@ function applyUniforms(rt: Map2dRuntime, timeMs: number, layers: LayerSettings) 
   u.uMapWidthPx.value = rt.mapCamera.mapWidthPx * dpr;
   u.uSunlight.value = layers.sunlight;
   applyAnalysisUniforms(rt.analysisUniforms, layers, sunBodyAt(timeMs), monthSunSamples(timeMs));
+  applyGridScale(rt.analysisUniforms, rt.mapCamera.mapWidthPx / 360, dpr);
 }

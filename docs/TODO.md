@@ -8,13 +8,13 @@
 |---|---|---|---|
 | ~~Q1~~ | 已解决，见 DECISION_LOG D-0017 | | |
 | Q2 | 综合有效位置图（L9）的基地参数有哪些、默认值多少 | 决定 UI 和着色规则 | FEATURE_SPEC §5 |
-| Q3 | 预设点位清单（中美俄等）和**有出处的**坐标。**进度（2026-11-15）**：已有 24 个，全部在 CREDITS 第 5 节登记出处：原型 4 个、阿波罗 12/14/15/16/17（NSSDCA）、嫦娥三/四/五/六号和月船三号（IAU 地名库或 LROC）、南极 10 个地名中心点（IAU，**不是着陆目标**）。**还缺**：Luna/Surveyor/SLIM/IM-1/Blue Ghost 等（没有核实过的出处，不写）；俄/印/日以外的任务。**Artemis III（2026-11-15 核实）**：9 个候选区名单已对照 NASA 官方新闻稿（2024-10-28，从 13 缩到 9：Peak near Cabeus B、Haworth、Malapert Massif、Mons Mouton Plateau、Mons Mouton、Nobile Rim 1、Nobile Rim 2、de Gerlache Rim 2、Slater Plain）核实无误，但 NASA 官方文本（新闻稿、NTRS 20250011660）只给名单和示意图，**没有逐区中心坐标**；第三方论文里的坐标是作者自选的最优点，不算官方定义。未核实前不进预设 | 用户要求预设点；坐标不能凭记忆 | FEATURE_SPEC §7 |
+| Q3 | 预设点位清单（中美俄等）和**有出处的**坐标。**进度（2026-11-15）**：已有 48 个（11 月 15 日补过三次），全部在 CREDITS 第 5 节登记出处：原型 4 个、阿波罗 12/14/15/16/17（NSSDCA）、嫦娥三/四/五/六号和月船三号（IAU 地名库或 LROC）、IM-1 和 IM-2（NASA/LROC 页面，南极）、SLIM 和 Blue Ghost 1（NASA/LROC 页面）、勘测者 1/3/5/6/7 和月球 16/17/20/21/23/24（LROC 2016 坐标表）、月球 9/13（维基百科人造物体清单，**精度约 300 m，待复核**）、南极 17 个地名中心点（IAU，**不是着陆目标**）。点位有 `kind` 字段：`landing-site` 着陆过的任务 / `place` 地名。**还缺**：已计划但没公布精确着陆点的任务（嫦娥七号、月船四号、月球 27、Griffin 等，**不写**）、着陆失败的（月球 25、月船二号、Hakuto-R、Beresheet，没收）。注意：AI 的预设卡片最多画 50 个，现在 48 个，再加要先放宽 `presetsVisualSchema`（`src/features/agent-search/ui/visual-data.ts`，louis068 的目录）。**Artemis III（2026-11-15 核实）**：9 个候选区名单已对照 NASA 官方新闻稿（2024-10-28，从 13 缩到 9：Peak near Cabeus B、Haworth、Malapert Massif、Mons Mouton Plateau、Mons Mouton、Nobile Rim 1、Nobile Rim 2、de Gerlache Rim 2、Slater Plain）核实无误，但 NASA 官方文本（新闻稿、NTRS 20250011660）只给名单和示意图，**没有逐区中心坐标**；第三方论文里的坐标是作者自选的最优点，不算官方定义。未核实前不进预设 | 用户要求预设点；坐标不能凭记忆 | FEATURE_SPEC §7 |
 | Q4 | 预计算产物放哪。**进度**：已调研，见 `docs/research/tile-hosting-limits.md`。小图层（坡度/日照/通信，估算几十 MB）可跟网站放 Vercel；全月高精度地形（约 8.5 GB）放不进 Vercel 和 Supabase 免费版，候选是 Cloudflare R2（对外）+ Oracle VPS（备份）。**2026-11-14 进展**：0.25° 整月预计算（约 55 MB，含地形、地平线、一年统计）已随网站放在 `public/data/v1/`，不需要外部存储。**还没拍板**：是否做高精度地形、是否用 R2 | 影响大小限制和稳定性 | DATA_FLOW §4 |
 | Q5 | 全月数据用什么 DEM、多大分辨率。**进度**：候选已选 LOLA 118 m 全月（`LDEM_256`）做地形，NASA Moon Trek 的 WAC（约 83 m/像素）做 2D 底图（见 `docs/research/nasa-trek-tiles-for-frontend.md`）。**2026-11-14 进展**：整月概览实际用了旧仓库已有的 `LDEM_64`（473.8 m/像素），0.25° 格子，全月地平线 25 秒算完（20 线程），见 decisions；更细的 DEM 是否要上，等前端用起来再定。**还差**：Trek 使用条款未确认；更高分辨率（着陆点尺度）的地平线耗时和大小没实测 | 决定"全月每点可调用"能否做到 | FEATURE_SPEC §6 |
 | Q6 | **沿用的框架与原型是否要向本地组织者说明或确认？** 官方 FAQ 有一条"赛前不得开始做挑战"（见 `docs/research/lunar-landing-site-navigator_research.md` 第 1 节），而沿用的内容是活动开始之前做的，这一点没有向组织者确认过。视频和提交文档里怎么如实标注"已有基础"也要定 | 避免提交被认定违规；对评委诚实 | DECISION_LOG D-0008 |
 
 | Q7 | **产品页极区地图颜色要不要换成 160 m 同源数据？** 现在极区光照图只有约 1.9 km 细节，而点位卡（`/api/point`）在 80°S 以南已是 160 m，两边数字会对不上（例：Mons Malapert 点位卡太阳比例 8.5% → 42.3%，地图颜色不会跟着变）。要换，需要 pipeline 出极区光照图层，再由夏娜接前端 | 避免同一个点地图和卡片说法不一样 | D-0028 |
-| Q8 | 产品页"着陆点"模式前端写死的 6 个 IAU Statio 点，要不要并入后端预设、前端改读 `/api/presets`？后端预设已有 24 个，包含这 6 个任务的点位和出处（见 Q3 进度） | 前端和接口说同一份清单 | D-0024、`decisions/2026-11-15_ShanLe1224_product-three-modes.md` |
+| ~~Q8~~ | 已解决（2026-11-15）：产品页 Landing Sites 模式改读 `/api/presets`，见 `decisions/2026-11-15_xbl2602_more-presets-and-product-list.md` | | |
 | Q9 | DeepSeek 封装位置：AGENTS.md 5.4 写的是 `src/lib/llm/`，实际在 `src/features/agent-search/api/deepseek.ts`。搬，还是改规则 | 规则和代码一致 | AGENTS.md 5.4、12 |
 | Q10 | 整月图层 L4–L7 和地球可见、同时可见图层何时做（前端读 `public/data/v1/`）；南极"按条件找位置"做成 160 m（要现算约 1134 万格）建议**不做**，在文档里标明仍是 0.25° | 赛题核心是通信，但按第 13 节排在核心体验和视频之后 | FEATURE_SPEC §3、D-0028 |
 
@@ -43,7 +43,8 @@
   - [ ] 点位卡显示"这个点用的数据有多精细"（接口返回的 `terrain.resolutionM`：南极 160 m，其他约 7.6 km）。现在页面上完全没有，合并南极高精度后用户看不出差别。
   - [ ] 点位卡里的一年统计固定是 2030 年：要么把时间轴起点传给接口的 `statsStart`，要么卡片上写明"2030 年"。现在不传也不写明。
   - [ ] "按条件找位置"（`POST /api/find-sites`）和"跨日期对比"（`POST /api/compare-dates`）加页面入口：现在只有 AI 和 MCP 能用，页面没有入口。
-  - [ ] 着陆点列表改读 `/api/presets`（等 Q8 确认）；极区地图颜色和点位卡同源（等 Q7）；整月图层 L4–L7（等 Q10）。
+  - [x] 着陆点列表改读 `/api/presets`（2026-11-15 由 xbl2602 代做，改了 `modes/` 下 3 个文件和 `lunar-quest-app.tsx`，**请夏娜看一眼**）。
+  - [ ] 极区地图颜色和点位卡同源（等 Q7）；整月图层 L4–L7（等 Q10）。
   - [ ] 看一眼整合时替你合入的第一人称改动（chanjy0806 的 5 个提交，没有经过你审）。
 - **`chanjy0806`（落地页 + 第一人称）**
   - [ ] **第一人称有一个已知故障（整合时发现，优先修）**：在 9.00°N 67.91°E（月球正面偏东，Mare Undarum 附近），进入第一人称后一整面竖条纹的"墙"挡住画面，墙左边缘是一条从屏幕顶到底的笔直竖线，不是真实地形（线上现版同一点是平坦地平线；你的分支单独构建也一样）。另外测的 7.29°N 55.76°E、5.54°N 73.97°E 画面正常，有坑有石头。复现：打开 `/product` 切 2D，点 9.00°N 67.91°E，进第一人称。已排除：真实坑数据（最近的坑在 4.7 km 外、直径 1.3 km）、`terrain-detail.ts` 的高度公式（用游戏里同一公式扫了全部 12.5 万个网格点，没有非数字、没有极端值；脚下 100 m 内最陡的是几米高的坑壁）、你最后一个提交（回退后墙还在）。还没查的：`first-person-scene.ts`、`rock-field.ts`、`first-person-view.tsx` 里相机/石头/"缩放"的改动，怀疑某个顶点或某块石头的位置异常。

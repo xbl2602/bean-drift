@@ -26,15 +26,15 @@ import { ViewControls, type MapMode } from "./view-controls";
 import { useAnnounceMapReady } from "./use-announce-map-ready";
 import { DEFAULT_APP_MODE, rememberAppMode, rememberedAppMode, type AppMode } from "./modes/app-modes";
 import { FindDataMode } from "./modes/find-data-mode";
-import type { HistoricLandingSite } from "./modes/historic-landing-sites";
-import { LandingSitesMode, useHistoricLandingSites } from "./modes/landing-sites-mode";
+import { LandingSitesMode, usePresetSites } from "./modes/landing-sites-mode";
 import { ModeSwitch } from "./modes/mode-switch";
+import { filterLandingSites, LANDING_KIND_COLORS, nearestSite, type LandingFilter, type SiteEntry } from "./modes/preset-sites";
 
 /** 搜索结果的纬度超过这个值就切到 3D 显示。 */
 const POLAR_SEARCH_LAT_DEG = 75;
 /** "选点"光标：一个小图钉，尖端（16, 30）就是点击的位置。浏览器不支持时退回十字。 */
 const PIN_CURSOR = `url("data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><path d="M16 30 8 17.500a9.500 9.500 0 1 1 16 0Z" fill="#bef264" stroke="#0d1400" stroke-width="2"/><circle cx="16" cy="12" r="3.500" fill="#0d1400"/></svg>')}") 16 30, crosshair`;
-/** Landing Sites 模式：点在某个着陆点这么多度以内就算点中它。 */
+/** Landing Sites 模式：点在某个着陆点这么多度以内，就算点中离它最近的那个。 */
 const LANDING_PICK_RADIUS_DEG = 8;
 
 export function LunarQuestApp() {
@@ -53,6 +53,7 @@ export function LunarQuestApp() {
     if (saved === "landing-sites") setLandingVisited(true);
   }, []);
   const [landingSiteId, setLandingSiteId] = useState<string | null>(null);
+  const [landingFilter, setLandingFilter] = useState<LandingFilter>("all");
   const [findTarget, setFindTarget] = useState<SearchTarget | null>(null);
   const [simResultsOpen, setSimResultsOpen] = useState(false);
   // 默认 3D 地球仪（Explore 模式进来就是 3D；2D 展开图可以在右上角切换）
@@ -71,8 +72,12 @@ export function LunarQuestApp() {
   const [draftSite, setDraftSite] = useState<DraftSite | null>(null);
   const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
   const { sites, addSite, removeSite, renameSite } = useSavedSites();
-  const landingState = useHistoricLandingSites(landingVisited || appMode === "landing-sites");
-  const landingSites = useMemo(() => (landingState.status === "ready" ? landingState.sites : []), [landingState]);
+  const landingState = usePresetSites(landingVisited || appMode === "landing-sites");
+  // 地图上只画筛选后的着陆任务；南极地名挤在极点附近，全画出来会叠成一团，所以只在选中它时才画那一个
+  const landingSites = useMemo(
+    () => filterLandingSites(landingState.status === "ready" ? landingState.sites : [], landingFilter).filter((site) => site.kind === "landing-site" || site.id === landingSiteId),
+    [landingState, landingFilter, landingSiteId],
+  );
   const exploring = appMode === "explore";
   // AI 工具和设置在三个模式里都能开，面板都在右边
   const rightToolOpen = activeTool === "ai" || activeTool === "settings";
@@ -95,6 +100,7 @@ export function LunarQuestApp() {
   const requestFocus = useCallback((point: LatLon, spanDeg: number) => setFocus((previous) => ({ seq: (previous?.seq ?? 0) + 1, point, spanDeg })), []);
 
   const focusComparisonSite = useCallback((site: SavedSite) => {
+    setDraftSite(null);
     setSelectedSiteId(site.id);
     setMapMode("3d");
     requestFocus(site, 110);
@@ -110,8 +116,8 @@ export function LunarQuestApp() {
 
   const selectTool = (tool: ToolId) => {
     setActiveTool(tool);
-    // 未保存的标记只属于 Select Landing Site：换到别的工具就收起
-    if (tool !== "site") setDraftSite(null);
+    // Inspection can pass its unsaved point to the comparison picker; other tools dismiss it.
+    if (tool !== "site" && tool !== "inspect") setDraftSite(null);
     if (tool === "compare") setMapMode("3d");
     const layer = toolInfo(tool).layer;
     if (layer) setLayers((current) => ({ ...current, base: layer }));
@@ -120,11 +126,8 @@ export function LunarQuestApp() {
     if (standingAt) leaveFirstPerson();
   };
   const selectMenuTool = (tool: ToolId) => {
-    if (tool !== "compare") return selectTool(tool);
-    setDraftSite(null);
-    setSelectedSiteId(null);
-    selectTool("site");
-    setNotice("Pick a location on the Moon, then choose Add to comparison.");
+    // The toolbar always starts with the picker; only its Compare button opens results.
+    selectTool(tool === "compare" ? "site" : tool);
   };
   const closeTool = () => {
     // 关掉图层工具的面板 = 不再看这个图层，回到月面影像
@@ -143,8 +146,12 @@ export function LunarQuestApp() {
     setError(null);
     setStandingAt(null);
   };
-  const saveSite = (point: LatLon, name?: string) => {
-    setNotice(addSite(point, name) ? `Added ${name ?? "site"} to comparison` : `The site list is full (${MAX_SITES}). Remove one first.`);
+  const chooseSiteForComparison = (point: LatLon, name?: string) => {
+    changeAppMode("explore");
+    selectTool("site");
+    setSearchTarget(null);
+    setDraftSite({ latDeg: point.latDeg, lonDeg: normalizeLonDeg(point.lonDeg), name: name || nextSiteName(sites) });
+    setSelectedSiteId(null);
   };
   const changeAppMode = (mode: AppMode) => {
     if (mode === appMode) return;
@@ -172,11 +179,17 @@ export function LunarQuestApp() {
     if (activeTool === "settings") closeTool();
     else selectTool("settings");
   };
-  const selectLandingSite = (site: HistoricLandingSite) => {
+  const selectLandingSite = (site: SiteEntry) => {
     if (rightToolOpen) setActiveTool(null); // 讲解面板和 AI / 设置面板都在右边，点了着陆点就看讲解
     setLandingSiteId(site.id);
     // 不强制切 3D：用户在 2D 平面图里点着陆点，就留在 2D，平面图自己会居中到这个点（3D 球则飞过去）
     requestFocus(site, 45);
+  };
+  const changeLandingFilter = (filter: LandingFilter) => {
+    setLandingFilter(filter);
+    // 选中的着陆点不在新的筛选里，就把右边的讲解收起
+    const stillShown = landingState.status === "ready" && filterLandingSites(landingState.sites, filter).some((site) => site.id === landingSiteId);
+    if (!stillShown) setLandingSiteId(null);
   };
   const lookUpPoint = (target: SearchTarget) => {
     setFindTarget(target);
@@ -184,13 +197,18 @@ export function LunarQuestApp() {
   };
   const handlePick = (point: LatLon) => {
     if (appMode === "landing-sites") {
-      const near = landingSites.find((site) => Math.abs(site.latDeg - point.latDeg) < LANDING_PICK_RADIUS_DEG && Math.abs(normalizeLonDeg(site.lonDeg - point.lonDeg)) < LANDING_PICK_RADIUS_DEG);
+      const near = nearestSite(landingSites, point, LANDING_PICK_RADIUS_DEG);
       if (near) selectLandingSite(near);
       return;
     }
     if (appMode === "find-data") {
       const picked = { latDeg: point.latDeg, lonDeg: normalizeLonDeg(point.lonDeg) };
       setFindTarget({ ...picked, label: t("sim.picked"), detail: formatLatLon(picked), spanDeg: 25 });
+      return;
+    }
+    if (activeTool === "search") {
+      const picked = { latDeg: point.latDeg, lonDeg: normalizeLonDeg(point.lonDeg) };
+      setSearchTarget({ ...picked, label: t("sim.picked"), detail: formatLatLon(picked), spanDeg: 25 });
       return;
     }
     if (activeTool === "compare") {
@@ -205,8 +223,10 @@ export function LunarQuestApp() {
     }
     else if (clickMode === "measure") setMeasurePoints((points) => [...points, { latDeg: point.latDeg, lonDeg: normalizeLonDeg(point.lonDeg) }]);
     else {
-      const picked = { latDeg: point.latDeg, lonDeg: normalizeLonDeg(point.lonDeg) };
-      setSearchTarget({ ...picked, label: t("sim.picked"), detail: formatLatLon(picked), spanDeg: 25 });
+      setSearchTarget(null);
+      setDraftSite({ latDeg: point.latDeg, lonDeg: normalizeLonDeg(point.lonDeg), name: nextSiteName(sites) });
+      setSelectedSiteId(null);
+      setActiveTool("inspect");
     }
   };
   const saveDraft = () => {
@@ -234,7 +254,7 @@ export function LunarQuestApp() {
   const annotations = useMemo<MapAnnotations>(() => {
     // 每个模式只画自己的标记：着陆点模式画任务着陆点，查数据模式画查询的位置
     if (appMode === "landing-sites") {
-      return { sites: landingSites.map((site) => ({ id: site.id, name: site.mission, latDeg: site.latDeg, lonDeg: site.lonDeg, createdAt: site.landedUtc })), measurePoints: [], searchPin: null, selectedSiteId: landingSiteId };
+      return { sites: landingSites.map((site) => ({ id: site.id, name: site.label, latDeg: site.latDeg, lonDeg: site.lonDeg, createdAt: site.landedUtc ?? "", markerColor: site.crew ? LANDING_KIND_COLORS[site.crew] : undefined })), measurePoints: [], searchPin: null, selectedSiteId: landingSiteId };
     }
     if (appMode === "find-data") return { sites: [], measurePoints: [], searchPin: findTarget };
     return { sites, measurePoints, searchPin: searchTarget, draftSite: draftSite ? { latDeg: draftSite.latDeg, lonDeg: draftSite.lonDeg, label: draftSite.name || "New marker" } : null, selectedSiteId };
@@ -260,15 +280,15 @@ export function LunarQuestApp() {
       )}
 
       </div>
-      {exploring && <ToolMenu activeTool={activeTool} onSelect={selectMenuTool} onHome={resetExplorer} onGroupOpen={closeTool} />}
+      {exploring && <ToolMenu activeTool={activeTool} onSelect={selectMenuTool} onHome={resetExplorer} />}
       {!standingAt && <ModeSwitch mode={appMode} onChange={changeAppMode} tutorialOpen={activeTool === "tutorial"} aiOpen={activeTool === "ai"} settingsOpen={activeTool === "settings"} onTutorial={openTutorial} onAi={toggleAi} onSettings={toggleSettings} />}
       {!standingAt && <ViewControls mode={mapMode} onModeChange={changeMode} layers={layers} onLayersChange={setLayers} />}
 
       {appMode === "landing-sites" && !standingAt && (
-        <LandingSitesMode state={landingState} selectedId={rightToolOpen ? null : landingSiteId} onSelect={selectLandingSite} onCloseDetail={() => setLandingSiteId(null)} timeMs={timeMs} weights={layers.weights} onStandHere={enterFirstPerson} />
+        <LandingSitesMode state={landingState} selectedId={rightToolOpen ? null : landingSiteId} filter={landingFilter} onFilterChange={changeLandingFilter} onSelect={selectLandingSite} onCloseDetail={() => setLandingSiteId(null)} timeMs={timeMs} weights={layers.weights} onStandHere={enterFirstPerson} />
       )}
       {appMode === "find-data" && !standingAt && (
-        <FindDataMode target={findTarget} onGoTo={lookUpPoint} onClear={() => setFindTarget(null)} timeMs={timeMs} onTimeChange={setTimeMs} weights={layers.weights} onStandHere={enterFirstPerson} onSaveSite={saveSite} resultsHidden={rightToolOpen} onResultsOpenChange={setSimResultsOpen} />
+        <FindDataMode target={findTarget} onGoTo={lookUpPoint} onClear={() => setFindTarget(null)} timeMs={timeMs} onTimeChange={setTimeMs} weights={layers.weights} onStandHere={enterFirstPerson} onCompareLocation={chooseSiteForComparison} resultsHidden={rightToolOpen} onResultsOpenChange={setSimResultsOpen} />
       )}
 
       {activeTool && (exploring || rightToolOpen) && (activeTool === "tutorial" || !standingAt) && (
@@ -293,9 +313,10 @@ export function LunarQuestApp() {
           onSaveDraft={saveDraft}
           selectedSiteId={selectedSiteId}
           onStandHere={enterFirstPerson}
-          onSaveSite={saveSite}
+          onCompareLocation={chooseSiteForComparison}
           onRenameSite={renameSite}
-          onRemoveSite={removeSite}
+          onRemoveSite={(id) => { removeSite(id); setSelectedSiteId(current => current === id ? null : current); }}
+          onFindNewSite={() => { setDraftSite(null); setSelectedSiteId(null); selectTool("site"); }}
           onSelectTool={selectTool}
           onClose={closeTool}
         />
@@ -317,7 +338,7 @@ export function LunarQuestApp() {
         </div>
       )}
       <div className={`pointer-events-none absolute inset-x-0 top-0 ${comparing ? "bottom-[var(--compare-height)]" : "bottom-0"}`}><div className="pointer-events-auto contents">
-      <TimelineBar key={`timeline-${viewRevision}`} timeMs={timeMs} onTimeChange={setTimeMs} />
+      <TimelineBar key={`timeline-${viewRevision}-${standingAt ? "first-person" : "map"}`} timeMs={timeMs} onTimeChange={setTimeMs} loop={!!standingAt} />
       </div></div>
       <p className={`pointer-events-none absolute ${comparing ? "hidden" : "xl:block"} bottom-0.5 right-3 z-10 hidden text-[10px] text-white/35 hidden`}>
         NASA SVS CGI Moon Kit · NASA Moon Trek / LROC Team / ASU · LRO LOLA · IAU/USGS names · Earth: NASA Blue Marble · Sun: NASA/SDO AIA (false colour)
