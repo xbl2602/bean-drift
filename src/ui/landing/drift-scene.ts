@@ -1,39 +1,49 @@
 // The "loading" animation between the landing page and the product page: a pixel-art scene in the
-// style of old arcade racing games. The bean drives in sideways from the left along a night track,
-// throwing up tyre smoke, stops dead centre so you can see it (it flips its sunglasses up and winks),
-// then swings round and speeds off to the right.
+// style of old arcade racing games, seen from above. Only the track and the car are drawn on a plain
+// dark screen. The bean drives in from the left and drifts through the first bend, laying the road
+// down in front of it as it goes (the track is not there until the car reaches it), stops dead centre
+// so you can see it (it flips its sunglasses up and winks), then drifts out through a second bend and
+// off the right-hand side. The page changes only once the car has completely left the picture.
 //
 // Everything is drawn with filled rectangles on a very small canvas (180 pixels tall) that the browser
 // scales up without smoothing, so every "pixel" is a crisp square. No pictures are used: the car, the
 // bean, the track and the smoke are all made in code (see docs/CREDITS.md).
 
 /** Roughly how long the whole show lasts (the car is gone a little after this); only used for the progress bar. */
-export const SCENE_SECONDS = 3.7;
+export const SCENE_SECONDS = 4;
 /** The page is changed only once the car has completely left the picture; this is the longest we ever wait. */
-export const GIVE_UP_AT_S = 6;
+export const GIVE_UP_AT_S = 7;
 
 const HEIGHT = 180;
-const ROAD_TOP = 104;
-const SPRITE_W = 64;
-const SPRITE_H = 32;
-const SPRITE_SCALE = 3;
-const CAR_Y = 126;
-/** Where the rear wheel sits, in screen pixels from the middle of the car. */
-const REAR_WHEEL = { x: -18 * SPRITE_SCALE, y: 7 * SPRITE_SCALE };
+const SPRITE_W = 42;
+const SPRITE_H = 22;
+const SPRITE_SCALE = 2;
+const BEAN_SCALE = 2;
+const ROAD_HALF_WIDTH = 33;
+const KERB_WIDTH = 4;
+const LOOK_AHEAD_PX = 80; // how much road is laid in front of the car
+const BACKGROUND = "#06050f";
 
-const ENTER_S = 1.2;
-const HOLD_END_S = 2.25;
-const EXIT_S = 1.5;
-/** The car turns this far (degrees, clockwise) while it speeds away, so it leaves in a curve, not a straight line. */
-const EXIT_TURN_DEG = 40;
-const GLASSES_UP = [1.3, 2.05] as const;
-const WINK = [1.55, 1.9] as const;
+const ENTER_S = 1.5;
+const HOLD_END_S = 2.8;
+const EXIT_S = 1.25;
+const GLASSES_UP = [1.7, 2.55] as const;
+const WINK = [1.95, 2.3] as const;
+
+/** Where the road goes, as fractions of the screen width and height: two bends with the car stopping in between. */
+const ROAD_POINTS: readonly (readonly [number, number])[] = [
+  [-0.16, 0.8],
+  [0.14, 0.8],
+  [0.31, 0.6],
+  [0.5, 0.46], // the car stops here
+  [0.69, 0.5],
+  [0.84, 0.7],
+  [1.16, 0.84],
+];
+const CENTER_POINT_INDEX = 3;
 
 const ease = {
-  inOutQuad: (t: number) => (t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2),
   outCubic: (t: number) => 1 - (1 - t) ** 3,
-  inCubic: (t: number) => t * t * t,
-  inQuad: (t: number) => t * t,
   outQuad: (t: number) => 1 - (1 - t) * (1 - t),
 };
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
@@ -41,6 +51,7 @@ const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 const within = (t: number, [from, to]: readonly [number, number]) => t >= from && t <= to;
 const rad = (deg: number) => (deg * Math.PI) / 180;
 
+type Pt = { x: number; y: number };
 type Puff = { x: number; y: number; vx: number; vy: number; age: number; life: number; r0: number; r1: number };
 
 function seeded(seed: number) {
@@ -68,64 +79,66 @@ function disc(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: number, 
   }
 }
 
-// ---------- the track and sky, drawn once per size ----------
+// ---------- the road ----------
 
-function drawBackdrop(ctx: CanvasRenderingContext2D, width: number) {
-  const rnd = seeded(7);
-  // Sky in visible bands, like an old palette-swapped gradient.
-  const bands = ["#080620", "#0c0a2a", "#120f38", "#1a1548", "#251d5a", "#33286d", "#463784"];
-  const bandHeight = Math.ceil(ROAD_TOP / bands.length);
-  bands.forEach((color, i) => rect(ctx, 0, i * bandHeight, width, bandHeight + 1, color));
-  for (let i = 0; i < width / 3; i++) {
-    const y = Math.floor(rnd() * ROAD_TOP * 0.8);
-    rect(ctx, Math.floor(rnd() * width), y, 1, 1, rnd() > 0.7 ? "#ffe9a8" : "#e9e6ff");
-  }
-  // A crescent Moon and a small Earth: this is the Lunar Quest night.
-  disc(ctx, width * 0.14, 30, 13, "#f3efcf");
-  disc(ctx, width * 0.14 + 6, 27, 11, "#120f38");
-  disc(ctx, width * 0.86, 24, 7, "#3f86e8");
-  rect(ctx, width * 0.86 - 4, 22, 5, 3, "#4fb26a");
-  rect(ctx, width * 0.86 + 1, 27, 4, 2, "#e9f2ff");
-  // Two layers of hills and a row of pine trees.
-  for (const [base, amp, color, seed] of [[ROAD_TOP - 28, 12, "#17133f", 1], [ROAD_TOP - 16, 9, "#100d2f", 2]] as const) {
-    for (let x = 0; x < width; x++) {
-      const h = base + Math.sin(x * 0.03 + seed) * amp + Math.sin(x * 0.011 + seed * 3) * amp * 0.8;
-      rect(ctx, x, h, 1, ROAD_TOP - h, color);
+type Road = { points: Pt[]; startIndex: number; centerIndex: number };
+
+/** The centre line of the road as points one pixel apart, running a little past both ends of the screen. */
+function buildRoad(width: number): Road {
+  const control = ROAD_POINTS.map(([fx, fy]) => ({ x: fx * width, y: fy * HEIGHT }));
+  const dense: Pt[] = [];
+  let centerDense = -1;
+  for (let i = 0; i < control.length - 1; i++) {
+    const p0 = control[Math.max(0, i - 1)];
+    const p1 = control[i];
+    const p2 = control[i + 1];
+    const p3 = control[Math.min(control.length - 1, i + 2)];
+    if (i === CENTER_POINT_INDEX) centerDense = dense.length;
+    for (let k = 0; k < 80; k++) {
+      const u = k / 80;
+      const at = (a: number, b: number, c: number, d: number) => 0.5 * (2 * b + (-a + c) * u + (2 * a - 5 * b + 4 * c - d) * u * u + (-a + 3 * b - 3 * c + d) * u * u * u);
+      dense.push({ x: at(p0.x, p1.x, p2.x, p3.x), y: at(p0.y, p1.y, p2.y, p3.y) });
     }
   }
-  for (let x = 4; x < width; x += 9 + Math.floor(rnd() * 10)) {
-    const top = ROAD_TOP - 24 - Math.floor(rnd() * 8);
-    for (let row = 0; row < 4; row++) rect(ctx, x - 2 - row, top + row * 5, 5 + row * 2, 5, "#0a0924");
-    rect(ctx, x, top + 20, 1, ROAD_TOP - top - 20, "#0a0924");
-  }
-  // Guard rail with yellow chevron signs.
-  rect(ctx, 0, ROAD_TOP - 7, width, 3, "#8a8fb0");
-  rect(ctx, 0, ROAD_TOP - 4, width, 1, "#4d5070");
-  for (let x = 0; x < width; x += 16) rect(ctx, x, ROAD_TOP - 7, 2, 7, "#5b5e80");
-  for (let x = 26; x < width; x += 84) {
-    rect(ctx, x, ROAD_TOP - 24, 22, 16, "#0d0c1c");
-    rect(ctx, x + 1, ROAD_TOP - 23, 20, 14, "#f2b632");
-    for (const dx of [4, 11]) for (let k = 0; k < 5; k++) {
-      rect(ctx, x + dx + (k < 3 ? k : 4 - k), ROAD_TOP - 21 + k * 2, 3, 2, "#1a1426");
+  dense.push(control[control.length - 1]);
+  // Resample at one pixel spacing.
+  const points: Pt[] = [dense[0]];
+  let centerIndex = 0;
+  let carried = 0;
+  for (let i = 1; i < dense.length; i++) {
+    let from = dense[i - 1];
+    const to = dense[i];
+    let segment = Math.hypot(to.x - from.x, to.y - from.y);
+    while (carried + segment >= 1) {
+      const t = (1 - carried) / segment;
+      from = { x: from.x + (to.x - from.x) * t, y: from.y + (to.y - from.y) * t };
+      points.push(from);
+      segment = Math.hypot(to.x - from.x, to.y - from.y);
+      carried = 0;
     }
-    rect(ctx, x + 10, ROAD_TOP - 8, 2, 4, "#5b5e80");
+    carried += segment;
+    if (i === centerDense) centerIndex = points.length - 1;
   }
-  // The road: asphalt, red and white kerb, dashed centre line.
-  for (let y = ROAD_TOP; y < HEIGHT; y++) {
-    const shade = Math.floor(((y - ROAD_TOP) / (HEIGHT - ROAD_TOP)) * 3);
-    rect(ctx, 0, y, width, 1, ["#2d2c40", "#272638", "#212031"][shade]);
-  }
-  for (let x = 0; x < width; x += 8) rect(ctx, x, ROAD_TOP, 8, 3, (x / 8) % 2 ? "#f4f0ff" : "#d6384a");
-  for (let i = 0; i < width * 4; i++) rect(ctx, rnd() * width, ROAD_TOP + 4 + rnd() * (HEIGHT - ROAD_TOP - 4), 1, 1, rnd() > 0.5 ? "#36354b" : "#1c1b2b");
-  for (let x = 6; x < width; x += 24) rect(ctx, x, 158, 12, 2, "#c9c6e6");
+  // Straight run-ups so the car can start and finish off screen.
+  const head = points[0];
+  const next = points[8];
+  const tail = points[points.length - 1];
+  const before = points[points.length - 9];
+  const lead: Pt[] = [];
+  for (let k = 140; k >= 1; k--) lead.push({ x: head.x - ((next.x - head.x) / 8) * k, y: head.y - ((next.y - head.y) / 8) * k });
+  const trail: Pt[] = [];
+  for (let k = 1; k <= 260; k++) trail.push({ x: tail.x + ((tail.x - before.x) / 8) * k, y: tail.y + ((tail.y - before.y) / 8) * k });
+  const all = [...lead, ...points, ...trail];
+  const startIndex = all.findIndex((p) => p.x > -SPRITE_W * SPRITE_SCALE * 0.6);
+  return { points: all, startIndex: Math.max(0, startIndex), centerIndex: centerIndex + lead.length };
 }
 
 // ---------- the car and the bean ----------
 
 function drawBean(ctx: CanvasRenderingContext2D, x: number, y: number, glassesUp: number, wink: boolean) {
-  disc(ctx, x, y, 7, "#46600f"); // outline
+  disc(ctx, x, y, 7, "#46600f");
   disc(ctx, x, y, 6, "#a8c43a");
-  disc(ctx, x + 2, y + 2, 4, "#8ba82c"); // shaded lower side
+  disc(ctx, x + 2, y + 2, 4, "#8ba82c");
   rect(ctx, x - 4, y - 5, 2, 1, "#f1fa9a");
   rect(ctx, x - 3, y - 4, 1, 1, "#f1fa9a");
   if (glassesUp > 0.5) {
@@ -154,46 +167,43 @@ function drawBean(ctx: CanvasRenderingContext2D, x: number, y: number, glassesUp
   rect(ctx, x - 5, y + 2, 2, 1, "#e68b7a");
 }
 
-function drawSprite(ctx: CanvasRenderingContext2D, timeS: number, wheelTurn: number) {
+/** The car seen from above, facing right: wheels, white body, black hood, open cockpit, spoiler. */
+function drawCar(ctx: CanvasRenderingContext2D, wheelTurn: number) {
   ctx.clearRect(0, 0, SPRITE_W, SPRITE_H);
-  const glassesUp = clamp01((timeS - GLASSES_UP[0]) / 0.18) * (1 - clamp01((timeS - (GLASSES_UP[1] - 0.18)) / 0.18));
-  const wink = within(timeS, WINK);
-  // Rear spoiler.
-  rect(ctx, 1, 5, 11, 2, "#14131f");
-  rect(ctx, 3, 7, 2, 5, "#14131f");
-  // Cabin: a low sloping hatchback roof with the glass inset, so the bean shows through the windscreen.
-  for (let y = 2; y <= 12; y++) {
-    const left = Math.round(15 + (12 - y) * 0.5);
-    const right = Math.round(47 - (12 - y) * 1.3);
-    rect(ctx, left, y, right - left, 1, "#e9e6f6");
-    if (y >= 4) rect(ctx, left + 3, y, right - left - 6, 1, "#3a2f78");
+  rect(ctx, 5, 5, 34, 16, "rgba(0,0,0,0.32)"); // soft shadow
+  // Wheels, with a tread mark that turns.
+  const tread = Math.floor(wheelTurn * 2) % 4;
+  for (const [wx, wy] of [[8, 1], [28, 1], [8, 17], [28, 17]] as const) {
+    rect(ctx, wx, wy, 9, 4, "#0c0b14");
+    rect(ctx, wx + 1 + tread * 2, wy + 1, 1, 2, "#3a3a52");
+    rect(ctx, wx + 4, wy + 1, 2, 2, "#6c7096");
   }
-  rect(ctx, 20, 5, 5, 1, "#8b7fe0");
-  rect(ctx, 22, 6, 3, 1, "#6a5ec4");
-  drawBean(ctx, 31, 10, glassesUp, wink);
-  // Body: white upper half, black lower half and bumpers, like the classic two-tone hatchback.
-  rect(ctx, 3, 13, 58, 5, "#f1eef9");
-  rect(ctx, 3, 18, 58, 5, "#1b1a27");
-  rect(ctx, 2, 14, 2, 8, "#2a2938");
-  rect(ctx, 60, 14, 2, 8, "#2a2938");
-  rect(ctx, 6, 16, 52, 1, "#c3bfd8");
-  rect(ctx, 5, 18, 54, 1, "#2f2e42");
-  // Lights.
-  rect(ctx, 57, 14, 5, 3, "#ffd96b");
-  rect(ctx, 58, 14, 3, 1, "#fff6c8");
-  rect(ctx, 57, 19, 4, 2, "#f2a33a");
-  rect(ctx, 2, 14, 3, 3, "#d6384a");
-  // Wheels, with spokes that turn.
-  for (const wx of [14, 49]) {
-    disc(ctx, wx, 23, 6, "#0c0b14");
-    disc(ctx, wx, 23, 3, "#8a8fb0");
-    disc(ctx, wx, 23, 1, "#2d2c40");
-    const a = wheelTurn;
-    for (let k = 0; k < 3; k++) {
-      const angle = a + (k * Math.PI * 2) / 3;
-      rect(ctx, wx + Math.cos(angle) * 2.4, 23 + Math.sin(angle) * 2.4, 1, 1, "#e9e6f6");
-    }
-  }
+  // Body.
+  rect(ctx, 6, 3, 30, 16, "#f1eef9");
+  rect(ctx, 4, 5, 34, 12, "#f1eef9");
+  rect(ctx, 5, 4, 32, 14, "#f1eef9");
+  rect(ctx, 4, 16, 34, 1, "#c3bfd8");
+  rect(ctx, 4, 5, 34, 1, "#c3bfd8");
+  // Black hood with a raised centre line, and the headlights.
+  rect(ctx, 27, 5, 10, 12, "#1b1a27");
+  rect(ctx, 27, 10, 10, 2, "#34334a");
+  rect(ctx, 37, 5, 2, 3, "#ffd96b");
+  rect(ctx, 37, 14, 2, 3, "#ffd96b");
+  rect(ctx, 37, 6, 1, 1, "#ffffff");
+  rect(ctx, 37, 15, 1, 1, "#ffffff");
+  // Cockpit and windscreen.
+  rect(ctx, 12, 5, 11, 12, "#241d4a");
+  rect(ctx, 23, 5, 3, 12, "#4a3d96");
+  rect(ctx, 24, 6, 1, 4, "#8b7fe0");
+  rect(ctx, 8, 5, 3, 12, "#e9e6f6");
+  // Mirrors, spoiler, tail lights.
+  rect(ctx, 24, 2, 3, 2, "#1b1a27");
+  rect(ctx, 24, 18, 3, 2, "#1b1a27");
+  rect(ctx, 1, 3, 4, 16, "#14131f");
+  rect(ctx, 5, 6, 2, 2, "#14131f");
+  rect(ctx, 5, 14, 2, 2, "#14131f");
+  rect(ctx, 4, 5, 1, 3, "#d6384a");
+  rect(ctx, 4, 14, 1, 3, "#d6384a");
 }
 
 function drawSparkle(ctx: CanvasRenderingContext2D, x: number, y: number, size: number) {
@@ -202,33 +212,51 @@ function drawSparkle(ctx: CanvasRenderingContext2D, x: number, y: number, size: 
   rect(ctx, x - 1, y - 1, 3, 3, "#ffffff");
 }
 
+type Layer = { canvas: HTMLCanvasElement; ctx: CanvasRenderingContext2D };
+
+function makeLayer(width: number): Layer {
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = HEIGHT;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("2D canvas is not available");
+  return { canvas, ctx };
+}
+
 export class DriftScene {
   private readonly ctx: CanvasRenderingContext2D;
-  private readonly sprite = document.createElement("canvas");
-  private readonly spriteCtx: CanvasRenderingContext2D;
-  private readonly backdrop = document.createElement("canvas");
+  private readonly carSprite = document.createElement("canvas");
+  private readonly carCtx: CanvasRenderingContext2D;
+  private readonly beanSprite = document.createElement("canvas");
+  private readonly beanCtx: CanvasRenderingContext2D;
   private width = 320;
+  private road: Road = { points: [], startIndex: 0, centerIndex: 0 };
+  private layers: Record<"kerb" | "asphalt" | "detail" | "marks", Layer> | null = null;
+  private stamped = 0;
+  private lastIndex = 0;
   private puffs: Puff[] = [];
-  private marks: { x: number; y: number }[] = [];
   private previous = { t: 0, x: 0, y: 0 };
   private wheelTurn = 0;
   private rnd = seeded(99);
   private goneAt: number | null = null;
 
+  constructor(private readonly canvas: HTMLCanvasElement) {
+    const ctx = canvas.getContext("2d");
+    const carCtx = this.carSprite.getContext("2d");
+    const beanCtx = this.beanSprite.getContext("2d");
+    if (!ctx || !carCtx || !beanCtx) throw new Error("2D canvas is not available");
+    this.ctx = ctx;
+    this.carCtx = carCtx;
+    this.beanCtx = beanCtx;
+    this.carSprite.width = SPRITE_W;
+    this.carSprite.height = SPRITE_H;
+    this.beanSprite.width = this.beanSprite.height = 18;
+    this.resize(canvas.clientWidth || window.innerWidth, canvas.clientHeight || window.innerHeight);
+  }
+
   /** Whether the car has completely left the picture (the page can change now). */
   get carHasLeft(): boolean {
     return this.goneAt !== null;
-  }
-
-  constructor(private readonly canvas: HTMLCanvasElement) {
-    const ctx = canvas.getContext("2d");
-    const spriteCtx = this.sprite.getContext("2d");
-    if (!ctx || !spriteCtx) throw new Error("2D canvas is not available");
-    this.ctx = ctx;
-    this.spriteCtx = spriteCtx;
-    this.sprite.width = SPRITE_W;
-    this.sprite.height = SPRITE_H;
-    this.resize(canvas.clientWidth || window.innerWidth, canvas.clientHeight || window.innerHeight);
   }
 
   /** The picture is always 180 pixels tall; its width follows the screen shape. */
@@ -236,128 +264,192 @@ export class DriftScene {
     this.width = Math.min(560, Math.max(260, Math.round((HEIGHT * cssWidth) / Math.max(cssHeight, 1))));
     this.canvas.width = this.width;
     this.canvas.height = HEIGHT;
-    this.backdrop.width = this.width;
-    this.backdrop.height = HEIGHT;
-    const context = this.backdrop.getContext("2d");
-    if (context) drawBackdrop(context, this.width);
     this.ctx.imageSmoothingEnabled = false;
+    this.road = buildRoad(this.width);
+    this.layers = { kerb: makeLayer(this.width), asphalt: makeLayer(this.width), detail: makeLayer(this.width), marks: makeLayer(this.width) };
+    this.stamped = 0;
+    this.lastIndex = this.road.startIndex;
   }
 
-  /** Where the car is at a moment: position of its middle, and how far it is turned (degrees, clockwise). */
+  private roadAt(s: number): { x: number; y: number; heading: number; turn: number } {
+    const { points } = this.road;
+    const index = Math.min(points.length - 2, Math.max(0, s));
+    const i = Math.floor(index);
+    const f = index - i;
+    const a = points[i];
+    const b = points[i + 1];
+    const ahead = points[Math.min(points.length - 1, i + 5)];
+    const behind = points[Math.max(0, i - 5)];
+    const far = points[Math.min(points.length - 1, i + 18)];
+    const near = points[Math.max(0, i - 18)];
+    const heading = Math.atan2(ahead.y - behind.y, ahead.x - behind.x);
+    const wider = Math.atan2(far.y - near.y, far.x - near.x);
+    const turn = Math.atan2(Math.sin(wider - heading), Math.cos(wider - heading));
+    return { x: lerp(a.x, b.x, f), y: lerp(a.y, b.y, f), heading, turn };
+  }
+
+  /** Where the car is on the road at a moment, and which way it points (degrees, clockwise). */
   private carState(t: number): { x: number; y: number; angle: number } {
-    const w = this.width;
+    const { startIndex, centerIndex, points } = this.road;
+    const end = points.length - 2;
+    let s: number;
+    let slide: number;
     if (t < ENTER_S) {
       const p = ease.outCubic(t / ENTER_S);
-      return { x: lerp(-100, w / 2, p), y: lerp(CAR_Y + 12, CAR_Y, p), angle: lerp(-26, -7, p) };
-    }
-    if (t < HOLD_END_S) {
+      s = lerp(startIndex, centerIndex, p);
+      slide = 30 * (1 - p) + 10;
+    } else if (t < HOLD_END_S) {
       const k = t - ENTER_S;
-      return { x: w / 2 + Math.sin(k * 5) * 1.5, y: CAR_Y + Math.sin(k * 11) * 1.2, angle: -7 + Math.sin(k * 8) * 1.4 };
+      s = centerIndex + Math.sin(k * 5) * 1.2;
+      slide = 10 + Math.sin(k * 6.5) * 5;
+    } else {
+      const u = (t - HOLD_END_S) / EXIT_S;
+      s = Math.min(end, centerIndex + ((end - centerIndex) / 1.15) * (0.1 * u + u * u * u));
+      slide = 10 + 22 * Math.sin(Math.PI * clamp01(u * 1.2));
     }
-    // Leaving: the car speeds up and swings round to the right in one long curve, drifting (its nose
-    // points further round than the way it is travelling), and keeps going until it is completely off screen.
-    const q = (t - HOLD_END_S) / EXIT_S; // 0 to 1 over the main turn; keeps growing after that
-    const reach = (w / 2 + 230) / 0.9;
-    const steps = 40;
-    let dx = 0;
-    let dy = 0;
-    for (let i = 0; i < steps; i++) {
-      const u = ((i + 0.5) / steps) * q;
-      const heading = rad(EXIT_TURN_DEG * ease.inOutQuad(clamp01(u)));
-      const speed = 0.15 + 3 * u * u;
-      dx += Math.cos(heading) * speed * (q / steps) * reach;
-      dy += Math.sin(heading) * speed * (q / steps) * reach;
-    }
-    const heading = EXIT_TURN_DEG * ease.inOutQuad(clamp01(q));
-    const slip = 16 * Math.sin(Math.PI * clamp01(q * 1.5));
-    return { x: w / 2 + dx, y: CAR_Y + dy, angle: -7 + heading + slip };
+    const at = this.roadAt(s);
+    // A drifting car points further into the bend than the way it is going.
+    const turnSign = at.turn === 0 ? 1 : Math.sign(at.turn);
+    return { x: at.x, y: at.y, angle: (at.heading * 180) / Math.PI + turnSign * slide };
   }
 
-  /** True once the car is completely outside the picture. */
-  isCarGone(timeS: number): boolean {
-    if (timeS <= HOLD_END_S) return false;
-    const car = this.carState(timeS);
-    return car.x > this.width + SPRITE_W * SPRITE_SCALE * 0.6 || car.y > HEIGHT + SPRITE_H * SPRITE_SCALE;
+  /** Lays down the road, a little ahead of the car, one pixel of road at a time. */
+  private layRoad(untilIndex: number) {
+    const layers = this.layers;
+    if (!layers) return;
+    const { points } = this.road;
+    const rnd = seeded(5 + this.stamped);
+    for (let i = this.stamped; i <= Math.min(points.length - 1, untilIndex); i++) {
+      const p = points[i];
+      if (p.x < -ROAD_HALF_WIDTH - 20 || p.x > this.width + ROAD_HALF_WIDTH + 20) continue;
+      disc(layers.kerb.ctx, p.x, p.y, ROAD_HALF_WIDTH + KERB_WIDTH, Math.floor(i / 7) % 2 ? "#f4f0ff" : "#d6384a");
+      disc(layers.asphalt.ctx, p.x, p.y, ROAD_HALF_WIDTH, i % 24 < 12 ? "#2d2c40" : "#2a2a3c");
+      if (Math.floor(i / 9) % 2 === 0) rect(layers.detail.ctx, p.x, p.y, 2, 2, "#c9c6e6");
+      if (rnd() < 0.5) {
+        const angle = rnd() * Math.PI * 2;
+        const radius = rnd() * (ROAD_HALF_WIDTH - 3);
+        rect(layers.detail.ctx, p.x + Math.cos(angle) * radius, p.y + Math.sin(angle) * radius, 1, 1, rnd() < 0.5 ? "#3b3a52" : "#1f1e30");
+      }
+    }
+    this.stamped = Math.max(this.stamped, untilIndex + 1);
   }
 
-  private emitPuffs(dt: number, t: number, x: number, y: number, angle: number, speed: number) {
-    const rate = t < ENTER_S ? 40 + 110 * (1 - t / ENTER_S) : t < HOLD_END_S ? 16 : 130;
+  /** Index of the road point nearest the car (searching forward from the last one found). */
+  private roadIndexNear(x: number, y: number): number {
+    const { points } = this.road;
+    let best = this.lastIndex;
+    let bestDistance = Infinity;
+    for (let i = Math.max(0, this.lastIndex - 30); i < Math.min(points.length, this.lastIndex + 160); i++) {
+      const d = (points[i].x - x) ** 2 + (points[i].y - y) ** 2;
+      if (d < bestDistance) {
+        bestDistance = d;
+        best = i;
+      }
+    }
+    this.lastIndex = best;
+    return best;
+  }
+
+  private emitPuffs(dt: number, t: number, car: { x: number; y: number; angle: number }, speed: number) {
+    const rate = t < ENTER_S ? 50 + 110 * (1 - t / ENTER_S) : t < HOLD_END_S ? 95 : 150;
     const count = Math.floor(rate * dt + this.rnd());
-    const rearX = x + Math.cos(rad(angle)) * REAR_WHEEL.x - Math.sin(rad(angle)) * REAR_WHEEL.y;
-    const rearY = y + Math.sin(rad(angle)) * REAR_WHEEL.x + Math.cos(rad(angle)) * REAR_WHEEL.y;
+    const a = rad(car.angle);
     for (let i = 0; i < count; i++) {
+      const side = this.rnd() < 0.5 ? -1 : 1;
+      const lx = -10 * SPRITE_SCALE;
+      const ly = side * 8 * SPRITE_SCALE;
       const r0 = 2 + Math.floor(this.rnd() * 2);
       this.puffs.push({
-        x: rearX + (this.rnd() - 0.5) * 4,
-        y: rearY + (this.rnd() - 0.5) * 3,
-        vx: -speed * 0.28 + (this.rnd() - 0.5) * 26,
-        vy: -(8 + this.rnd() * 26),
+        x: car.x + Math.cos(a) * lx - Math.sin(a) * ly,
+        y: car.y + Math.sin(a) * lx + Math.cos(a) * ly,
+        vx: -Math.cos(a) * speed * 0.12 + (this.rnd() - 0.5) * 30,
+        vy: -Math.sin(a) * speed * 0.12 + (this.rnd() - 0.5) * 30 - 6,
         age: 0,
         life: 0.9 + this.rnd() * 0.8,
         r0,
         r1: r0 + 5 + Math.floor(this.rnd() * 4),
       });
     }
-    if (this.puffs.length > 320) this.puffs.splice(0, this.puffs.length - 320);
+    if (this.puffs.length > 360) this.puffs.splice(0, this.puffs.length - 360);
   }
 
   render(timeS: number) {
     const t = Math.max(timeS, 0);
-    if (this.goneAt === null && this.isCarGone(t)) this.goneAt = t;
     const dt = Math.min(Math.max(t - this.previous.t, 0), 0.05);
-    const { ctx } = this;
+    const { ctx, layers } = this;
+    if (!layers) return;
     const car = this.carState(t);
-    const speed = dt > 0 ? (car.x - this.previous.x) / dt : 0;
-    this.wheelTurn += (Math.abs(speed) * dt) / 6 + dt * 6;
+    const speed = dt > 0 ? Math.hypot(car.x - this.previous.x, car.y - this.previous.y) / dt : 0;
+    this.wheelTurn += (speed * dt) / 5 + dt * 6;
     this.previous = { t, x: car.x, y: car.y };
+    if (this.goneAt === null && t > HOLD_END_S && (car.x > this.width + 70 || car.x < -70 || car.y > HEIGHT + 70 || car.y < -70)) this.goneAt = t;
 
-    // Little camera shake as the car lands and as it launches away.
-    const launch = t > HOLD_END_S ? Math.max(0, 1 - (t - HOLD_END_S) / 0.35) : 0;
-    const landing = t < ENTER_S + 0.3 && t > ENTER_S ? 1 - (t - ENTER_S) / 0.3 : 0;
+    // The road is laid just ahead of the car: it is not there until the car gets close.
+    this.layRoad(this.roadIndexNear(car.x, car.y) + LOOK_AHEAD_PX);
+
+    const launch = t > HOLD_END_S ? Math.max(0, 1 - (t - HOLD_END_S) / 0.3) : 0;
+    const landing = t > ENTER_S && t < ENTER_S + 0.25 ? 1 - (t - ENTER_S) / 0.25 : 0;
     const shake = Math.max(launch, landing);
     ctx.setTransform(1, 0, 0, 1, Math.round((this.rnd() - 0.5) * 4 * shake), Math.round((this.rnd() - 0.5) * 3 * shake));
-    ctx.drawImage(this.backdrop, 0, 0);
+    ctx.fillStyle = BACKGROUND;
+    ctx.fillRect(-4, -4, this.width + 8, HEIGHT + 8);
+    ctx.drawImage(layers.kerb.canvas, 0, 0);
+    ctx.drawImage(layers.asphalt.canvas, 0, 0);
+    ctx.drawImage(layers.detail.canvas, 0, 0);
 
     // Tyre marks stay on the road behind the rear wheels.
-    if (dt > 0 && (t < ENTER_S || (t > HOLD_END_S - 0.1 && !this.carHasLeft))) {
-      this.marks.push({ x: car.x + Math.cos(rad(car.angle)) * REAR_WHEEL.x - Math.sin(rad(car.angle)) * (REAR_WHEEL.y + 8), y: car.y + Math.sin(rad(car.angle)) * REAR_WHEEL.x + Math.cos(rad(car.angle)) * (REAR_WHEEL.y + 8) });
+    if (dt > 0 && this.goneAt === null) {
+      const a = rad(car.angle);
+      for (const side of [-1, 1]) {
+        const lx = -10 * SPRITE_SCALE;
+        const ly = side * 8 * SPRITE_SCALE;
+        rect(layers.marks.ctx, car.x + Math.cos(a) * lx - Math.sin(a) * ly, car.y + Math.sin(a) * lx + Math.cos(a) * ly, 2, 2, "#12111c");
+      }
     }
-    ctx.fillStyle = "#12111c";
-    for (const mark of this.marks) ctx.fillRect(Math.round(mark.x), Math.min(HEIGHT - 2, Math.max(ROAD_TOP + 4, Math.round(mark.y))), 3, 2);
+    ctx.drawImage(layers.marks.canvas, 0, 0);
 
     // Speed lines behind the car while it is moving fast.
-    const fast = clamp01((Math.abs(speed) - 140) / 260);
+    const fast = clamp01((speed - 160) / 300);
     if (fast > 0) {
-      ctx.fillStyle = `rgba(233,230,255,${(0.2 + 0.4 * fast).toFixed(2)})`;
-      for (let i = 0; i < 9; i++) {
-        const y = ROAD_TOP - 40 + this.rnd() * 110;
-        const length = 14 + this.rnd() * 36 * fast;
-        const x = car.x - 80 - this.rnd() * 90 * fast;
-        ctx.fillRect(Math.round(x), Math.round(y), Math.round(length), 1);
+      const heading = rad(car.angle);
+      ctx.fillStyle = `rgba(233,230,255,${(0.2 + 0.35 * fast).toFixed(2)})`;
+      for (let i = 0; i < 8; i++) {
+        const lateral = (this.rnd() - 0.5) * 70;
+        const back = 46 + this.rnd() * 60 * fast;
+        const px = car.x - Math.cos(heading) * back - Math.sin(heading) * lateral;
+        const py = car.y - Math.sin(heading) * back + Math.cos(heading) * lateral;
+        ctx.fillRect(Math.round(px), Math.round(py), Math.round(10 + this.rnd() * 22 * fast), 1);
       }
     }
 
-    if (dt > 0) this.emitPuffs(dt, t, car.x, car.y, car.angle, speed);
+    if (dt > 0) this.emitPuffs(dt, t, car, speed);
     this.stepPuffs(dt);
     this.drawPuffs(true);
 
-    // The car itself: drawn big (each sprite pixel is 2 screen pixels) and turned about its middle.
-    drawSprite(this.spriteCtx, t, this.wheelTurn);
+    // The car (each sprite pixel is 2 screen pixels), turned to the way it points; then the bean on top, always upright.
+    drawCar(this.carCtx, this.wheelTurn);
     ctx.save();
     ctx.translate(Math.round(car.x), Math.round(car.y));
     ctx.rotate(rad(car.angle));
     ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(this.sprite, (-SPRITE_W * SPRITE_SCALE) / 2, (-SPRITE_H * SPRITE_SCALE) / 2, SPRITE_W * SPRITE_SCALE, SPRITE_H * SPRITE_SCALE);
+    ctx.drawImage(this.carSprite, (-SPRITE_W * SPRITE_SCALE) / 2, (-SPRITE_H * SPRITE_SCALE) / 2, SPRITE_W * SPRITE_SCALE, SPRITE_H * SPRITE_SCALE);
     ctx.restore();
+    const glassesUp = clamp01((t - GLASSES_UP[0]) / 0.18) * (1 - clamp01((t - (GLASSES_UP[1] - 0.18)) / 0.18));
+    this.beanCtx.clearRect(0, 0, 18, 18);
+    drawBean(this.beanCtx, 9, 9, glassesUp, within(t, WINK));
+    const seat = rad(car.angle);
+    const beanX = car.x + Math.cos(seat) * -4 * SPRITE_SCALE;
+    const beanY = car.y + Math.sin(seat) * -4 * SPRITE_SCALE;
+    ctx.drawImage(this.beanSprite, Math.round(beanX - 9 * BEAN_SCALE), Math.round(beanY - 9 * BEAN_SCALE - 3), 18 * BEAN_SCALE, 18 * BEAN_SCALE);
     if (within(t, [WINK[0] + 0.05, WINK[1] + 0.2])) {
-      drawSparkle(ctx, car.x + 14, car.y - 52, 4 + Math.round(Math.sin((t - WINK[0]) * 18)));
+      drawSparkle(ctx, beanX + 20, beanY - 28, 4 + Math.round(Math.sin((t - WINK[0]) * 18)));
     }
-    this.drawPuffs(false); // smoke in front of the wheels, drawn over the car
+    this.drawPuffs(false);
 
-    // Pixel progress blocks and the closing fade to black.
+    // Pixel progress blocks and the closing fade to black once the car has gone.
     const blocks = 14;
     for (let i = 0; i < blocks; i++) {
-      const done = i < Math.floor(Math.min(1, t / SCENE_SECONDS) * blocks + 0.5);
+      const done = this.goneAt !== null || i < Math.floor(Math.min(1, t / SCENE_SECONDS) * blocks + 0.5);
       rect(ctx, this.width / 2 - blocks * 5 + i * 10, HEIGHT - 20, 8, 5, done ? "#ffe08a" : "#2b2655");
     }
     const fade = this.goneAt === null ? 0 : clamp01((t - this.goneAt) / 0.4) * 0.85;
@@ -373,8 +465,8 @@ export class DriftScene {
       puff.age += dt;
       puff.x += puff.vx * dt;
       puff.y += puff.vy * dt;
-      puff.vx *= Math.exp(-dt * 1.4);
-      puff.vy *= Math.exp(-dt * 1.1);
+      puff.vx *= Math.exp(-dt * 1.6);
+      puff.vy *= Math.exp(-dt * 1.6);
     }
     this.puffs = this.puffs.filter((puff) => puff.age < puff.life);
   }
@@ -382,7 +474,7 @@ export class DriftScene {
   /** Smoke in three flat tones (bright, lavender, grey-violet), shrinking away at the end of its life. */
   private drawPuffs(behind: boolean) {
     for (const puff of this.puffs) {
-      const isBehind = puff.vx <= 0 || puff.age < puff.life * 0.5;
+      const isBehind = puff.age < puff.life * 0.55;
       if (isBehind !== behind) continue;
       const k = puff.age / puff.life;
       const radius = Math.max(1, Math.round(lerp(puff.r0, puff.r1, ease.outQuad(k)) * (k > 0.7 ? 1 - (k - 0.7) / 0.5 : 1)));
