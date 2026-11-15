@@ -3,12 +3,17 @@
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { searchLunarData, type SearchResult } from "./search-client";
 import styles from "./lunar-search.module.css";
+import { AnswerVisuals } from "./answer-visuals";
+import { AnswerText } from "./answer-text";
 
 const EXAMPLES = [
   { label: "Explore landing sites", question: "List the available lunar landing site presets and their coordinates." },
   { label: "Find flat sunny sites", question: "Find south polar sites south of -85 latitude with slope under 5 degrees and longest darkness under 400 hours." },
   { label: "Compare two locations", question: "Compare the lunar south pole and Apollo 11 at 2030-01-01T12:00:00Z." },
   { label: "14-day south pole timeline", question: "Show the sunlight and Earth visibility windows at the lunar south pole from 2030-01-01T00:00:00Z to 2030-01-15T00:00:00Z." },
+  { label: "Sun + Earth together", question: "At latitude -89.9, longitude 0, show when the Sun and Earth are simultaneously visible during the 14 days starting 2030-01-01T00:00:00Z." },
+  { label: "Longest dark period", question: "At latitude -89.9, longitude 0, what is the longest period without sunlight in the available annual statistics? State the statistics period and explain the power-planning limitation." },
+  { label: "What can astronauts eat?", question: "Can astronauts find or grow food on the Moon? Explain what must be brought from Earth and which resources this lunar navigator cannot assess. Do not infer food or water availability from coordinates." },
 ];
 const TOOL_LABELS: Record<string, string> = {
   list_presets: "Lunar locations",
@@ -66,7 +71,7 @@ export function LunarSearch({ embedded = false }: { embedded?: boolean } = {}) {
     }
   }
 
-  function choose(question: string) { setQuestion(question); inputRef.current?.focus(); }
+  function choose(question: string) { setQuestion(question); inputRef.current?.focus(); inputRef.current?.scrollIntoView({ block: "nearest" }); }
 
   return (
     <section className={embedded ? `${styles.panel} ${styles.embedded}` : styles.panel}
@@ -97,15 +102,19 @@ export function LunarSearch({ embedded = false }: { embedded?: boolean } = {}) {
         </div>
       </form>
       <p id={`${id}-hint`} className={styles.hint}>Include a location and UTC date. Each search is independent. Ctrl/Cmd + Enter to search.</p>
+      <details className={styles.quickQuestions} open={!result}>
+      <summary>Quick questions · choose a starting point</summary>
       <div className={styles.examples} aria-label="Example questions">
         {EXAMPLES.map(example => <button type="button" key={example.label} disabled={pending} onClick={() => choose(example.question)}>{example.label}<span aria-hidden="true"> +</span></button>)}
       </div>
+      </details>
       <div role="status" aria-live="polite" className={styles.status}>{pending ? "Checking lunar tools. This may take a moment…" : notice}</div>
       {error ? <div role="alert" className={styles.error}>{error}<button type="button" onClick={() => inputRef.current?.focus()}>Edit question</button></div> : null}
       {result ? <article ref={answerRef} className={styles.answer} aria-label="Search answer">
         <div className={styles.answerHeader}><h3>Search result</h3><span>{result.model}</span></div>
         <p className={styles.question}>{submitted}</p>
-        <div className={styles.answerText}>{result.answer}</div>
+        <AnswerVisuals sources={result.sources} onQuestion={choose} />
+        <div className={styles.answerText}><AnswerText text={result.answer} /></div>
         {result.sources.length ? <div className={styles.sources}>
           <h4>Tool data · {result.sources.length}</h4>
           <p>Expand to inspect the inputs, returned values and provenance.</p>
