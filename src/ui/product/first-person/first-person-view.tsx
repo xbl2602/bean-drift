@@ -1,6 +1,7 @@
 "use client";
 // 第一人称：站在点击的位置环顾四周。拖动可水平 360° 转一整圈、上下看；滚轮只做放大/缩小（改视场角，人不动、眼睛高度固定 1.6 m）。
-// 可以打开"悬停转视角"：不按鼠标，只把鼠标移向屏幕边缘，视角就慢慢转过去。
+// 右上角有"Mouse look"开关：打开后不用按鼠标，镜头跟着鼠标走——鼠标往上移，视线抬高；往下移，视线低下去；
+// 把鼠标移向屏幕左右边缘，视角就慢慢转过去。
 // 键盘或屏幕方向键可以在着陆点周围 2 km 内前后左右走动（walk-motion.ts、walk-pad.tsx）。
 // 画面按需重绘：位置（转头/走动/视点高度）和时间轴没变就不重画，阴影也只在需要时重算；
 // 画面至少按 2K 渲染（长边 2560 像素），默认 4K（长边 3840）；太阳和阴影跟着底部时间轴走。
@@ -26,10 +27,12 @@ const FOV_DEFAULT_DEG = 70;
 const FOV_MIN_DEG = 10;
 /** 视场角追着目标值走的快慢（每秒），让放大缩小是顺滑的，不是一格一跳。 */
 const FOV_EASE_PER_S = 9;
-/** 悬停转视角：鼠标离屏幕中心超过这个比例才开始转（0..1），越靠边转得越快（度/秒，70° 视场下）。 */
+/** 鼠标跟随（Mouse look）：左右——离屏幕中心超过这个比例才开始转（0..1），越靠边转得越快（度/秒，70° 视场下）。 */
 const HOVER_DEADZONE = 0.2;
-const HOVER_YAW_DEG_PER_S = 45;
-const HOVER_PITCH_DEG_PER_S = 28;
+const HOVER_YAW_DEG_PER_S = 50;
+/** 上下——鼠标在屏幕最上/最下时，视线抬高/压低到这个角度（70° 视场下，放大后按比例缩小），镜头平滑地追上去。 */
+const HOVER_PITCH_RANGE_DEG = 55;
+const HOVER_PITCH_FOLLOW_PER_S = 6;
 /** 渲染分辨率：长边像素数。2K 是最低档，屏幕本身更清晰时按屏幕来。 */
 const LONG_EDGE_PX = { "4k": 3840, "2k": 2560 } as const;
 /** 按住 ←/→ 转身、PageUp/PageDown 抬头低头的速度（度/秒）。 */
@@ -147,7 +150,8 @@ export function FirstPersonView({ point, timeMs, onExit, onLoadingChange, onErro
             const strength = (offset: number) => Math.sign(offset) * Math.pow(Math.max(Math.abs(offset) - HOVER_DEADZONE, 0) / (1 - HOVER_DEADZONE), 1.5);
             const zoomSlow = v.fovDeg / FOV_DEFAULT_DEG; // 放大后转得更慢，才好瞄准
             v.yawDeg = (((v.yawDeg + strength(hover.x) * HOVER_YAW_DEG_PER_S * zoomSlow * dtS) % 360) + 360) % 360;
-            v.pitchDeg = THREE.MathUtils.clamp(v.pitchDeg - strength(hover.y) * HOVER_PITCH_DEG_PER_S * zoomSlow * dtS, -PITCH_LIMIT_DEG, PITCH_LIMIT_DEG);
+            const pitchTarget = THREE.MathUtils.clamp(-hover.y * HOVER_PITCH_RANGE_DEG * Math.max(zoomSlow, 0.35), -PITCH_LIMIT_DEG, PITCH_LIMIT_DEG);
+            v.pitchDeg += (pitchTarget - v.pitchDeg) * (1 - Math.exp(-HOVER_PITCH_FOLLOW_PER_S * dtS));
           }
           if (Math.abs(v.yawDeg - shownHeading) > 0.25) {
             shownHeading = v.yawDeg;
@@ -238,6 +242,15 @@ export function FirstPersonView({ point, timeMs, onExit, onLoadingChange, onErro
 
       <button
         type="button"
+        aria-pressed={hoverLook}
+        title="Mouse look: the view follows the mouse. Move it up or down to look up or down, towards the left or right edge to turn."
+        onClick={() => setHoverLook((value) => !value)}
+        className={`absolute right-4 top-[4.4rem] z-20 rounded-full border px-5 py-2.5 text-sm font-medium lunar-glass backdrop-blur-md transition sm:right-6 sm:top-[5.4rem] ${hoverLook ? "border-lime-300/70 bg-lime-300/20 text-lime-100" : "border-white/15 bg-black/60 text-white hover:bg-white/15"}`}
+      >
+        {hoverLook ? "Mouse look: ON" : "Mouse look: off"}
+      </button>
+      <button
+        type="button"
         onClick={onExit}
         className="absolute right-4 top-4 z-20 rounded-full border border-white/15 bg-black/60 px-5 py-2.5 text-sm font-medium text-white lunar-glass backdrop-blur-md transition hover:bg-white/15 sm:right-6 sm:top-6"
       >
@@ -271,21 +284,12 @@ export function FirstPersonView({ point, timeMs, onExit, onLoadingChange, onErro
             <dd className="font-mono">{`${zoomX.toFixed(1)}×`}</dd>
           </dl>
           <TerrainVisibilityPanel state={pointApi} />
-          <button
-            type="button"
-            aria-pressed={hoverLook}
-            title="Turn the view by moving the mouse towards the edge of the screen, without dragging"
-            onClick={() => setHoverLook((value) => !value)}
-            className={`mt-3 w-full rounded-full border px-3 py-1.5 text-xs transition ${hoverLook ? "border-lime-300/60 bg-lime-300/15 text-lime-100" : "border-white/15 text-white/85 hover:bg-white/10"}`}
-          >
-            {hoverLook ? "Hover to look: ON (move the mouse to an edge)" : "Hover to look: off (drag to look)"}
-          </button>
           <div className="mt-3 flex gap-2">
             <LookButton label="Face the Sun" disabled={!sunUp} onClick={() => lookToward(conditions.sun.azimuthDeg, conditions.sun.elevationDeg)} />
             <LookButton label="Face Earth" disabled={!earthUp} onClick={() => lookToward(conditions.earth.azimuthDeg, conditions.earth.elevationDeg)} />
           </div>
           <p className="mt-3 text-[11px] leading-snug text-white/45">
-            Drag to look around (full 360°) · W/S or ↑/↓ to walk, A/D to step sideways, ←/→ to turn, hold Shift to go faster (up to 2 km from the landing spot) · scroll to zoom in and out · Esc to return · use the timeline to move the Sun and shadows. Large terrain and shadows use NASA LOLA data (about 1.9 km
+            Drag to look around (full 360°), or switch on Mouse look at the top right and just move the mouse · W/S or ↑/↓ to walk, A/D to step sideways, ←/→ to turn, hold Shift to go faster (up to 2 km from the landing spot) · scroll to zoom in and out · Esc to return · use the timeline to move the Sun and shadows. Large terrain and shadows use NASA LOLA data (about 1.9 km
             resolution). Craters of 1 km and wider are real ones from the Robbins lunar crater catalogue, at their real positions and sizes. Smaller craters, the scattered rocks and the soil grain are generated to match real lunar statistics, so they look right but are not measured. The Sun and Earth rows above are angles from a smooth sphere and ignore terrain blocking; the &quot;Power &amp; Earth contact&quot; block includes it and is for the landing spot.
           </p>
         </div>

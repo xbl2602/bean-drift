@@ -12,12 +12,18 @@ import type { RealCrater } from "./crater-catalog";
 const MAX_WAVELENGTH_M = 1000;
 const MIN_WAVELENGTH_M = 4;
 /** 每个波长的起伏幅度 = 波长 × 这个比例（1 km 波长约 ±12 m）。 */
-const ROUGHNESS = 0.012;
+const ROUGHNESS = 0.008;
 /** 生成小坑的范围：半径 4 m ~ 400 m，只铺在人周围这么远的地方（更远的小坑本来也看不清）。 */
 const SMALL_MIN_RADIUS_M = 4;
 const SMALL_MAX_RADIUS_M = 400;
-const SMALL_FIELD_RADIUS_M = 1800;
-const SMALL_MAX_COUNT = 9000;
+const SMALL_FIELD_RADIUS_M = 2200;
+const SMALL_MAX_COUNT = 14_000;
+/** 清晰的新坑（直径 25~160 m）：在人周围一定会有几个，站在哪里都能一眼看到"这里有坑"。 */
+const HERO_CRATER_COUNT = 14;
+/** 中等大小的坑（直径 40~400 m）：远近各处都有，让整片地面看上去有坑坑洼洼的层次。 */
+const MID_CRATER_COUNT = 140;
+/** 脚边的小坑（直径 14~70 m，离人 20~330 m）：走几步就能碰到，近处也有坑坑洼洼。 */
+const NEAR_CRATER_COUNT = 70;
 /** 小坑的数量随直径的这个次方减少（累计分布 N(>D) ∝ D^-2.2）。 */
 const SIZE_EXPONENT = 2.2;
 /** 半径超过这个值的坑放进"大坑表"逐个检查，其余的放进空间格子里。 */
@@ -37,6 +43,8 @@ interface Crater {
 export interface TerrainDetail {
   /** 细节高度（米），叠加在 LOLA 高度上。cellM 是该处网格的边长：比网格还细的细节会被去掉，避免锯齿。 */
   heightM: (eastM: number, northM: number, cellM: number) => number;
+  /** 同一处地面的明暗倍数（新坑的亮溅射物、老坑的暗坑底），乘在底图颜色上。 */
+  albedoAt: (eastM: number, northM: number, cellM: number) => number;
   /** 用到的真实坑数 / 生成的小坑数（给界面说明用）。 */
   counts: { real: number; generated: number };
 }
@@ -84,7 +92,8 @@ function craterProfileM(rho: number, radiusM: number, crispness: number): number
   const diameterM = radiusM * 2;
   const complex = diameterM > 18_000;
   const depthRatio = (0.025 + 0.18 * Math.pow(crispness, 1.2)) * (complex ? (1.044 * Math.pow(diameterM / 1000, -0.699)) / 0.2 : 1);
-  const depthM = diameterM * depthRatio;
+  // 比统计值略深一点：站在地面上（眼睛只有 1.6 m 高），统计上真实的浅坑几乎看不出来
+  const depthM = diameterM * depthRatio * (complex ? 1 : 1.3);
   const rimM = diameterM * (0.004 + 0.018 * crispness);
   const rimWidth = 0.35 - 0.22 * crispness;
   let h = rimM * Math.exp(-(((rho - 1) / rimWidth) ** 2));
@@ -95,6 +104,15 @@ function craterProfileM(rho: number, radiusM: number, crispness: number): number
     h += rimM * 0.55 * (0.4 + 0.6 * crispness) * Math.pow(rho, -3) * (1 - smooth(2.2, 3, rho));
   }
   return h;
+}
+
+/**
+ * 坑附近的地面明暗（乘在底图颜色上，1 = 不变）：新坑的溅射物和坑沿又亮又白，老坑的坑底被填平、略暗。
+ * 这样即使太阳很高、没有长长的影子，坑和坑沿也能看出来。
+ */
+function craterShade(rho: number, crispness: number): number {
+  if (rho < 1) return 1 - 0.14 * (1 - crispness) * (1 - rho * rho) + 0.1 * crispness * rho * rho;
+  return 1 + 0.5 * Math.pow(crispness, 1.4) * Math.exp(-(((rho - 1.15) / 0.8) ** 2)) * (1 - smooth(2.2, 3, rho));
 }
 
 /** 大于几公里的坑，LOLA 的 1.9 km 网格已经表达了大部分形状；这里把细节幅度逐渐收小，避免重复叠加。 */
@@ -140,7 +158,7 @@ export function createTerrainDetail(latDeg: number, lonDeg: number, realCraters:
 
   // 2. 按本地真实大坑的密度定标的小坑：数量随直径 -2.2 次方减少
   const areaKm2 = Math.PI * (realRadiusM / 1000) ** 2;
-  const density1km = realCraters.length > 0 ? Math.min(Math.max(realNear / areaKm2, 0.005), 0.12) : 0.03;
+  const density1km = realCraters.length > 0 ? Math.min(Math.max(realNear / areaKm2, 0.02), 0.15) : 0.04;
   const smallAreaKm2 = Math.PI * (SMALL_FIELD_RADIUS_M / 1000) ** 2;
   const dMin = (SMALL_MIN_RADIUS_M * 2) / 1000;
   const dMax = (SMALL_MAX_RADIUS_M * 2) / 1000;
@@ -151,9 +169,50 @@ export function createTerrainDetail(latDeg: number, lonDeg: number, realCraters:
     const diameterKm = Math.pow(Math.pow(dMin, -SIZE_EXPONENT) - random() * (Math.pow(dMin, -SIZE_EXPONENT) - Math.pow(dMax, -SIZE_EXPONENT)), -1 / SIZE_EXPONENT);
     const distanceM = Math.sqrt(random()) * SMALL_FIELD_RADIUS_M;
     const angle = random() * Math.PI * 2;
-    add({ eastM: Math.cos(angle) * distanceM, northM: Math.sin(angle) * distanceM, radiusM: (diameterKm * 1000) / 2, crispness: Math.pow(random(), 2.3) });
+    add({ eastM: Math.cos(angle) * distanceM, northM: Math.sin(angle) * distanceM, radiusM: (diameterKm * 1000) / 2, crispness: Math.pow(random(), 1.3) });
     generated++;
   }
+  for (let i = 0; i < HERO_CRATER_COUNT; i++) {
+    // 均匀分布在各个方向上，离人 70 m ~ 700 m；直径 25 ~ 160 m，几乎都是新坑
+    const angle = ((i + random() * 0.8) / HERO_CRATER_COUNT) * Math.PI * 2;
+    const distanceM = 45 + Math.pow(random(), 1.3) * 400;
+    const diameterM = 22 * Math.pow(130 / 22, random());
+    add({ eastM: Math.cos(angle) * distanceM, northM: Math.sin(angle) * distanceM, radiusM: diameterM / 2, crispness: 0.7 + 0.3 * random() });
+    generated++;
+  }
+  for (let i = 0; i < NEAR_CRATER_COUNT; i++) {
+    const diameterM = 14 * Math.pow(70 / 14, random());
+    const distanceM = 20 + Math.sqrt(random()) * 310;
+    const angle = random() * Math.PI * 2;
+    add({ eastM: Math.cos(angle) * distanceM, northM: Math.sin(angle) * distanceM, radiusM: diameterM / 2, crispness: 0.35 + 0.65 * Math.pow(random(), 0.9) });
+    generated++;
+  }
+  for (let i = 0; i < MID_CRATER_COUNT; i++) {
+    const diameterM = 40 * Math.pow(400 / 40, random());
+    const distanceM = 90 + Math.sqrt(random()) * 1900;
+    const angle = random() * Math.PI * 2;
+    add({ eastM: Math.cos(angle) * distanceM, northM: Math.sin(angle) * distanceM, radiusM: diameterM / 2, crispness: 0.25 + 0.75 * Math.pow(random(), 1.2) });
+    generated++;
+  }
+
+  /** 对 (east, north) 附近每个够大的坑调用一次 visit(坑, rho)。 */
+  const visitCraters = (eastM: number, northM: number, cellM: number, visit: (crater: Crater, rho: number) => void) => {
+    for (const crater of big) {
+      if (crater.radiusM < 2 * cellM) continue;
+      const rho = Math.hypot(eastM - crater.eastM, northM - crater.northM) / crater.radiusM;
+      if (rho < 3) visit(crater, rho);
+    }
+    const ix = Math.floor(eastM / GRID_CELL_M);
+    const iy = Math.floor(northM / GRID_CELL_M);
+    if (ix < -GRID_HALF || ix > GRID_HALF || iy < -GRID_HALF || iy > GRID_HALF) return;
+    const list = grid.get(cellKey(ix, iy));
+    if (!list) return;
+    for (const crater of list) {
+      if (crater.radiusM < 2 * cellM) continue;
+      const rho = Math.hypot(eastM - crater.eastM, northM - crater.northM) / crater.radiusM;
+      if (rho < 3) visit(crater, rho);
+    }
+  };
 
   return {
     counts: { real: realNear, generated },
@@ -165,24 +224,17 @@ export function createTerrainDetail(latDeg: number, lonDeg: number, realCraters:
         if (keep <= 0) break;
         h += valueNoise(eastM / wavelengthM, northM / wavelengthM, seed + octave * 1013) * wavelengthM * ROUGHNESS * keep;
       }
-      for (const crater of big) {
-        if (crater.radiusM < 2 * cellM) continue;
-        const rho = Math.hypot(eastM - crater.eastM, northM - crater.northM) / crater.radiusM;
-        if (rho < 3) h += craterProfileM(rho, crater.radiusM, crater.crispness) * lolaCovers(crater.radiusM);
-      }
-      const ix = Math.floor(eastM / GRID_CELL_M);
-      const iy = Math.floor(northM / GRID_CELL_M);
-      if (ix >= -GRID_HALF && ix <= GRID_HALF && iy >= -GRID_HALF && iy <= GRID_HALF) {
-        const list = grid.get(cellKey(ix, iy));
-        if (list) {
-          for (const crater of list) {
-            if (crater.radiusM < 2 * cellM) continue;
-            const rho = Math.hypot(eastM - crater.eastM, northM - crater.northM) / crater.radiusM;
-            if (rho < 3) h += craterProfileM(rho, crater.radiusM, crater.crispness);
-          }
-        }
-      }
+      visitCraters(eastM, northM, cellM, (crater, rho) => {
+        h += craterProfileM(rho, crater.radiusM, crater.crispness) * (crater.radiusM >= BIG_CRATER_RADIUS_M ? lolaCovers(crater.radiusM) : 1);
+      });
       return h;
+    },
+    albedoAt(eastM, northM, cellM) {
+      let tone = 1;
+      visitCraters(eastM, northM, cellM, (crater, rho) => {
+        tone *= craterShade(rho, crater.crispness);
+      });
+      return Math.min(Math.max(tone, 0.7), 1.6);
     },
   };
 }
